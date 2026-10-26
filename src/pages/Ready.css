@@ -1,0 +1,105 @@
+.ready {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  text-align: center;
+}
+
+.ready-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ready-title {
+  font-size: 32px;
+  line-height: 1.15;
+}
+
+.ready-head .faint {
+  font-size: 15px;
+}
+
+.ready-download {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ready-download .btn {
+  font-size: 17px;
+}
+
+.ready-note {
+  font-size: 14px;
+}
+
+.ready-note:empty {
+  display: none;
+}
+
+.ready-licence {
+  width: 100%;
+  overflow: hidden;
+  text-align: left;
+  border-radius: 16px;
+}
+
+.ready-licence-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ready-licence-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ready-licence-id .mono {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ready-licence-name {
+  font-weight: 700;
+}
+
+.ready-licence-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.ready-licence-links a {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ready-licence-note {
+  padding: 0 20px 18px;
+}
+
+.ready-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.ready-foot a {
+  color: var(--muted);
+  font-weight: 700;
+}

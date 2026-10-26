@@ -1,0 +1,140 @@
+.verify {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 72px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.verify-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.verify-intro h1 {
+  margin: 0;
+  font-size: 36px;
+}
+
+.verify-intro p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.verify-form {
+  display: flex;
+  gap: 10px;
+}
+
+.verify-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.verify-label input {
+  flex: 1;
+  min-width: 0;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--field);
+  border-radius: 999px;
+  padding: 14px 20px;
+  font-size: 16px;
+}
+
+.verify-label input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.verify-form .btn {
+  flex: none;
+  padding: 14px 26px;
+}
+
+.verify-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.verify-result {
+  display: flex;
+  overflow: hidden;
+}
+
+.verify-edge {
+  flex: none;
+  width: 6px;
+  position: relative;
+}
+
+.verify-edge svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.verify-body {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.verify-body h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.verify-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.verify-head svg {
+  flex: none;
+}
+
+.verify-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  font-size: 14px;
+}
+
+.verify-dl dt {
+  color: var(--faint);
+}
+
+.verify-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.verify-note {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .verify {
+    padding-top: 48px;
+  }
+
+  .verify-body {
+    padding: 20px;
+  }
+}

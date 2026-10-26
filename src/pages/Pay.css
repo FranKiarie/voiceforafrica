@@ -1,0 +1,214 @@
+.pay {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.pay-title {
+  font-size: 32px;
+  line-height: 1.15;
+}
+
+.pay-back {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Test checkout: a neutral stand-in for Paystack's own screen. Its colours
+   are Paystack-like greys on purpose, so they live here as local tokens. */
+.co-layer {
+  --co-dim: rgba(20, 12, 8, 0.55);
+  --co-panel: #ffffff;
+  --co-ink: #1f2430;
+  --co-sub: #5b6170;
+  --co-rule: #e5e7eb;
+  --co-edge: #d1d5db;
+  --co-soft: #f3f4f6;
+  --co-dash: #9ca3af;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.co-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--co-dim);
+}
+
+.co-panel {
+  position: absolute;
+  left: 50%;
+  top: max(24px, 12vh);
+  width: 400px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  background: var(--co-panel);
+  color: var(--co-ink);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  text-align: left;
+  transform: translateX(-50%);
+  animation: co-rise 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes co-rise {
+  from {
+    transform: translate(-50%, 40px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.co-head {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--co-rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+
+.co-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.co-email {
+  font-size: 13px;
+  color: var(--co-sub);
+  overflow-wrap: anywhere;
+}
+
+.co-amount {
+  font-size: 15px;
+}
+
+.co-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--co-sub);
+  border: 1px dashed var(--co-dash);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.co-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.co-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.co-tab {
+  flex: 1;
+  border: 1px solid var(--co-edge);
+  background: var(--co-panel);
+  color: var(--co-ink);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.co-tab[aria-pressed="true"] {
+  border: 2px solid var(--co-ink);
+  background: var(--co-soft);
+  font-weight: 700;
+  padding: 9px;
+}
+
+.co-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--co-sub);
+}
+
+.co-field input {
+  border: 1px solid var(--co-edge);
+  border-radius: 10px;
+  padding: 12px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--co-ink);
+  background: var(--co-panel);
+}
+
+.co-note {
+  font-size: 14px;
+  color: var(--co-sub);
+}
+
+.co-pay {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--co-ink);
+  color: var(--co-panel);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.co-pay:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.co-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.co-cancel {
+  align-self: center;
+  border: 0;
+  background: none;
+  color: var(--co-sub);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.co-tab:focus-visible,
+.co-pay:focus-visible,
+.co-cancel:focus-visible,
+.co-field input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-panel {
+    animation: none;
+  }
+}

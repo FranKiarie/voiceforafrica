@@ -1,0 +1,89 @@
+.listen {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 32px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  text-align: center;
+}
+
+.listen-pill {
+  margin: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.listen-title {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-size: 32px;
+  line-height: 1.15;
+}
+
+.listen-progress {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Keep all 16 beads on one line at phone width. */
+.listen .beads {
+  gap: min(8px, 1.4vw);
+}
+
+.listen .bead {
+  flex: none;
+  width: min(18px, 3.6vw);
+  height: min(18px, 3.6vw);
+}
+
+.listen-clock,
+.listen-short {
+  margin: 0;
+  font-size: 14px;
+}
+
+.listen-short {
+  font-size: 13px;
+}
+
+.listen-buy {
+  width: 100%;
+  border-top: 1px solid var(--line);
+  padding-top: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.listen-full {
+  margin: 0;
+  font-size: 15px;
+}
+
+.listen-price {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-size: 48px;
+  line-height: 1;
+}
+
+.listen-auto {
+  margin: 0;
+  font-size: 13px;
+}
+
+.listen-again {
+  font-size: 14px;
+}
