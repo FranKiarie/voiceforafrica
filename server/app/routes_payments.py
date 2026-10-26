@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict
 
 from . import db, jobs, paystack
 from .config import settings
-from .catalog import is_voice, purpose_or_default
+from .catalog import public_voice_id, purpose_or_default
 from .pricing import MAX_PAYG_CHARS, PLAN_USD, plan_amount, quote
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,8 @@ async def payg_checkout(body: PaygCheckout):
         raise HTTPException(400, "The script needs at least 20 characters.")
     if len(script) > MAX_PAYG_CHARS:
         raise HTTPException(400, f"The script can be at most {MAX_PAYG_CHARS} characters.")
-    if not is_voice(body.voiceId):
+    voice_id = public_voice_id(body.voiceId)
+    if not voice_id:
         raise HTTPException(400, "Choose one of the listed voices.")
     language = (body.language or "").strip().lower()
     if not LANG_RE.match(language):
@@ -107,7 +108,7 @@ async def payg_checkout(body: PaygCheckout):
         {
             "id": job_id,
             "email": email,
-            "voice_id": body.voiceId,
+            "voice_id": voice_id,
             "language": language,
             "purpose": purpose_or_default(body.purpose),
             "script": script,

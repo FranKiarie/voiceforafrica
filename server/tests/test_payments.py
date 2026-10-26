@@ -396,6 +396,13 @@ def test_payg_checkout_rejects_bad_email(env):
     assert res.status_code == 400
 
 
+def test_payg_checkout_translates_an_old_library_voice_id(env):
+    res = env.client.post("/payg/checkout", json={**_payg_body(), "voiceId": "sw-ke-csagent-4"})
+    assert res.status_code == 200, res.text
+    [row] = env.db.tables["voice_jobs"].values()
+    assert row["voice_id"] == "amara"
+
+
 def test_payg_checkout_stores_purpose(env):
     assert env.client.post("/payg/checkout", json={**_payg_body(), "purpose": "documentary"}).status_code == 200
     assert env.client.post("/payg/checkout", json={**_payg_body(), "purpose": "nope"}).status_code == 200

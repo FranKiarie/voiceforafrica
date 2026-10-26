@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from . import db
 from .config import settings
-from .catalog import is_voice, purpose_or_default, voice_name
+from .catalog import public_voice_id, purpose_or_default, voice_name
 from .pricing import MAX_PAYG_CHARS
 from .tts import TtsError, preview_text, render_mp3
 
@@ -110,7 +110,8 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         raise HTTPException(400, f"Your script needs at least {MIN_SCRIPT_CHARS} characters.")
     if len(script) > MAX_PAYG_CHARS:
         raise HTTPException(400, f"Your script is longer than {MAX_PAYG_CHARS:,} characters.")
-    if not is_voice(body.voiceId):
+    voice_id = public_voice_id(body.voiceId)
+    if not voice_id:
         raise HTTPException(400, "Please choose one of the listed voices.")
     purpose = purpose_or_default(body.purpose)
     language = (body.language or "").strip().lower()
@@ -134,7 +135,7 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
                 "id": preview_id,
                 "email": email,
                 "ip": ip,
-                "voice_id": body.voiceId,
+                "voice_id": voice_id,
                 "language": language,
                 "script_sha256": hashlib.sha256(script.encode("utf-8")).hexdigest(),
                 "seconds": 0,
@@ -153,7 +154,7 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
 
     text = preview_text(script)
     try:
-        mp3, seconds = await asyncio.wait_for(render_mp3(text, body.voiceId, language, purpose), PREVIEW_RENDER_SECONDS)
+        mp3, seconds = await asyncio.wait_for(render_mp3(text, voice_id, language, purpose), PREVIEW_RENDER_SECONDS)
     except (TimeoutError, asyncio.TimeoutError) as e:
         await _drop_reservation(preview_id)
         raise HTTPException(503, "The voice service is busy. Please try again in a minute.") from e

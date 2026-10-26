@@ -276,6 +276,14 @@ def test_preview_unknown_purpose_falls_back_to_general(fake, client):
     assert fake["rendered"][3] == "general"
 
 
-def test_preview_rejects_raw_library_voice(fake, client):
+def test_preview_translates_an_old_library_voice_id(fake, client):
     res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": "sw-ke-csagent-4", "email": "ann@example.com"})
-    assert res.status_code == 400
+    assert res.status_code == 200, res.text
+    assert fake["rendered"][1] == "amara"
+    assert fake["inserts"][0][1]["voice_id"] == "amara"
+
+
+def test_preview_refuses_a_voice_not_offered(fake, client):
+    for voice in ("sw-ke-training-7", "puck", ""):
+        res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": voice, "email": "ann@example.com"})
+        assert res.status_code == 400

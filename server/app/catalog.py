@@ -33,6 +33,7 @@ VOICES: dict[str, tuple[str, str]] = {
 # Jobs created before the names were introduced stored the Google voice itself.
 _LEGACY_PREFIX = "sw-ke-"
 _BY_GOOGLE = {google: name for name, google in VOICES.values()}
+_PUBLIC_BY_GOOGLE = {google: public for public, (_, google) in VOICES.items()}
 
 # public id -> (label, delivery note for the speech model). Notes stay short:
 # long style text competes with the voice and makes it drift.
@@ -53,8 +54,16 @@ PURPOSES: dict[str, tuple[str, str]] = {
 DEFAULT_PURPOSE = "general"
 
 
-def is_voice(voice_id: str) -> bool:
-    return voice_id in VOICES
+def public_voice_id(voice_id: str) -> str | None:
+    """The catalogue id for a request's voice, or None when it is not offered.
+
+    Pages loaded before the names were introduced still send the library id;
+    those are translated rather than refused.
+    """
+    voice_id = (voice_id or "").strip()
+    if voice_id in VOICES:
+        return voice_id
+    return _PUBLIC_BY_GOOGLE.get(voice_id)
 
 
 def google_voice(voice_id: str) -> str:

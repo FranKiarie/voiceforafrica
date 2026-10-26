@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "re
 import { DrumRoll, Shell } from "../components/Shell";
 import { formatKes } from "../data";
 import { setFlow, useFlow } from "../flow";
-import { API_MODE, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
+import { API_MODE, ApiError, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
 import { resumeWithPaystack } from "../lib/paystack";
 import { Link, navigate } from "../router";
 import "./Pay.css";
 
 type Mode = "waiting" | "demo" | "cancelled" | "error";
+
+const NETWORK_TEXT = "Nothing was charged. Check your connection and try again.";
 
 function previewId(): string | undefined {
   try {
@@ -22,6 +24,7 @@ function previewId(): string | undefined {
 export default function Pay() {
   const flow = useFlow();
   const [mode, setMode] = useState<Mode>("waiting");
+  const [errorText, setErrorText] = useState(NETWORK_TEXT);
   const [checkout, setCheckout] = useState<PaygCheckout | null>(null);
   const checkoutRef = useRef<PaygCheckout | null>(null);
   const started = useRef(false);
@@ -55,9 +58,14 @@ export default function Pay() {
       } else if (API_MODE === "demo") {
         setMode("demo");
       } else {
+        setErrorText("Nothing was charged. Payments aren't available right now; please try again shortly.");
         setMode("error");
       }
-    } catch {
+    } catch (err) {
+      // The server explains 4xx problems (a bad email, too many attempts) in plain words.
+      if (err instanceof ApiError && err.status < 500) setErrorText(`Nothing was charged. ${err.message}`);
+      else if (err instanceof ApiError) setErrorText("Nothing was charged. Something went wrong on our side; please try again.");
+      else setErrorText(NETWORK_TEXT);
       setMode("error");
     }
   }, [flow.script, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel]);
@@ -96,9 +104,7 @@ export default function Pay() {
           <>
             <h1 className="pay-title">{mode === "error" ? "We couldn't open the payment" : "Payment not finished"}</h1>
             <p className="muted" role={mode === "error" ? "alert" : undefined}>
-              {mode === "error"
-                ? "Nothing was charged. Check your connection and try again."
-                : "Nothing was charged. Your clip is still here."}
+              {mode === "error" ? errorText : "Nothing was charged. Your clip is still here."}
             </p>
             <button type="button" className="btn" onClick={() => void start()}>
               {payLabel}
