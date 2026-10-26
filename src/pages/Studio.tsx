@@ -123,7 +123,8 @@ export default function Studio() {
         recordPreview(PREVIEWS_PER_DAY);
         setUsed(PREVIEWS_PER_DAY);
         setLimitHit(true);
-      } else if (err instanceof ApiError && err.status < 500) {
+      } else if (err instanceof ApiError && (err.status < 500 || err.status === 503)) {
+        // The server's 4xx and 503 messages are written for customers.
         setError(err.message);
       } else if (err instanceof ApiError) {
         setError("We couldn't make your preview just now. Please try again in a minute.");

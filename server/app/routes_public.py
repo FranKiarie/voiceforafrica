@@ -7,6 +7,7 @@ stored or compared, so "Ann@X.com" and "ann@x.com" are the same customer.
 from __future__ import annotations
 
 import asyncio
+import logging
 import hashlib
 import ipaddress
 import re
@@ -21,6 +22,8 @@ from .config import settings
 from .catalog import public_voice_id, purpose_or_default, voice_name
 from .pricing import MAX_PAYG_CHARS
 from .tts import TtsError, preview_text, render_mp3
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -160,6 +163,11 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         raise HTTPException(503, "The voice service is busy. Please try again in a minute.") from e
     except TtsError as e:
         await _drop_reservation(preview_id)
+        logger.warning("Preview render failed for voice %s: %s", voice_id, e)
+        if "per day" in str(e):
+            raise HTTPException(
+                503, "We've reached today's limit for new voice clips. Please try again in a few hours."
+            ) from e
         if getattr(e, "retryable", False):
             raise HTTPException(503, "The voice service is busy. Please try again in a minute.") from e
         raise HTTPException(503, "The voice service isn't switched on yet.") from e

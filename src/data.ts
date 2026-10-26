@@ -149,7 +149,7 @@ export const LIVE_ACCENTS: Accent[] = ACCENTS.filter((a) => VOICES.some((v) => v
 export const DEFAULT_VOICE = "wanjiru";
 
 /** A five-second hello in the voice, served from public/voices. */
-export const voiceSample = (id: string) => `/voices/${id}.mp3`;
+export const voiceSample = (id: string) => `/voices/${id}.mp3?v=2`;
 
 export type Purpose = { id: string; label: string };
 

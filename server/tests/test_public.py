@@ -293,3 +293,14 @@ def test_preview_translates_a_renamed_voice(fake, client):
     res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": "amara", "email": "ann@example.com"})
     assert res.status_code == 200, res.text
     assert fake["rendered"][1] == "wanjiru"
+
+
+def test_preview_says_when_the_daily_voice_limit_is_reached(fake, client, monkeypatch):
+    async def capped(text, voice_id, language, purpose=None):
+        raise routes_public.TtsError("Gemini speech request failed (429): limit: 10 requests per day", retryable=True)
+
+    monkeypatch.setattr(routes_public, "render_mp3", capped)
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"})
+    assert res.status_code == 503
+    assert "today's limit" in res.json()["detail"]
+    assert len(fake["deletes"]) == 1
