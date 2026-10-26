@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "re
 import { DrumRoll, Shell } from "../components/Shell";
 import { formatKes } from "../data";
 import { setFlow, useFlow } from "../flow";
-import { API_MODE, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
+import { API_MODE, ApiError, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
 import { resumeWithPaystack } from "../lib/paystack";
 import { Link, navigate } from "../router";
 import "./Pay.css";
@@ -22,18 +22,21 @@ function previewId(): string | undefined {
 export default function Pay() {
   const flow = useFlow();
   const [mode, setMode] = useState<Mode>("waiting");
+  const [error, setError] = useState("");
   const [checkout, setCheckout] = useState<PaygCheckout | null>(null);
   const checkoutRef = useRef<PaygCheckout | null>(null);
   const started = useRef(false);
 
   const onSuccess = useCallback((ref: string) => {
-    setFlow({ paymentRef: ref });
+    // Live references are the licence ID. Demo references are not, so keep the job.
+    setFlow(ref.startsWith("VS-") ? { paymentRef: ref, jobId: ref } : { paymentRef: ref });
     navigate("/ready");
   }, []);
   const onCancel = useCallback(() => setMode("cancelled"), []);
 
   const start = useCallback(async () => {
     setMode("waiting");
+    setError("");
     try {
       // The server prices the job; the browser never sends an amount.
       let co = checkoutRef.current;
@@ -47,7 +50,7 @@ export default function Pay() {
         });
         checkoutRef.current = co;
         setCheckout(co);
-        setFlow({ jobId: co.jobId, paidKes: co.amountKes });
+        setFlow({ jobId: co.jobId, paidKes: co.amountKes, accessCode: co.accessCode });
       }
       if (co.accessCode) {
         await resumeWithPaystack(co.accessCode, { onSuccess, onCancel });
@@ -56,7 +59,8 @@ export default function Pay() {
       } else {
         setMode("error");
       }
-    } catch {
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "");
       setMode("error");
     }
   }, [flow.script, flow.voiceId, flow.language, flow.email, onSuccess, onCancel]);
@@ -77,10 +81,24 @@ export default function Pay() {
       navigate("/studio");
       return;
     }
+    const params = new URLSearchParams(window.location.search);
+    const returned = params.get("reference") || params.get("trxref");
+    if (returned) {
+      setFlow({ jobId: returned, paymentRef: returned });
+      navigate("/ready");
+      return;
+    }
     if (started.current) return;
     started.current = true;
+    // A refresh must not open a second M-Pesa prompt. The ready page asks Paystack
+    // whether this reference was paid.
+    const retry = params.get("retry") === "1";
+    if (flow.jobId && !retry) {
+      navigate("/ready");
+      return;
+    }
     void start();
-  }, [empty, start]);
+  }, [empty, start, flow.jobId]);
 
   if (empty) return null;
 
@@ -96,7 +114,7 @@ export default function Pay() {
             <h1 className="pay-title">{mode === "error" ? "We couldn't open the payment" : "Payment not finished"}</h1>
             <p className="muted" role={mode === "error" ? "alert" : undefined}>
               {mode === "error"
-                ? "Nothing was charged. Check your connection and try again."
+                ? error || "Nothing was charged. Check your connection and try again."
                 : "Nothing was charged. Your clip is still here."}
             </p>
             <button type="button" className="btn" onClick={() => void start()}>

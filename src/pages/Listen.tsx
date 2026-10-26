@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BeadProgress, Drum, Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, quoteFor } from "../data";
+import { KES_PER_MINUTE, PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, quoteFor } from "../data";
+import { objectUrl } from "../download";
 import { useFlow } from "../flow";
 import { createPreview, type Preview } from "../lib/api";
 import "./Listen.css";
@@ -44,8 +45,14 @@ export default function Listen() {
   const leftForPay = useRef(false);
   const audio = useRef<HTMLAudioElement>(null);
 
-  const audioUrl = preview?.audioUrl;
+  const rawAudio = preview?.audioUrl;
+  const audioUrl = useMemo(() => (rawAudio ? objectUrl(rawAudio) : undefined), [rawAudio]);
   const previewLen = preview?.seconds ?? 0;
+
+  useEffect(() => {
+    if (!audioUrl?.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(audioUrl);
+  }, [audioUrl]);
 
   useEffect(() => {
     if (empty) navigate("/studio");
@@ -118,6 +125,7 @@ export default function Listen() {
           <audio
             ref={audio}
             src={audioUrl}
+            playsInline
             preload="auto"
             onTimeUpdate={(e) => setElapsed(Math.min(previewLen || Infinity, e.currentTarget.currentTime))}
             onPause={() => setPlaying(false)}
@@ -153,9 +161,7 @@ export default function Listen() {
                 {formatClock(elapsed)} / {formatClock(previewLen)} · {voice.name}
               </p>
               {short && (
-                <p className="faint listen-short">
-                  Short script: you hear it all, with a soft chime. Paying unlocks the clean file.
-                </p>
+                <p className="faint listen-short">Short script: you hear it all. Paying unlocks the clean file.</p>
               )}
             </div>
           </>
@@ -164,6 +170,10 @@ export default function Listen() {
         <div className="listen-buy">
           <p className="muted listen-full">Full script · about {formatDuration(q.projectedSeconds)}</p>
           <p className="listen-price">{formatKes(q.kes)}</p>
+          <p className="faint listen-auto">
+            {q.billedMinutes} min at {formatKes(KES_PER_MINUTE)} a minute
+            {q.projectedSeconds < 60 ? " · one minute minimum" : ""}
+          </p>
           <button type="button" className="btn btn-block" onClick={goPay}>
             Pay {formatKes(q.kes)}
           </button>

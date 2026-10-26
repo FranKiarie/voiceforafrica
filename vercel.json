@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "rewrites": [{ "source": "/((?!assets/|brand/).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!api/|assets/|brand/).*)", "destination": "/index.html" }],
+  "functions": {
+    "api/**/*.ts": { "maxDuration": 60 }
+  }
 }

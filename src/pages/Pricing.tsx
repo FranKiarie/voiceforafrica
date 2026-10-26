@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Shell, PatternStrip } from "../components/Shell";
 import { Link } from "../router";
-import type { PatternId } from "../data";
+import { KES_PER_MINUTE, formatKes, type PatternId } from "../data";
 import type { Plan } from "../lib/api";
 import "./Pricing.css";
 
@@ -22,9 +22,9 @@ const TIERS: Tier[] = [
   {
     name: "Pay as you go",
     pattern: "band",
-    price: "$1.50",
+    price: formatKes(KES_PER_MINUTE),
     per: "/ min",
-    line: "About KES 195 a minute. Hear 45 seconds first, no account. One language.",
+    line: "Hear 45 seconds first, no account. One minute minimum, then rounded up. One language.",
     cta: "Paste your script",
     kind: "studio",
   },
@@ -87,7 +87,9 @@ export default function Pricing() {
     <Shell>
       <section className="pricing-intro">
         <h1>Pricing</h1>
-        <p className="muted">Pay per clip, or save with a plan once you make more than 10 minutes a month.</p>
+        <p className="muted">
+          Pay per clip at {formatKes(KES_PER_MINUTE)} a minute. Monthly plans are listed below and are not on sale yet.
+        </p>
         <div className="period" role="group" aria-label="Billing period">
           <button type="button" aria-pressed={!yearly} onClick={() => setYearly(false)}>
             Monthly

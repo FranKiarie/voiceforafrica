@@ -1,18 +1,28 @@
 // The one place the frontend talks to the voice backend.
 //
-// Live mode: VITE_API_BASE is set (the Fly app, e.g. https://api.voice.mikaka.io).
-// Demo mode: no base URL, so every call is answered in the browser. The demo
-// keeps licences and clips in localStorage and never moves money or makes audio.
+// Live mode (the default): same-origin /api functions on Vercel, or VITE_API_BASE
+// if a separate backend is ever pointed here. The server prices the clip, checks
+// Paystack, and only then returns audio.
+// Demo mode (VITE_API_MODE=demo): no audio and no money, for layout work only.
 
 import { formatDuration, quoteFor, VOICES } from "../data";
 
 const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
-export const API_MODE: "live" | "demo" = BASE ? "live" : "demo";
+export const API_MODE: "live" | "demo" = import.meta.env.VITE_API_MODE === "demo" ? "demo" : "live";
 
-export type Preview = { previewId: string; seconds: number; audioUrl?: string };
+export type Preview = { previewId: string; seconds: number; audioUrl?: string; mime?: string };
 export type PaygCheckout = { jobId: string; amountKes: number; accessCode?: string };
 export type JobStatus = "paying" | "generating" | "ready" | "failed";
-export type Job = { jobId: string; status: JobStatus; seconds?: number; audioUrl?: string; licenceId?: string };
+export type Job = {
+  jobId: string;
+  status: JobStatus;
+  seconds?: number;
+  audioUrl?: string;
+  licenceId?: string;
+  mime?: string;
+  error?: string;
+  refunded?: boolean;
+};
 export type Licence = { id: string; tier: string; voice: string; length: string; issued: string; paidKes?: number };
 export type Clip = { id: string; licenceId: string; voice: string; length: string; createdAt: string; tier: string; audioUrl?: string };
 export type Plan = "starter" | "creator" | "pro" | "business";
@@ -199,9 +209,18 @@ export function confirmDemoPayment(jobId: string) {
   writeList(JOBS_KEY, jobs);
 }
 
-/** Poll after payment until status is "ready" (or "failed"). */
-export async function getJob(jobId: string): Promise<Job> {
-  if (API_MODE === "live") return call("GET", `/jobs/${encodeURIComponent(jobId)}`);
+export type ClaimInput = { script: string; voiceId: string; language: string };
+
+/** Poll after payment until status is "ready" (or "failed"). Live mode re-checks Paystack. */
+export async function getJob(jobId: string, claim?: ClaimInput): Promise<Job> {
+  if (API_MODE === "live") {
+    return call("POST", "/jobs/claim", {
+      reference: jobId,
+      script: claim?.script ?? "",
+      voiceId: claim?.voiceId ?? "",
+      language: claim?.language ?? "",
+    });
+  }
   const jobs = readList<DemoJob>(JOBS_KEY);
   const job = jobs.find((j) => j.jobId === jobId);
   if (!job) throw new ApiError(404, "Job not found");

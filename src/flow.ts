@@ -11,6 +11,7 @@ export type Flow = {
   jobId?: string;
   paidKes?: number;
   paymentRef?: string;
+  accessCode?: string;
   licenceId?: string;
 };
 

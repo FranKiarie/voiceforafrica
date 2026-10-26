@@ -83,7 +83,11 @@ export default function Clips() {
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (API_MODE === "live" && getSession() === null) {
+    if (API_MODE === "live") {
+      setState({ kind: "signin" });
+      return;
+    }
+    if (getSession() === null) {
       setSignedIn(false);
       setState({ kind: "signin" });
       return;
@@ -93,7 +97,7 @@ export default function Clips() {
       const clips = await listClips();
       setState({ kind: "ready", clips });
     } catch (e) {
-      if (API_MODE === "live" && e instanceof ApiError && e.status === 401) {
+      if (e instanceof ApiError && e.status === 401) {
         signOut();
         setSignedIn(false);
         setState({ kind: "signin" });
@@ -150,9 +154,13 @@ export default function Clips() {
         {state.kind === "signin" && (
           <div className="card clips-empty">
             <div className="clips-empty-body">
-              <p>Sign in to see your clips.</p>
-              <Link href="/signin" className="btn">
-                Sign in
+              {API_MODE === "live" ? (
+                <p>Your clip stays on the ready page in this browser. A clip library needs an account, and accounts are not open yet.</p>
+              ) : (
+                <p>Sign in to see your clips.</p>
+              )}
+              <Link href={API_MODE === "live" ? "/studio" : "/signin"} className="btn">
+                {API_MODE === "live" ? "Paste your script" : "Sign in"}
               </Link>
             </div>
           </div>
@@ -185,7 +193,7 @@ export default function Clips() {
         )}
 
         <p className="faint clips-foot">
-          Pay-as-you-go clips stay here for 7 days. Plans keep them longer. <Link href="/pricing">See plans</Link>
+          Save the download from the ready page before you close the tab. <Link href="/pricing">Pricing</Link>
         </p>
       </div>
     </Shell>

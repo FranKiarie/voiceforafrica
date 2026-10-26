@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Drum, PatternDot, Shell } from "../components/Shell";
 import { Link } from "../router";
-import { COMING_SOON, LANGUAGES, VOICES } from "../data";
+import { COMING_SOON, KES_PER_MINUTE, LANGUAGES, VOICES, formatKes } from "../data";
 import "./Home.css";
 
 const DOTS = ["#D0442A", "#E8A33C", "#3F57B8", "#2E9E6B"];
@@ -48,11 +48,63 @@ function LanguageRun({ hidden }: { hidden?: boolean }) {
 }
 
 export default function Home() {
-  const [samplePlaying, setSamplePlaying] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [sampleError, setSampleError] = useState("");
   const [lang, setLang] = useState("All");
+  const audio = useRef<HTMLAudioElement>(null);
+  const cache = useRef(new Map<string, string>());
 
   const voices = VOICES; // English and Kiswahili cover every voice today.
+
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    const onEnded = () => setPlayingId(null);
+    el.addEventListener("ended", onEnded);
+    return () => el.removeEventListener("ended", onEnded);
+  }, []);
+
+  const handlePlay = async (voiceId: string, name: string) => {
+    const el = audio.current;
+    if (!el || busyId) return;
+    if (playingId === voiceId && !el.paused) {
+      el.pause();
+      setPlayingId(null);
+      return;
+    }
+    setSampleError("");
+    let url = cache.current.get(voiceId);
+    if (!url) {
+      setBusyId(voiceId);
+      try {
+        const res = await fetch(`/api/v1/voice-studio/sample?voice=${encodeURIComponent(voiceId)}`);
+        if (!res.ok) {
+          let detail = "The sample isn't available right now.";
+          try {
+            detail = (await res.json()).detail || detail;
+          } catch {
+            // Keep the fallback.
+          }
+          throw new Error(detail);
+        }
+        url = URL.createObjectURL(await res.blob());
+        cache.current.set(voiceId, url);
+      } catch (err) {
+        setSampleError(err instanceof Error ? err.message : `Couldn't play ${name}.`);
+        setBusyId(null);
+        return;
+      }
+      setBusyId(null);
+    }
+    el.src = url;
+    try {
+      await el.play();
+      setPlayingId(voiceId);
+    } catch {
+      setSampleError("Tap again to play the sample.");
+    }
+  };
 
   return (
     <Shell>
@@ -67,15 +119,18 @@ export default function Home() {
         <Link className="btn home-cta" href="/studio">
           Paste your script
         </Link>
-        <p className="home-price faint">KES 195 a minute, or plans from $15</p>
+        <p className="home-price faint">{formatKes(KES_PER_MINUTE)} a minute · one minute minimum</p>
         <div className="home-sample">
+          <audio ref={audio} playsInline preload="none" />
           <Drum
             size={96}
-            playing={samplePlaying}
-            label={samplePlaying ? "Pause Call Centre Agent 4" : "Play Call Centre Agent 4"}
-            onClick={() => setSamplePlaying((p) => !p)}
+            playing={playingId === VOICES[0].id}
+            label={playingId === VOICES[0].id ? "Pause Call Centre Agent 4" : "Play Call Centre Agent 4"}
+            onClick={() => void handlePlay(VOICES[0].id, VOICES[0].name)}
           />
-          <p className="faint home-sample-caption">Hear Call Centre Agent 4 · Kenya</p>
+          <p className="faint home-sample-caption" role="status">
+            {busyId === VOICES[0].id ? "Getting the sample…" : sampleError || "Hear Call Centre Agent 4 · Kenya"}
+          </p>
         </div>
       </section>
 
@@ -139,7 +194,7 @@ export default function Home() {
                   size={44}
                   playing={playing}
                   label={playing ? `Pause ${v.name}` : `Play ${v.name}`}
-                  onClick={() => setPlayingId(playing ? null : v.id)}
+                  onClick={() => void handlePlay(v.id, v.name)}
                 />
                 <div className="voice-text">
                   <span className="voice-name">{v.name}</span>

@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DrumRoll, Drum, PatternStrip, Shell } from "../components/Shell";
 import { VOICES, formatClock, quoteFor } from "../data";
+import { objectUrl, saveFromUrl, saveText } from "../download";
 import { setFlow, useFlow } from "../flow";
+import { licenceDocument } from "../licence";
 import { ApiError, getJob, type Job } from "../lib/api";
 import { Link, navigate } from "../router";
 import "./Ready.css";
 
 const POLL_MS = 2000;
-const NOT_LIVE = "Your MP3 downloads here once the voice service is live.";
 
 export default function Ready() {
   const flow = useFlow();
@@ -19,10 +20,14 @@ export default function Ready() {
   const [pdfNote, setPdfNote] = useState("");
   const audio = useRef<HTMLAudioElement>(null);
   const jobId = flow.jobId;
-  const paid = Boolean(jobId && flow.paymentRef);
+  const canClaim = Boolean(jobId && flow.script.trim());
 
   useEffect(() => {
-    if (!paid || !jobId) {
+    if (!flow.script.trim()) {
+      navigate("/studio");
+      return;
+    }
+    if (!jobId) {
       navigate("/listen");
       return;
     }
@@ -30,7 +35,7 @@ export default function Ready() {
     let timer: number | undefined;
     const poll = async () => {
       try {
-        const j = await getJob(jobId);
+        const j = await getJob(jobId, { script: flow.script, voiceId: flow.voiceId, language: flow.language });
         if (!alive) return;
         setJob(j);
         if (j.status === "ready") {
@@ -40,8 +45,8 @@ export default function Ready() {
         if (j.status === "failed") return;
       } catch (e) {
         if (!alive) return;
-        if (e instanceof ApiError && e.status === 404) {
-          setJob({ jobId, status: "failed" });
+        if (e instanceof ApiError && (e.status === 404 || e.status === 400)) {
+          setJob({ jobId, status: "failed", error: e.message });
           return;
         }
         // Network hiccup: keep trying.
@@ -53,9 +58,14 @@ export default function Ready() {
       alive = false;
       window.clearTimeout(timer);
     };
-  }, [paid, jobId]);
+  }, [canClaim, jobId, flow.script, flow.voiceId, flow.language]);
 
-  const audioUrl = job?.status === "ready" ? job.audioUrl : undefined;
+  const rawAudio = job?.status === "ready" ? job.audioUrl : undefined;
+  const audioUrl = useMemo(() => (rawAudio ? objectUrl(rawAudio) : undefined), [rawAudio]);
+  useEffect(() => {
+    if (!audioUrl?.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(audioUrl);
+  }, [audioUrl]);
 
   useEffect(() => {
     const el = audio.current;
@@ -64,15 +74,17 @@ export default function Ready() {
     else el.pause();
   }, [playing, audioUrl]);
 
-  if (!paid) return null;
+  if (!canClaim || !jobId) return null;
 
   if (!job || job.status === "paying" || job.status === "generating") {
+    const confirming = !job || job.status === "paying";
     return (
       <Shell step={4} footer={false}>
         <div className="ready">
           <DrumRoll />
           <div role="status">
-            <h1 className="ready-title">Making your full clip…</h1>
+            <h1 className="ready-title">{confirming ? "Confirming your payment…" : "Making your full clip…"}</h1>
+            {confirming && <p className="muted">If you used M-Pesa, enter the PIN on your phone and keep this page open.</p>}
           </div>
         </div>
       </Shell>
@@ -85,8 +97,18 @@ export default function Ready() {
         <div className="ready">
           <h1 className="ready-title">Something went wrong</h1>
           <p className="muted" role="alert">
-            Something went wrong making your clip. We'll refund you automatically.
+            {job.error || "Something went wrong making your clip. Email support@mikaka.io with your payment reference."}
           </p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setFlow({ jobId: undefined, paymentRef: undefined, accessCode: undefined, licenceId: undefined });
+              navigate("/pay?retry=1");
+            }}
+          >
+            Try payment again
+          </button>
           <Link href="/studio">Back to the studio</Link>
         </div>
       </Shell>
@@ -113,6 +135,7 @@ export default function Ready() {
           <audio
             ref={audio}
             src={audioUrl}
+            playsInline
             preload="metadata"
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -129,12 +152,21 @@ export default function Ready() {
 
         <div className="ready-download">
           {audioUrl ? (
-            <a className="btn btn-block" href={audioUrl} download>
-              Download MP3
-            </a>
+            <button
+              type="button"
+              className="btn btn-block"
+              onClick={() => {
+                const ext = job.mime === "audio/wav" ? "wav" : "mp3";
+                void saveFromUrl(`mikaka-voice.${ext}`, audioUrl).catch(() =>
+                  setMp3Note("The download didn't start. Tap play, then try again."),
+                );
+              }}
+            >
+              Download {job.mime === "audio/wav" ? "WAV" : "MP3"}
+            </button>
           ) : (
-            <button type="button" className="btn btn-block" onClick={() => setMp3Note(NOT_LIVE)}>
-              Download MP3
+            <button type="button" className="btn btn-block" onClick={() => setMp3Note("The file isn't ready yet.")}>
+              Download audio
             </button>
           )}
           <p className="ready-note muted" role="status">
@@ -151,13 +183,26 @@ export default function Ready() {
             </div>
             <div className="ready-licence-links">
               <a
-                href="#certificate"
+                href="#licence"
                 onClick={(e) => {
                   e.preventDefault();
-                  setPdfNote("Your certificate downloads here once the voice service is live.");
+                  if (!id) return;
+                  const issued = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+                  void saveText(
+                    `mikaka-licence-${id}.txt`,
+                    licenceDocument({
+                      id,
+                      voice: voiceName,
+                      language: flow.language,
+                      seconds,
+                      paidKes: flow.paidKes,
+                      email: flow.email,
+                      issued,
+                    }),
+                  ).catch(() => setPdfNote("The licence file didn't download. Copy the ID above."));
                 }}
               >
-                Certificate (PDF)
+                Licence (text file)
               </a>
               {id && <Link href={`/verify/${id}`}>Check it</Link>}
             </div>
@@ -168,9 +213,9 @@ export default function Ready() {
         </section>
 
         <div className="ready-foot faint">
-          <p>We emailed you a link to come back to this clip for 7 days.</p>
+          <p>Save the file and the licence ID before you leave this page. We don't email a copy.</p>
           <p>
-            Making more than 10 minutes a month? <Link href="/pricing">Plans from $15</Link>
+            Making more than 10 minutes a month? <Link href="/pricing">See pricing</Link>
           </p>
         </div>
       </div>

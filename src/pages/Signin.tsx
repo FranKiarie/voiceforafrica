@@ -59,6 +59,22 @@ export default function Signin() {
     );
   }
 
+  if (API_MODE === "live") {
+    return (
+      <Shell>
+        <div className="narrow center signin">
+          <div className="signin-head">
+            <h1 className="signin-title">No account needed</h1>
+            <p className="muted">Pay as you go from the studio. Your download and licence stay on the ready page in this browser. Sign-in is not open yet.</p>
+          </div>
+          <Link href="/studio" className="btn btn-block">
+            Paste your script
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
+
   return (
     <Shell>
       <div className="narrow center signin">

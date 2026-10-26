@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { LANGUAGES, MAX_PAYG_CHARS, VOICES, formatDuration, quoteFor } from "../data";
+import { KES_PER_MINUTE, LANGUAGES, MAX_PAYG_CHARS, VOICES, formatDuration, formatKes, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
-import { createPreview, type Preview } from "../lib/api";
+import { ApiError, createPreview, type Preview } from "../lib/api";
 import "./Studio.css";
 
 const PREVIEW_KEY = "mv.previews";
@@ -86,8 +86,8 @@ export default function Studio() {
       savePreview(preview);
       setFlow({ language, voiceId, script, email: trimmed, adult: true });
       navigate("/listen");
-    } catch {
-      setError("We couldn't make your preview just now. Check your connection and try again.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "We couldn't make your preview just now. Check your connection and try again.");
       setBusy(false);
     }
   };
@@ -139,6 +139,7 @@ export default function Studio() {
           </label>
           <p id="script-count" className="faint studio-count" aria-live="polite">
             {q.chars.toLocaleString("en-KE")} characters · about {formatDuration(q.projectedSeconds)}
+            {q.kes > 0 ? ` · ${formatKes(q.kes)}` : ""}
           </p>
         </div>
 
@@ -183,7 +184,7 @@ export default function Studio() {
             {busy ? "Getting your preview…" : "Hear 45 seconds free"}
           </button>
           <p className="faint center studio-note">
-            Then KES 195 a minute if you like it · {left} free {left === 1 ? "preview" : "previews"} left today
+            Then {formatKes(KES_PER_MINUTE)} a minute if you like it · {left} free {left === 1 ? "preview" : "previews"} left today
           </p>
         </div>
       </form>

@@ -1,11 +1,18 @@
-// Shared product data. Prices and rules come from docs/voice-studio/PLAN.md
-// on the private voice-studio branch.
+// Shared product data. The shilling price lives in pricing.ts — one number.
 
 export const KES_PER_USD = 129.4;
-export const PAYG_USD_PER_MIN = 1.5;
-export const PREVIEW_SECONDS = 45;
-export const CHARS_PER_SECOND = 15;
-export const MAX_PAYG_CHARS = 4500;
+
+export {
+  CHARS_PER_SECOND,
+  KES_PER_MINUTE,
+  MAX_PAYG_CHARS,
+  MIN_SCRIPT_CHARS,
+  PREVIEW_SECONDS,
+  normalizeScript,
+  previewSource,
+  quoteFor,
+} from "./pricing";
+export type { Quote } from "./pricing";
 
 export type Language = { own: string; en?: string; code: string; premiumOnly?: boolean };
 
@@ -33,17 +40,24 @@ export const LANGUAGES: Language[] = [
   { own: "العربية", en: "Arabic", code: "ar" },
 ];
 
-export type Voice = { id: string; name: string; country: string; meta: string };
+export type Voice = {
+  id: string;
+  name: string;
+  country: string;
+  meta: string;
+  /** Gemini 3.8 extended voice. Kenyan Kiswahili + English. */
+  geminiVoice: string;
+  style: string;
+};
 
-// Google library voices confirmed for Kenya. Other countries appear after the
-// Phase 0 voice check.
+// Gemini 3.8 Flash voices for Swahili (Kenya). Other countries come later.
 export const VOICES: Voice[] = [
-  { id: "sw-ke-csagent-4", name: "Call Centre Agent 4", country: "Kenya", meta: "Kenya · Female · Kiswahili + English" },
-  { id: "sw-ke-advisor-1", name: "Advisor 1", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-tutor-2", name: "Tutor 2", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-concierge-3", name: "Concierge 3", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-assistant-5", name: "Assistant 5", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-training-6", name: "Training 6", country: "Kenya", meta: "Kenya · Kiswahili + English" },
+  { id: "sw-ke-csagent-4", geminiVoice: "Csagent4", style: "warm, clear, and professional", name: "Call Centre Agent 4", country: "Kenya", meta: "Kenya · Female · Kiswahili + English" },
+  { id: "sw-ke-advisor-1", geminiVoice: "Advisor1", style: "calm and reassuring", name: "Advisor 1", country: "Kenya", meta: "Kenya · Kiswahili + English" },
+  { id: "sw-ke-tutor-2", geminiVoice: "Tutor2", style: "bright and patient", name: "Tutor 2", country: "Kenya", meta: "Kenya · Kiswahili + English" },
+  { id: "sw-ke-concierge-3", geminiVoice: "Concierge3", style: "friendly and welcoming", name: "Concierge 3", country: "Kenya", meta: "Kenya · Kiswahili + English" },
+  { id: "sw-ke-assistant-5", geminiVoice: "Assistant5", style: "soft and helpful", name: "Assistant 5", country: "Kenya", meta: "Kenya · Kiswahili + English" },
+  { id: "sw-ke-training-6", geminiVoice: "Training6", style: "clear and steady", name: "Training 6", country: "Kenya", meta: "Kenya · Kiswahili + English" },
 ];
 
 export const COMING_SOON: { country: string; pattern: PatternId }[] = [
@@ -55,26 +69,6 @@ export const COMING_SOON: { country: string; pattern: PatternId }[] = [
 ];
 
 export type PatternId = "band" | "beads" | "adire" | "kente" | "ndebele" | "kitenge" | "bark" | "mud";
-
-export type Quote = {
-  chars: number;
-  projectedSeconds: number;
-  billedSeconds: number;
-  usd: number;
-  kes: number;
-};
-
-// Projected length = characters ÷ speaking rate × 1.1, rounded up to the next
-// 30 seconds, with a 1-minute minimum. The price shown is the price paid.
-export function quoteFor(script: string): Quote {
-  const chars = script.trim().length;
-  const projectedSeconds = Math.round(chars / CHARS_PER_SECOND);
-  const padded = (chars / CHARS_PER_SECOND) * 1.1;
-  const billedSeconds = Math.max(60, Math.ceil(padded / 30) * 30);
-  const usd = Math.round((billedSeconds / 60) * PAYG_USD_PER_MIN * 100) / 100;
-  const kes = Math.ceil((usd * KES_PER_USD) / 5) * 5;
-  return { chars, projectedSeconds, billedSeconds, usd, kes };
-}
 
 export function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
