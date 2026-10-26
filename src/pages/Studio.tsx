@@ -3,7 +3,7 @@ import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
 import { LANGUAGES, MAX_PAYG_CHARS, VOICES, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
-import { createPreview, type Preview } from "../lib/api";
+import { ApiError, createPreview, type Preview } from "../lib/api";
 import { supabase, useSession } from "../lib/supabase";
 import "./Studio.css";
 
@@ -103,9 +103,20 @@ export default function Studio() {
       savePreview(preview);
       setFlow({ language, voiceId, script, email: trimmed, adult: true });
       navigate("/listen");
-    } catch {
-      setError("We couldn't make your preview just now. Check your connection and try again.");
+    } catch (err) {
       setBusy(false);
+      if (err instanceof ApiError && err.status === 429) {
+        // The server counts by email and network too, so trust it over this browser's count.
+        recordPreview(PREVIEWS_PER_DAY);
+        setUsed(PREVIEWS_PER_DAY);
+        setLimitHit(true);
+      } else if (err instanceof ApiError && err.status < 500) {
+        setError(err.message);
+      } else if (err instanceof ApiError) {
+        setError("We couldn't make your preview just now. Please try again in a minute.");
+      } else {
+        setError("We couldn't reach the server. Check your connection and try again.");
+      }
     }
   };
 
