@@ -1,6 +1,15 @@
 // Voices with a recorded hello in public/voices/<id>.mp3. Only list a voice once
 // its file says the right thing in the right voice.
 export const SAMPLE_IDS: string[] = [
+  // Kenyan library voices: our own hello, with the spoken name cut out.
+  "wanjiru",
+  "nyokabi",
+  "makena",
+  "akinyi",
+  "chebet",
+  "njeri",
+  "zawadi",
+  "kamau",
   // Designed voices: Google's own sample, cut to 15 s.
   "funmi",
   "tunde",
