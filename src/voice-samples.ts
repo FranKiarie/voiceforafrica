@@ -1,3 +1,33 @@
 // Voices with a recorded hello in public/voices/<id>.mp3. Only list a voice once
 // its file says the right thing in the right voice.
-export const SAMPLE_IDS: string[] = [];
+export const SAMPLE_IDS: string[] = [
+  // Designed voices: Google's own sample, cut to 15 s.
+  "funmi",
+  "tunde",
+  "emeka",
+  "chiamaka",
+  "aisha",
+  "musa",
+  "akosua",
+  "kwame",
+  "nakato",
+  "mukasa",
+  "rehema",
+  "juma",
+  "selam",
+  "abebe",
+  "uwase",
+  "mugisha",
+  "rufaro",
+  "tendai",
+  "chileshe",
+  "mwila",
+  "awa",
+  "moussa",
+  "aya",
+  "yao",
+  "bijou",
+  "ilunga",
+  "salma",
+  "youssef",
+];

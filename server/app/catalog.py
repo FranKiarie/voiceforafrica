@@ -43,6 +43,46 @@ VOICES: dict[str, tuple[str, str]] = {
     "mariam": ("Mariam", "ar-eg-storyteller-11"),
     "omar": ("Omar", "ar-eg-podcaster-3"),
     "karim": ("Karim", "ar-eg-commercial-1"),
+    # Nigeria (designed voice, en-NG)
+    "funmi": ("Funmi", "voice_7xoag99v4uko"),
+    "tunde": ("Tunde", "voice_6ls3v2bd4hl0"),
+    "emeka": ("Emeka", "voice_2sqa74ccryq3"),
+    "chiamaka": ("Chiamaka", "voice_f6s0qhivyaxt"),
+    "aisha": ("Aisha", "voice_7mavwhztafj5"),
+    "musa": ("Musa", "voice_y2siuh963chh"),
+    # Ghana (designed voice, en-GH)
+    "akosua": ("Akosua", "voice_6uuwkzzqi4mz"),
+    "kwame": ("Kwame", "voice_ipcpof5xl68n"),
+    # Uganda (designed voice, en-UG)
+    "nakato": ("Nakato", "voice_b4nfzw2y6wty"),
+    "mukasa": ("Mukasa", "voice_0j2v8dr33af3"),
+    # Tanzania (designed voice, sw-TZ; Rehema was created as plain sw)
+    "rehema": ("Rehema", "voice_49yqmebq9u2g"),
+    "juma": ("Juma", "voice_nlpb9q9f05d1"),
+    # Ethiopia (designed voice, en-ET)
+    "selam": ("Selam", "voice_iaodnu93l25z"),
+    "abebe": ("Abebe", "voice_5kg0bv2jjfqv"),
+    # Rwanda (designed voice, en-RW)
+    "uwase": ("Uwase", "voice_v8r2nf6gu97u"),
+    "mugisha": ("Mugisha", "voice_bamlae64ubmo"),
+    # Zimbabwe (designed voice, en-ZW)
+    "rufaro": ("Rufaro", "voice_o3k6sej5jqjj"),
+    "tendai": ("Tendai", "voice_nu8cpioqed6k"),
+    # Zambia (designed voice, en-ZM)
+    "chileshe": ("Chileshe", "voice_z31w4d08kup9"),
+    "mwila": ("Mwila", "voice_ulk6lq8etxzp"),
+    # Senegal (designed voice, fr-SN)
+    "awa": ("Awa", "voice_l7mx3678006w"),
+    "moussa": ("Moussa", "voice_cevj7r48ur5h"),
+    # Côte d'Ivoire (designed voice, fr-CI)
+    "aya": ("Aya", "voice_ng7ta32xw356"),
+    "yao": ("Yao", "voice_xijrcfsky3ot"),
+    # DR Congo (designed voice, fr-CD)
+    "bijou": ("Bijou", "voice_gw6kz7810n0o"),
+    "ilunga": ("Ilunga", "voice_0tbunxctet34"),
+    # Morocco (designed voice, ar-MA)
+    "salma": ("Salma", "voice_mpcc9bc0bkg3"),
+    "youssef": ("Youssef", "voice_0sgmkojykn3x"),
 }
 
 # Names used for a few hours on 2026-10-27, before every name matched its
