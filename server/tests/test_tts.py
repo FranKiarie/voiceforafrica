@@ -187,7 +187,7 @@ def test_render_mp3_uses_the_library_voice_and_purpose(keyed, monkeypatch):
         return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
 
     _mock_client(monkeypatch, handler)
-    mp3, _ = asyncio.run(tts.render_mp3("Habari yako.", "kwame", "sw", "documentary"))
+    mp3, _ = asyncio.run(tts.render_mp3("Habari yako.", "kamau", "sw", "documentary"))
     assert mp3
     assert seen["body"]["generation_config"]["speech_config"][0]["voice"] == "sw-ke-tutor-3"
     style = seen["body"]["input"][0]["content"][0]["annotations"][0]["style"]

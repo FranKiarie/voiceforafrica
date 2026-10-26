@@ -1,3 +1,5 @@
+import { SAMPLE_IDS } from "./voice-samples";
+
 // Shared product data. Prices and rules come from docs/voice-studio/PLAN.md
 // on the private voice-studio branch.
 
@@ -34,45 +36,90 @@ export const LANGUAGES: Language[] = [
 ];
 
 export type Gender = "Female" | "Male";
-export type Voice = { id: string; name: string; gender: Gender; style: string; meta: string; sample: boolean };
+export type Voice = {
+  id: string;
+  name: string;
+  gender: Gender;
+  style: string;
+  accent: string;
+  meta: string;
+  sample: boolean;
+};
 
-// Voices with a recorded hello in public/voices. The rest follow once the
-// speech quota allows; until then they have no play button.
-const WITH_SAMPLE = new Set(["amara", "thandiwe", "naledi", "akinyi", "folake", "selam", "zawadi", "kwame"]);
+export type Accent = { id: string; label: string };
 
-// Google library voices with a Kenyan accent, shown under African first names.
-// The server maps each id to the library voice (server/app/catalog.py).
-const voice = (id: string, name: string, gender: Gender, style: string): Voice => ({
+// In the order the accent picker shows them.
+export const ACCENTS: Accent[] = [
+  { id: "ke", label: "Kenyan" },
+  { id: "ng", label: "Nigerian" },
+  { id: "za", label: "South African" },
+  { id: "gh", label: "Ghanaian" },
+  { id: "tz", label: "Tanzanian" },
+  { id: "ug", label: "Ugandan" },
+  { id: "rw", label: "Rwandan" },
+  { id: "et", label: "Ethiopian" },
+  { id: "zw", label: "Zimbabwean" },
+  { id: "zm", label: "Zambian" },
+  { id: "sn", label: "Senegalese French" },
+  { id: "ci", label: "Ivorian French" },
+  { id: "cd", label: "Congolese French" },
+  { id: "eg", label: "Egyptian Arabic" },
+  { id: "ma", label: "Moroccan Arabic" },
+];
+
+export const accentLabel = (id: string) => ACCENTS.find((a) => a.id === id)?.label ?? id;
+
+// Voices with a recorded hello in public/voices; the rest show "sample soon".
+const WITH_SAMPLE = new Set<string>(SAMPLE_IDS);
+
+// Each name matches where its voice comes from. The server maps the id to the
+// Google voice (server/app/catalog.py), so the site never sees Google's ids.
+const voice = (id: string, name: string, gender: Gender, accent: string, style: string): Voice => ({
   id,
   name,
   gender,
   style,
-  meta: `${gender} · ${style} · Kenyan accent`,
+  accent,
+  meta: `${gender} · ${style} · ${accentLabel(accent)} accent`,
   sample: WITH_SAMPLE.has(id),
 });
 
 export const VOICES: Voice[] = [
-  voice("amara", "Amara", "Female", "Warm and reassuring"),
-  voice("thandiwe", "Thandiwe", "Female", "Rich, soothing narrator"),
-  voice("naledi", "Naledi", "Female", "Bright video host"),
-  voice("akinyi", "Akinyi", "Female", "Friendly storyteller"),
-  voice("folake", "Folake", "Female", "Energetic and colourful"),
-  voice("selam", "Selam", "Female", "Light and precise"),
-  voice("ngozi", "Ngozi", "Female", "Crisp and eager"),
-  voice("zawadi", "Zawadi", "Female", "Laid-back and kind"),
-  voice("kwame", "Kwame", "Male", "Confident newsreader"),
-  voice("thabo", "Thabo", "Male", "Deep, intimate radio voice"),
-  voice("kofi", "Kofi", "Male", "Lively podcast host"),
-  voice("abebe", "Abebe", "Male", "Seasoned and authoritative"),
-  voice("sekou", "Sekou", "Male", "Commercial announcer"),
-  voice("bongani", "Bongani", "Male", "Warm video host"),
-  voice("jabari", "Jabari", "Male", "Young storyteller"),
-  voice("chidi", "Chidi", "Male", "Fast and punchy"),
-  voice("tendai", "Tendai", "Male", "Smooth and resonant"),
-  voice("otieno", "Otieno", "Male", "Natural and clear"),
+  voice("wanjiru", "Wanjiru", "Female", "ke", "Warm and reassuring"),
+  voice("nyokabi", "Nyokabi", "Female", "ke", "Rich, soothing narrator"),
+  voice("makena", "Makena", "Female", "ke", "Bright video host"),
+  voice("akinyi", "Akinyi", "Female", "ke", "Friendly storyteller"),
+  voice("chebet", "Chebet", "Female", "ke", "Energetic and colourful"),
+  voice("njeri", "Njeri", "Female", "ke", "Light and precise"),
+  voice("atieno", "Atieno", "Female", "ke", "Crisp and eager"),
+  voice("zawadi", "Zawadi", "Female", "ke", "Laid-back and kind"),
+  voice("kamau", "Kamau", "Male", "ke", "Confident newsreader"),
+  voice("onyango", "Onyango", "Male", "ke", "Deep, intimate radio voice"),
+  voice("baraka", "Baraka", "Male", "ke", "Lively podcast host"),
+  voice("kiprono", "Kiprono", "Male", "ke", "Seasoned and authoritative"),
+  voice("mwangi", "Mwangi", "Male", "ke", "Commercial announcer"),
+  voice("mutua", "Mutua", "Male", "ke", "Warm video host"),
+  voice("jabari", "Jabari", "Male", "ke", "Young storyteller"),
+  voice("kibet", "Kibet", "Male", "ke", "Fast and punchy"),
+  voice("omondi", "Omondi", "Male", "ke", "Smooth and resonant"),
+  voice("otieno", "Otieno", "Male", "ke", "Natural and clear"),
+  voice("thandiwe", "Thandiwe", "Female", "za", "Calm documentary narrator"),
+  voice("lerato", "Lerato", "Female", "za", "Bright advert voice"),
+  voice("naledi", "Naledi", "Female", "za", "Friendly video host"),
+  voice("thabo", "Thabo", "Male", "za", "Documentary narrator"),
+  voice("sipho", "Sipho", "Male", "za", "Confident advert voice"),
+  voice("bongani", "Bongani", "Male", "za", "Clear news voice"),
+  voice("nour", "Nour", "Female", "eg", "Radio host"),
+  voice("mariam", "Mariam", "Female", "eg", "Light, precise storyteller"),
+  voice("omar", "Omar", "Male", "eg", "Deep, unhurried narrator"),
+  voice("karim", "Karim", "Male", "eg", "Resonant advert voice"),
+  // DESIGNED_VOICES
 ];
 
-export const DEFAULT_VOICE = "amara";
+/** Accents that have at least one voice, in picker order. */
+export const LIVE_ACCENTS: Accent[] = ACCENTS.filter((a) => VOICES.some((v) => v.accent === a.id));
+
+export const DEFAULT_VOICE = "wanjiru";
 
 /** A five-second hello in the voice, served from public/voices. */
 export const voiceSample = (id: string) => `/voices/${id}.mp3`;
@@ -96,14 +143,6 @@ export const PURPOSES: Purpose[] = [
 ];
 
 export const DEFAULT_PURPOSE = "general";
-
-export const COMING_SOON: { country: string; pattern: PatternId }[] = [
-  { country: "Nigeria", pattern: "adire" },
-  { country: "Ghana", pattern: "kente" },
-  { country: "South Africa", pattern: "ndebele" },
-  { country: "Tanzania", pattern: "kitenge" },
-  { country: "Uganda", pattern: "bark" },
-];
 
 export type PatternId = "band" | "beads" | "adire" | "kente" | "ndebele" | "kitenge" | "bark" | "mud";
 

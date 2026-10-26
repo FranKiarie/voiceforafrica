@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { LANGUAGES, MAX_PAYG_CHARS, PURPOSES, VOICES, formatDuration, quoteFor } from "../data";
+import { LANGUAGES, LIVE_ACCENTS, MAX_PAYG_CHARS, PURPOSES, VOICES, accentLabel, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { ApiError, createPreview, type Preview } from "../lib/api";
 import { useVoiceSample } from "../lib/sample";
@@ -68,6 +68,7 @@ export default function Studio() {
   const flow = useFlow();
   const [language, setLanguage] = useState(flow.language);
   const [voiceId, setVoiceId] = useState(flow.voiceId);
+  const [accent, setAccent] = useState(() => VOICES.find((v) => v.id === flow.voiceId)?.accent ?? "ke");
   const [purpose, setPurpose] = useState(flow.purpose);
   const [sampling, toggleSample] = useVoiceSample();
   const [script, setScript] = useState(flow.script);
@@ -84,6 +85,14 @@ export default function Studio() {
 
   const lang = LANGUAGES.find((l) => l.code === language);
   const voice = VOICES.find((v) => v.id === voiceId) ?? VOICES[0];
+  const accentVoices = VOICES.filter((v) => v.accent === accent);
+
+  const chooseAccent = (id: string) => {
+    setAccent(id);
+    // Keep the voice if it fits the new accent, else take that accent's first voice.
+    const first = VOICES.find((v) => v.accent === id);
+    if (first && voice.accent !== id) setVoiceId(first.id);
+  };
   const q = quoteFor(script);
   const left = Math.max(0, PREVIEWS_PER_DAY - used);
   const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(useEmail.trim()) && adult;
@@ -152,20 +161,34 @@ export default function Studio() {
             </select>
           </label>
           <label className="field">
-            Voice
-            <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
-              {(["Female", "Male"] as const).map((g) => (
+            Accent
+            <select value={accent} onChange={(e) => chooseAccent(e.target.value)}>
+              {LIVE_ACCENTS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="field">
+          Voice
+          <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
+            {(["Female", "Male"] as const).map((g) => {
+              const group = accentVoices.filter((v) => v.gender === g);
+              return group.length ? (
                 <optgroup key={g} label={g}>
-                  {VOICES.filter((v) => v.gender === g).map((v) => (
+                  {group.map((v) => (
                     <option key={v.id} value={v.id}>
                       {`${v.name} · ${v.style}`}
                     </option>
                   ))}
                 </optgroup>
-              ))}
-            </select>
-          </label>
-        </div>
+              ) : null;
+            })}
+          </select>
+        </label>
         {voice.sample ? (
           <button
             type="button"
@@ -181,10 +204,10 @@ export default function Studio() {
               )}
             </svg>
             {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
-            <span className="faint">{` · ${voice.gender} · Kenyan accent`}</span>
+            <span className="faint">{` · ${voice.gender} · ${accentLabel(voice.accent)} accent`}</span>
           </button>
         ) : (
-          <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · Kenyan accent · sample coming soon`}</p>
+          <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · ${accentLabel(voice.accent)} accent · sample coming soon`}</p>
         )}
         {lang?.premiumOnly && (
           <p className="faint studio-hint">

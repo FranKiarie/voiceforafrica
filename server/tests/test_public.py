@@ -100,7 +100,7 @@ BASE = "/api/v1/voice-studio"
 def test_preview_happy_path(fake, client):
     res = client.post(
         f"{BASE}/previews",
-        json={"script": SCRIPT, "voiceId": "amara", "language": "sw", "email": "Ann@Example.COM"},
+        json={"script": SCRIPT, "voiceId": "wanjiru", "language": "sw", "email": "Ann@Example.COM"},
         headers={"Fly-Client-IP": "41.90.1.2"},
     )
     assert res.status_code == 200, res.text
@@ -113,7 +113,7 @@ def test_preview_happy_path(fake, client):
     assert table == "voice_previews"
     assert row["email"] == "ann@example.com"
     assert row["ip"] == "41.90.1.2"
-    assert row["storage_path"] == path and row["voice_id"] == "amara"
+    assert row["storage_path"] == path and row["voice_id"] == "wanjiru"
     assert len(row["script_sha256"]) == 64
     assert fake["updates"] == [("voice_previews", {"id": f"eq.{body['previewId']}"}, {"seconds": 47})]
     assert fake["deletes"] == []
@@ -126,7 +126,7 @@ def test_preview_rate_limited(fake, client):
     fake["count"] = 3
     res = client.post(
         f"{BASE}/previews",
-        json={"script": SCRIPT, "voiceId": "amara", "language": "sw", "email": "ann@example.com"},
+        json={"script": SCRIPT, "voiceId": "wanjiru", "language": "sw", "email": "ann@example.com"},
     )
     assert res.status_code == 429
     assert res.json() == {"detail": "You've used today's 3 free previews. Try again tomorrow."}
@@ -136,7 +136,7 @@ def test_preview_rate_limited(fake, client):
 def test_preview_rejects_bad_input(fake, client):
     res = client.post(f"{BASE}/previews", json={"script": SCRIPT, "voiceId": "nope", "language": "sw", "email": "a@b.co"})
     assert res.status_code == 400
-    res = client.post(f"{BASE}/previews", json={"script": SCRIPT, "voiceId": "amara", "language": "sw", "email": "not-an-email"})
+    res = client.post(f"{BASE}/previews", json={"script": SCRIPT, "voiceId": "wanjiru", "language": "sw", "email": "not-an-email"})
     assert res.status_code == 400
 
 
@@ -214,7 +214,7 @@ def test_format_length():
     assert routes_public.format_length(145) == "2 min 25 s"
 
 
-PREVIEW = {"script": SCRIPT, "voiceId": "amara", "language": "sw"}
+PREVIEW = {"script": SCRIPT, "voiceId": "wanjiru", "language": "sw"}
 
 
 def test_preview_limit_counts_email_or_ip(fake, client):
@@ -267,7 +267,7 @@ def test_verify_rejects_filter_syntax(fake, client):
 def test_preview_passes_purpose_to_the_render(fake, client):
     res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com", "purpose": "radio-ad"})
     assert res.status_code == 200, res.text
-    assert fake["rendered"][1:] == ("amara", "sw", "radio-ad")
+    assert fake["rendered"][1:] == ("wanjiru", "sw", "radio-ad")
 
 
 def test_preview_unknown_purpose_falls_back_to_general(fake, client):
@@ -279,11 +279,17 @@ def test_preview_unknown_purpose_falls_back_to_general(fake, client):
 def test_preview_translates_an_old_library_voice_id(fake, client):
     res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": "sw-ke-csagent-4", "email": "ann@example.com"})
     assert res.status_code == 200, res.text
-    assert fake["rendered"][1] == "amara"
-    assert fake["inserts"][0][1]["voice_id"] == "amara"
+    assert fake["rendered"][1] == "wanjiru"
+    assert fake["inserts"][0][1]["voice_id"] == "wanjiru"
 
 
 def test_preview_refuses_a_voice_not_offered(fake, client):
     for voice in ("sw-ke-training-7", "puck", ""):
         res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": voice, "email": "ann@example.com"})
         assert res.status_code == 400
+
+
+def test_preview_translates_a_renamed_voice(fake, client):
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": "amara", "email": "ann@example.com"})
+    assert res.status_code == 200, res.text
+    assert fake["rendered"][1] == "wanjiru"

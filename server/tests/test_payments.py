@@ -275,7 +275,7 @@ def test_generate_issues_licence(env, monkeypatch):
     row = env.db.tables["voice_jobs"][JOB_ID]
     assert row["status"] == "ready" and row["audio_seconds"] == 9
     lic = env.db.tables["voice_licences"][row["licence_id"]]
-    assert lic["job_id"] == JOB_ID and lic["tier"] == "Commercial" and lic["voice_name"] == "Amara"
+    assert lic["job_id"] == JOB_ID and lic["tier"] == "Commercial" and lic["voice_name"] == "Wanjiru"
 
 
 # ---- webhook: handle first, record after ----------------------------------
@@ -349,7 +349,7 @@ def test_loaders_refuse_bad_ids():
 
 def _payg_body(email="Buyer@Example.com"):
     return {"previewId": "stale-preview", "script": "Karibu sana kwa Mikaka Voice leo.",
-            "voiceId": "amara", "language": "sw", "email": email}
+            "voiceId": "wanjiru", "language": "sw", "email": email}
 
 
 def _plan_body(email="buyer@example.com"):
@@ -400,7 +400,7 @@ def test_payg_checkout_translates_an_old_library_voice_id(env):
     res = env.client.post("/payg/checkout", json={**_payg_body(), "voiceId": "sw-ke-csagent-4"})
     assert res.status_code == 200, res.text
     [row] = env.db.tables["voice_jobs"].values()
-    assert row["voice_id"] == "amara"
+    assert row["voice_id"] == "wanjiru"
 
 
 def test_payg_checkout_stores_purpose(env):
@@ -422,7 +422,7 @@ def test_generate_renders_with_the_jobs_purpose(env, monkeypatch):
     asyncio.run(jobs.generate(JOB_ID))
     assert seen["args"] == ("sw-ke-csagent-4", "news")
     [licence] = env.db.tables["voice_licences"].values()
-    assert licence["voice_name"] == "Amara"
+    assert licence["voice_name"] == "Wanjiru"
 
 
 # ---- resuming stuck renders -----------------------------------------------------

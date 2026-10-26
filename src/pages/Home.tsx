@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Drum, PatternDot, Shell } from "../components/Shell";
 import { Link } from "../router";
-import { COMING_SOON, DEFAULT_VOICE, LANGUAGES, VOICES } from "../data";
+import { DEFAULT_VOICE, LANGUAGES, LIVE_ACCENTS, VOICES, accentLabel } from "../data";
 import { useVoiceSample } from "../lib/sample";
 import "./Home.css";
 
@@ -25,7 +25,6 @@ const USES = [
   { title: "Announcements", line: "For shops, schools, churches and events, in the local language.", icon: ICONS.bell },
 ];
 
-const VOICE_FILTERS = ["All", "Female", "Male"];
 
 function LanguageRun({ hidden }: { hidden?: boolean }) {
   return (
@@ -49,9 +48,9 @@ function LanguageRun({ hidden }: { hidden?: boolean }) {
 
 export default function Home() {
   const [playingId, toggleSample] = useVoiceSample();
-  const [who, setWho] = useState("All");
+  const [accent, setAccent] = useState("ke");
 
-  const voices = who === "All" ? VOICES : VOICES.filter((v) => v.gender === who);
+  const voices = VOICES.filter((v) => v.accent === accent);
   const hero = VOICES.find((v) => v.id === DEFAULT_VOICE) ?? VOICES[0];
   const heroPlaying = playingId === hero.id;
 
@@ -76,7 +75,7 @@ export default function Home() {
             label={heroPlaying ? `Pause ${hero.name}` : `Play ${hero.name}`}
             onClick={() => toggleSample(hero.id)}
           />
-          <p className="faint home-sample-caption">{`Hear ${hero.name} · Kenyan accent`}</p>
+          <p className="faint home-sample-caption">{`Hear ${hero.name} · ${accentLabel(hero.accent)} accent`}</p>
         </div>
       </section>
 
@@ -122,10 +121,12 @@ export default function Home() {
         <div className="voices-head">
           <h2 id="voices-title">Voices</h2>
           <label className="voices-filter faint">
-            Show
-            <select value={who} onChange={(e) => setWho(e.target.value)}>
-              {VOICE_FILTERS.map((o) => (
-                <option key={o}>{o}</option>
+            Accent
+            <select value={accent} onChange={(e) => setAccent(e.target.value)}>
+              {LIVE_ACCENTS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
               ))}
             </select>
           </label>
@@ -156,15 +157,6 @@ export default function Home() {
           })}
         </ul>
 
-        <div className="voices-soon faint">
-          <span>Coming after our voice check:</span>
-          {COMING_SOON.map((s) => (
-            <span className="soon-item" key={s.country}>
-              <PatternDot pattern={s.pattern} size={14} />
-              {s.country}
-            </span>
-          ))}
-        </div>
       </section>
     </Shell>
   );
