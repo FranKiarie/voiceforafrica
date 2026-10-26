@@ -18,6 +18,7 @@ from typing import AsyncIterator
 import httpx
 import lameenc
 
+from .catalog import google_voice, purpose_style
 from .config import settings
 from .pricing import CHARS_PER_SECOND, PREMIUM_ONLY_LANGS
 
@@ -221,7 +222,7 @@ def _redact(text: str) -> str:
     return _KEY_SHAPE.sub("[redacted]", text)
 
 
-async def _synthesize_chunk(client: httpx.AsyncClient, text: str, voice_id: str, model: str) -> bytes:
+async def _synthesize_chunk(client: httpx.AsyncClient, text: str, voice_id: str, model: str, style: str) -> bytes:
     loop = asyncio.get_running_loop()
     timeout = float(settings.tts_timeout_seconds)
     phase = "first audio"
@@ -234,7 +235,7 @@ async def _synthesize_chunk(client: httpx.AsyncClient, text: str, voice_id: str,
             async with client.stream(
                 "POST", INTERACTIONS_URL,
                 headers={"x-goog-api-key": settings.google_ai_api_key},
-                json=speech_request(model=model, voice=voice_id, text=text, style=build_speech_style()),
+                json=speech_request(model=model, voice=voice_id, text=text, style=style),
                 timeout=timeout,
             ) as response:
                 if response.is_error:
@@ -290,9 +291,10 @@ async def _synthesize_chunk(client: httpx.AsyncClient, text: str, voice_id: str,
     return bytes(audio)
 
 
-async def synthesize_pcm(text: str, voice_id: str, model: str) -> bytes:
+async def synthesize_pcm(text: str, voice_id: str, model: str, style: str | None = None) -> bytes:
     if not settings.google_ai_api_key:
         raise TtsError("Voice service not configured", retryable=False)
+    style = style or build_speech_style()
     chunks = chunk_text(text)
     if not chunks:
         raise TtsError("Nothing to read", retryable=False)
@@ -301,7 +303,7 @@ async def synthesize_pcm(text: str, voice_id: str, model: str) -> bytes:
         for chunk in chunks:
             for attempt in range(MAX_ATTEMPTS):
                 try:
-                    out.extend(await _synthesize_chunk(client, chunk, voice_id, model))
+                    out.extend(await _synthesize_chunk(client, chunk, voice_id, model, style))
                     break
                 except TtsError as exc:
                     if not exc.retryable or attempt == MAX_ATTEMPTS - 1:
@@ -325,7 +327,8 @@ def pcm_seconds(pcm: bytes, sample_rate: int = SAMPLE_RATE) -> int:
     return round(len(pcm) / 2 / sample_rate)
 
 
-async def render_mp3(text: str, voice_id: str, language: str) -> tuple[bytes, int]:
+async def render_mp3(text: str, voice_id: str, language: str, purpose: str | None = None) -> tuple[bytes, int]:
+    """voice_id is the public catalogue id; purpose picks the delivery note."""
     model = pick_model(language)
-    pcm = await synthesize_pcm(text, voice_id, model)
+    pcm = await synthesize_pcm(text, google_voice(voice_id), model, purpose_style(purpose))
     return encode_mp3(pcm), pcm_seconds(pcm)

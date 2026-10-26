@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Drum, PatternDot, Shell } from "../components/Shell";
 import { Link } from "../router";
-import { COMING_SOON, LANGUAGES, VOICES } from "../data";
+import { COMING_SOON, DEFAULT_VOICE, LANGUAGES, VOICES } from "../data";
+import { useVoiceSample } from "../lib/sample";
 import "./Home.css";
 
 const DOTS = ["#D0442A", "#E8A33C", "#3F57B8", "#2E9E6B"];
@@ -24,8 +25,7 @@ const USES = [
   { title: "Announcements", line: "For shops, schools, churches and events, in the local language.", icon: ICONS.bell },
 ];
 
-// Every Kenyan voice speaks both, so the filter keeps all six for now.
-const VOICE_LANGS = ["All", "English", "Kiswahili"];
+const VOICE_FILTERS = ["All", "Female", "Male"];
 
 function LanguageRun({ hidden }: { hidden?: boolean }) {
   return (
@@ -48,11 +48,12 @@ function LanguageRun({ hidden }: { hidden?: boolean }) {
 }
 
 export default function Home() {
-  const [samplePlaying, setSamplePlaying] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const [lang, setLang] = useState("All");
+  const [playingId, toggleSample] = useVoiceSample();
+  const [who, setWho] = useState("All");
 
-  const voices = VOICES; // English and Kiswahili cover every voice today.
+  const voices = who === "All" ? VOICES : VOICES.filter((v) => v.gender === who);
+  const hero = VOICES.find((v) => v.id === DEFAULT_VOICE) ?? VOICES[0];
+  const heroPlaying = playingId === hero.id;
 
   return (
     <Shell>
@@ -71,11 +72,11 @@ export default function Home() {
         <div className="home-sample">
           <Drum
             size={96}
-            playing={samplePlaying}
-            label={samplePlaying ? "Pause Call Centre Agent 4" : "Play Call Centre Agent 4"}
-            onClick={() => setSamplePlaying((p) => !p)}
+            playing={heroPlaying}
+            label={heroPlaying ? `Pause ${hero.name}` : `Play ${hero.name}`}
+            onClick={() => toggleSample(hero.id)}
           />
-          <p className="faint home-sample-caption">Hear Call Centre Agent 4 · Kenya</p>
+          <p className="faint home-sample-caption">{`Hear ${hero.name} · Kenyan accent`}</p>
         </div>
       </section>
 
@@ -121,9 +122,9 @@ export default function Home() {
         <div className="voices-head">
           <h2 id="voices-title">Voices</h2>
           <label className="voices-filter faint">
-            Language
-            <select value={lang} onChange={(e) => setLang(e.target.value)}>
-              {VOICE_LANGS.map((o) => (
+            Show
+            <select value={who} onChange={(e) => setWho(e.target.value)}>
+              {VOICE_FILTERS.map((o) => (
                 <option key={o}>{o}</option>
               ))}
             </select>
@@ -139,7 +140,7 @@ export default function Home() {
                   size={44}
                   playing={playing}
                   label={playing ? `Pause ${v.name}` : `Play ${v.name}`}
-                  onClick={() => setPlayingId(playing ? null : v.id)}
+                  onClick={() => toggleSample(v.id)}
                 />
                 <div className="voice-text">
                   <span className="voice-name">{v.name}</span>

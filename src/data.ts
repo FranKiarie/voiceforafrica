@@ -33,18 +33,64 @@ export const LANGUAGES: Language[] = [
   { own: "العربية", en: "Arabic", code: "ar" },
 ];
 
-export type Voice = { id: string; name: string; country: string; meta: string };
+export type Gender = "Female" | "Male";
+export type Voice = { id: string; name: string; gender: Gender; style: string; meta: string };
 
-// Google library voices confirmed for Kenya. Other countries appear after the
-// Phase 0 voice check.
+// Google library voices with a Kenyan accent, shown under African first names.
+// The server maps each id to the library voice (server/app/catalog.py).
+const voice = (id: string, name: string, gender: Gender, style: string): Voice => ({
+  id,
+  name,
+  gender,
+  style,
+  meta: `${gender} · ${style} · Kenyan accent`,
+});
+
 export const VOICES: Voice[] = [
-  { id: "sw-ke-csagent-4", name: "Call Centre Agent 4", country: "Kenya", meta: "Kenya · Female · Kiswahili + English" },
-  { id: "sw-ke-advisor-1", name: "Advisor 1", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-tutor-2", name: "Tutor 2", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-concierge-3", name: "Concierge 3", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-assistant-5", name: "Assistant 5", country: "Kenya", meta: "Kenya · Kiswahili + English" },
-  { id: "sw-ke-training-6", name: "Training 6", country: "Kenya", meta: "Kenya · Kiswahili + English" },
+  voice("amara", "Amara", "Female", "Warm and reassuring"),
+  voice("thandiwe", "Thandiwe", "Female", "Rich, soothing narrator"),
+  voice("naledi", "Naledi", "Female", "Bright video host"),
+  voice("akinyi", "Akinyi", "Female", "Friendly storyteller"),
+  voice("adwoa", "Adwoa", "Female", "Lively podcast host"),
+  voice("folake", "Folake", "Female", "Energetic and colourful"),
+  voice("selam", "Selam", "Female", "Light and precise"),
+  voice("ngozi", "Ngozi", "Female", "Crisp and eager"),
+  voice("zawadi", "Zawadi", "Female", "Laid-back and kind"),
+  voice("kwame", "Kwame", "Male", "Confident newsreader"),
+  voice("thabo", "Thabo", "Male", "Deep, intimate radio voice"),
+  voice("abebe", "Abebe", "Male", "Seasoned and authoritative"),
+  voice("sekou", "Sekou", "Male", "Commercial announcer"),
+  voice("bongani", "Bongani", "Male", "Warm video host"),
+  voice("jabari", "Jabari", "Male", "Young storyteller"),
+  voice("chidi", "Chidi", "Male", "Fast and punchy"),
+  voice("tendai", "Tendai", "Male", "Smooth and resonant"),
+  voice("otieno", "Otieno", "Male", "Natural and clear"),
 ];
+
+export const DEFAULT_VOICE = "amara";
+
+/** A five-second hello in the voice, served from public/voices. */
+export const voiceSample = (id: string) => `/voices/${id}.mp3`;
+
+export type Purpose = { id: string; label: string };
+
+// What the voice-over is for. The server turns each into a short delivery note.
+export const PURPOSES: Purpose[] = [
+  { id: "general", label: "General voice-over" },
+  { id: "radio-ad", label: "Radio ad" },
+  { id: "commercial", label: "TV or online ad" },
+  { id: "documentary", label: "Documentary" },
+  { id: "explainer", label: "Corporate or explainer video" },
+  { id: "training", label: "Training or e-learning" },
+  { id: "story", label: "Audiobook or story" },
+  { id: "news", label: "News read" },
+  { id: "podcast", label: "Podcast intro or outro" },
+  { id: "phone", label: "Phone menu or on-hold message" },
+  { id: "social", label: "Social media video" },
+  { id: "announcement", label: "Event or public announcement" },
+];
+
+export const DEFAULT_PURPOSE = "general";
 
 export const COMING_SOON: { country: string; pattern: PatternId }[] = [
   { country: "Nigeria", pattern: "adire" },

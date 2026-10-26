@@ -16,7 +16,7 @@ except Exception:  # noqa: BLE001
     class TtsError(Exception):
         pass
 
-    async def render_mp3(text, voice_id, language):
+    async def render_mp3(text, voice_id, language, purpose=None):
         return b"ID3fake", 12
 
     stub.TtsError = TtsError
@@ -134,11 +134,12 @@ def env(monkeypatch):
                                  monkeypatch=monkeypatch)
 
 
-def _job(amount_kes=195, status="paying"):
+def _job(amount_kes=195, status="paying", **extra):
     return {
         "id": JOB_ID, "email": "a@b.co", "voice_id": "sw-ke-csagent-4", "language": "sw",
         "script": "Karibu sana kwa Mikaka Voice leo.", "chars": 33, "projected_seconds": 2,
         "billed_seconds": 60, "amount_kes": amount_kes, "amount_usd": 1.5, "status": status,
+        **extra,
     }
 
 
@@ -266,7 +267,7 @@ def test_get_job_ready_returns_signed_audio(env):
 def test_generate_issues_licence(env, monkeypatch):
     env.db.tables["voice_jobs"] = {JOB_ID: _job(status="generating")}
 
-    async def render(text, voice_id, language):
+    async def render(text, voice_id, language, purpose=None):
         return b"ID3audio", 9
 
     monkeypatch.setattr(jobs, "render_mp3", render)
@@ -274,7 +275,7 @@ def test_generate_issues_licence(env, monkeypatch):
     row = env.db.tables["voice_jobs"][JOB_ID]
     assert row["status"] == "ready" and row["audio_seconds"] == 9
     lic = env.db.tables["voice_licences"][row["licence_id"]]
-    assert lic["job_id"] == JOB_ID and lic["tier"] == "Commercial" and lic["voice_name"] == "Call Centre Agent 4"
+    assert lic["job_id"] == JOB_ID and lic["tier"] == "Commercial" and lic["voice_name"] == "Amara"
 
 
 # ---- webhook: handle first, record after ----------------------------------
@@ -348,7 +349,7 @@ def test_loaders_refuse_bad_ids():
 
 def _payg_body(email="Buyer@Example.com"):
     return {"previewId": "stale-preview", "script": "Karibu sana kwa Mikaka Voice leo.",
-            "voiceId": "sw-ke-csagent-4", "language": "sw", "email": email}
+            "voiceId": "amara", "language": "sw", "email": email}
 
 
 def _plan_body(email="buyer@example.com"):
@@ -395,6 +396,28 @@ def test_payg_checkout_rejects_bad_email(env):
     assert res.status_code == 400
 
 
+def test_payg_checkout_stores_purpose(env):
+    assert env.client.post("/payg/checkout", json={**_payg_body(), "purpose": "documentary"}).status_code == 200
+    assert env.client.post("/payg/checkout", json={**_payg_body(), "purpose": "nope"}).status_code == 200
+    assert env.client.post("/payg/checkout", json=_payg_body()).status_code == 200
+    assert [r["purpose"] for r in env.db.tables["voice_jobs"].values()] == ["documentary", "general", "general"]
+
+
+def test_generate_renders_with_the_jobs_purpose(env, monkeypatch):
+    env.db.tables["voice_jobs"] = {JOB_ID: _job(status="generating", purpose="news")}
+    seen = {}
+
+    async def render(text, voice_id, language, purpose=None):
+        seen["args"] = (voice_id, purpose)
+        return b"ID3audio", 9
+
+    monkeypatch.setattr(jobs, "render_mp3", render)
+    asyncio.run(jobs.generate(JOB_ID))
+    assert seen["args"] == ("sw-ke-csagent-4", "news")
+    [licence] = env.db.tables["voice_licences"].values()
+    assert licence["voice_name"] == "Amara"
+
+
 # ---- resuming stuck renders -----------------------------------------------------
 
 STALE_ID = "vj_" + "c" * 24
@@ -412,7 +435,7 @@ def _seed_generating(fake):
 def _run_resume(monkeypatch, fake, **kwargs):
     renders = []
 
-    async def render(text, voice_id, language):
+    async def render(text, voice_id, language, purpose=None):
         renders.append(text)
         return b"ID3audio", 7
 

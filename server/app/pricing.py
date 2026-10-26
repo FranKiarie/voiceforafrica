@@ -9,14 +9,6 @@ MAX_PAYG_CHARS = 4500
 PLAN_USD = {"starter": 15, "creator": 50, "pro": 100, "business": 350}
 PREMIUM_ONLY_LANGS = {"sw", "ig", "so", "ti", "st"}
 
-VOICES = {
-    "sw-ke-csagent-4": "Call Centre Agent 4",
-    "sw-ke-advisor-1": "Advisor 1",
-    "sw-ke-tutor-2": "Tutor 2",
-    "sw-ke-concierge-3": "Concierge 3",
-    "sw-ke-assistant-5": "Assistant 5",
-    "sw-ke-training-6": "Training 6",
-}
 
 
 # String.prototype.trim() strips WhiteSpace + LineTerminator, which is not the

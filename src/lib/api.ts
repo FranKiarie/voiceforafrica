@@ -118,7 +118,13 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // ---- endpoints ------------------------------------------------------------
 
 /** Free preview: at least 45 s of the script (the whole clip if shorter). */
-export async function createPreview(input: { script: string; voiceId: string; language: string; email: string }): Promise<Preview> {
+export async function createPreview(input: {
+  script: string;
+  voiceId: string;
+  language: string;
+  email: string;
+  purpose: string;
+}): Promise<Preview> {
   if (API_MODE === "live") return call("POST", "/previews", input);
   const q = quoteFor(input.script);
   await wait(600);
@@ -132,6 +138,7 @@ export async function createPaygCheckout(input: {
   voiceId: string;
   language: string;
   email: string;
+  purpose: string;
 }): Promise<PaygCheckout> {
   if (API_MODE === "live") return call("POST", "/payg/checkout", input);
   const q = quoteFor(input.script);

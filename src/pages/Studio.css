@@ -28,6 +28,32 @@
   min-width: 0;
 }
 
+.studio-sample {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-self: flex-start;
+  margin: -8px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.studio-sample svg {
+  color: var(--accent);
+}
+
+.studio-sample .faint {
+  font-weight: 400;
+}
+
 .studio-hint {
   margin: -8px 0 0;
   font-size: 13px;

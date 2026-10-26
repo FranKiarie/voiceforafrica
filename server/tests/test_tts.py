@@ -176,3 +176,19 @@ def test_preview_text_never_empty_and_keeps_whole_words():
     assert out and script.startswith(out) and script[len(out)] == "\n"
     script = ("abcd " * 180) + "tail " * 100  # char 900 is a space: keep the last full word
     assert tts.preview_text(script) == ("abcd " * 180).strip()
+
+
+def test_render_mp3_uses_the_library_voice_and_purpose(keyed, monkeypatch):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        body = _sse(_audio(b"\x01\x00" * 2400), {"event_type": "interaction.completed"})
+        return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+    _mock_client(monkeypatch, handler)
+    mp3, _ = asyncio.run(tts.render_mp3("Habari yako.", "kwame", "sw", "documentary"))
+    assert mp3
+    assert seen["body"]["generation_config"]["speech_config"][0]["voice"] == "sw-ke-tutor-3"
+    style = seen["body"]["input"][0]["content"][0]["annotations"][0]["style"]
+    assert style.startswith("Documentary narration")

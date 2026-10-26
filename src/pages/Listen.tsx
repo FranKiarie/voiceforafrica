@@ -55,7 +55,7 @@ export default function Listen() {
   useEffect(() => {
     if (empty || preview || loadError) return;
     let alive = true;
-    createPreview({ script: flow.script, voiceId: flow.voiceId, language: flow.language, email: flow.email })
+    createPreview({ script: flow.script, voiceId: flow.voiceId, language: flow.language, email: flow.email, purpose: flow.purpose })
       .then((p) => {
         if (!alive) return;
         savePreview(p);
@@ -67,7 +67,7 @@ export default function Listen() {
     return () => {
       alive = false;
     };
-  }, [empty, preview, loadError, flow.script, flow.voiceId, flow.language, flow.email]);
+  }, [empty, preview, loadError, flow.script, flow.voiceId, flow.language, flow.email, flow.purpose]);
 
   const goPay = () => {
     if (leftForPay.current) return;

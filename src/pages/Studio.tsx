@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { LANGUAGES, MAX_PAYG_CHARS, VOICES, formatDuration, quoteFor } from "../data";
+import { LANGUAGES, MAX_PAYG_CHARS, PURPOSES, VOICES, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { ApiError, createPreview, type Preview } from "../lib/api";
+import { useVoiceSample } from "../lib/sample";
 import { supabase, useSession } from "../lib/supabase";
 import "./Studio.css";
 
@@ -67,6 +68,8 @@ export default function Studio() {
   const flow = useFlow();
   const [language, setLanguage] = useState(flow.language);
   const [voiceId, setVoiceId] = useState(flow.voiceId);
+  const [purpose, setPurpose] = useState(flow.purpose);
+  const [sampling, toggleSample] = useVoiceSample();
   const [script, setScript] = useState(flow.script);
   const [email, setEmail] = useState(flow.email);
   // Signed in: the account email is used and locked. Signed out: type any email.
@@ -80,6 +83,7 @@ export default function Studio() {
   const [error, setError] = useState("");
 
   const lang = LANGUAGES.find((l) => l.code === language);
+  const voice = VOICES.find((v) => v.id === voiceId) ?? VOICES[0];
   const q = quoteFor(script);
   const left = Math.max(0, PREVIEWS_PER_DAY - used);
   const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(useEmail.trim()) && adult;
@@ -97,11 +101,11 @@ export default function Studio() {
     setError("");
     const trimmed = useEmail.trim();
     try {
-      const preview = await createPreview({ script, voiceId, language, email: trimmed });
+      const preview = await createPreview({ script, voiceId, language, email: trimmed, purpose });
       recordPreview(count + 1);
       setUsed(count + 1);
       savePreview(preview);
-      setFlow({ language, voiceId, script, email: trimmed, adult: true });
+      setFlow({ language, voiceId, purpose, script, email: trimmed, adult: true });
       navigate("/listen");
     } catch (err) {
       setBusy(false);
@@ -125,6 +129,17 @@ export default function Studio() {
       <form className="narrow studio" onSubmit={(e) => void submit(e)} noValidate>
         <h1 className="studio-title">Paste your script</h1>
 
+        <label className="field">
+          What's it for?
+          <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+            {PURPOSES.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="studio-row">
           <label className="field">
             Language
@@ -139,14 +154,34 @@ export default function Studio() {
           <label className="field">
             Voice
             <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
-              {VOICES.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
+              {(["Female", "Male"] as const).map((g) => (
+                <optgroup key={g} label={g}>
+                  {VOICES.filter((v) => v.gender === g).map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {`${v.name} · ${v.style}`}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>
         </div>
+        <button
+          type="button"
+          className="studio-sample"
+          aria-pressed={sampling === voice.id}
+          onClick={() => toggleSample(voice.id)}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            {sampling === voice.id ? (
+              <path d="M7 5 h3 v14 h-3 Z M14 5 h3 v14 h-3 Z" fill="currentColor" />
+            ) : (
+              <path d="M8 5 L19 12 L8 19 Z" fill="currentColor" />
+            )}
+          </svg>
+          {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
+          <span className="faint">{` · ${voice.gender} · Kenyan accent`}</span>
+        </button>
         {lang?.premiumOnly && (
           <p className="faint studio-hint">
             {lang.own} uses our Premium voice engine; same price on pay as you go.

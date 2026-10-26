@@ -25,7 +25,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from . import db, paystack
-from .pricing import VOICES
+from .catalog import voice_name
 from .tts import TtsError, render_mp3  # noqa: F401 - TtsError re-exported for callers
 
 logger = logging.getLogger(__name__)
@@ -221,7 +221,7 @@ async def generate(job_id: str) -> None:
             return
 
         beat = asyncio.create_task(_heartbeat(job_id))
-        audio, seconds = await render_mp3(job["script"], job["voice_id"], job["language"])
+        audio, seconds = await render_mp3(job["script"], job["voice_id"], job["language"], job.get("purpose"))
         await db.upload(path, audio, "audio/mpeg")
         digest = hashlib.sha256(audio).hexdigest()
 
@@ -235,7 +235,7 @@ async def generate(job_id: str) -> None:
                         "id": licence_id,
                         "job_id": job_id,
                         "tier": "Commercial",
-                        "voice_name": VOICES.get(job["voice_id"], job["voice_id"]),
+                        "voice_name": voice_name(job["voice_id"]),
                         "length_seconds": int(seconds),
                         "audio_sha256": digest,
                         "email": job["email"],

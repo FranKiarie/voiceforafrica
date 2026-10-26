@@ -18,7 +18,8 @@ from pydantic import BaseModel
 
 from . import db
 from .config import settings
-from .pricing import MAX_PAYG_CHARS, VOICES
+from .catalog import is_voice, purpose_or_default, voice_name
+from .pricing import MAX_PAYG_CHARS
 from .tts import TtsError, preview_text, render_mp3
 
 router = APIRouter()
@@ -99,6 +100,7 @@ class PreviewIn(BaseModel):
     voiceId: str = ""
     language: str = ""
     email: str = ""
+    purpose: str = ""
 
 
 @router.post("/previews")
@@ -108,8 +110,9 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         raise HTTPException(400, f"Your script needs at least {MIN_SCRIPT_CHARS} characters.")
     if len(script) > MAX_PAYG_CHARS:
         raise HTTPException(400, f"Your script is longer than {MAX_PAYG_CHARS:,} characters.")
-    if body.voiceId not in VOICES:
+    if not is_voice(body.voiceId):
         raise HTTPException(400, "Please choose one of the listed voices.")
+    purpose = purpose_or_default(body.purpose)
     language = (body.language or "").strip().lower()
     if not LANG_RE.match(language):
         raise HTTPException(400, "Please choose a language.")
@@ -150,7 +153,7 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
 
     text = preview_text(script)
     try:
-        mp3, seconds = await asyncio.wait_for(render_mp3(text, body.voiceId, language), PREVIEW_RENDER_SECONDS)
+        mp3, seconds = await asyncio.wait_for(render_mp3(text, body.voiceId, language, purpose), PREVIEW_RENDER_SECONDS)
     except (TimeoutError, asyncio.TimeoutError) as e:
         await _drop_reservation(preview_id)
         raise HTTPException(503, "The voice service is busy. Please try again in a minute.") from e
@@ -266,7 +269,7 @@ async def list_clips(authorization: str | None = Header(default=None)) -> list[d
         clip = {
             "id": j["id"],
             "licenceId": j.get("licence_id") or "",
-            "voice": VOICES.get(j.get("voice_id") or "", j.get("voice_id") or ""),
+            "voice": voice_name(j.get("voice_id") or ""),
             "length": format_length(j.get("audio_seconds") or j.get("projected_seconds")),
             "createdAt": j.get("created_at") or "",
             "tier": "Commercial",

@@ -19,7 +19,7 @@ if importlib.util.find_spec("app.tts") is None:
 
     stub.TtsError = TtsError
     stub.preview_text = lambda script: script
-    async def _render(text, voice_id, language):  # noqa: E306
+    async def _render(text, voice_id, language, purpose=None):  # noqa: E306
         return b"ID3", 1.0
     stub.render_mp3 = _render
     sys.modules["app.tts"] = stub
@@ -72,8 +72,8 @@ def fake(monkeypatch):
     async def user_from_token(token):
         return state["user"] if token == "good-token" else None
 
-    async def render_mp3(text, voice_id, language):
-        state["rendered"] = (text, voice_id, language)
+    async def render_mp3(text, voice_id, language, purpose=None):
+        state["rendered"] = (text, voice_id, language, purpose)
         return b"ID3fake", 47.4
 
     for name, fn in {
@@ -100,7 +100,7 @@ BASE = "/api/v1/voice-studio"
 def test_preview_happy_path(fake, client):
     res = client.post(
         f"{BASE}/previews",
-        json={"script": SCRIPT, "voiceId": "sw-ke-csagent-4", "language": "sw", "email": "Ann@Example.COM"},
+        json={"script": SCRIPT, "voiceId": "amara", "language": "sw", "email": "Ann@Example.COM"},
         headers={"Fly-Client-IP": "41.90.1.2"},
     )
     assert res.status_code == 200, res.text
@@ -113,7 +113,7 @@ def test_preview_happy_path(fake, client):
     assert table == "voice_previews"
     assert row["email"] == "ann@example.com"
     assert row["ip"] == "41.90.1.2"
-    assert row["storage_path"] == path and row["voice_id"] == "sw-ke-csagent-4"
+    assert row["storage_path"] == path and row["voice_id"] == "amara"
     assert len(row["script_sha256"]) == 64
     assert fake["updates"] == [("voice_previews", {"id": f"eq.{body['previewId']}"}, {"seconds": 47})]
     assert fake["deletes"] == []
@@ -126,7 +126,7 @@ def test_preview_rate_limited(fake, client):
     fake["count"] = 3
     res = client.post(
         f"{BASE}/previews",
-        json={"script": SCRIPT, "voiceId": "sw-ke-csagent-4", "language": "sw", "email": "ann@example.com"},
+        json={"script": SCRIPT, "voiceId": "amara", "language": "sw", "email": "ann@example.com"},
     )
     assert res.status_code == 429
     assert res.json() == {"detail": "You've used today's 3 free previews. Try again tomorrow."}
@@ -136,7 +136,7 @@ def test_preview_rate_limited(fake, client):
 def test_preview_rejects_bad_input(fake, client):
     res = client.post(f"{BASE}/previews", json={"script": SCRIPT, "voiceId": "nope", "language": "sw", "email": "a@b.co"})
     assert res.status_code == 400
-    res = client.post(f"{BASE}/previews", json={"script": SCRIPT, "voiceId": "sw-ke-csagent-4", "language": "sw", "email": "not-an-email"})
+    res = client.post(f"{BASE}/previews", json={"script": SCRIPT, "voiceId": "amara", "language": "sw", "email": "not-an-email"})
     assert res.status_code == 400
 
 
@@ -200,7 +200,7 @@ def test_clips_with_token(fake, client):
     assert res.status_code == 200, res.text
     [clip] = res.json()
     assert clip["id"] == "job-1" and clip["licenceId"] == "VS-2026-ABC123"
-    assert clip["voice"] == "Tutor 2" and clip["length"] == "45 s" and clip["tier"] == "Commercial"
+    assert clip["voice"] == "Jabari" and clip["length"] == "45 s" and clip["tier"] == "Commercial"
     assert clip["createdAt"] == "2026-10-20T09:00:00+00:00"
     assert "e=86400" in clip["audioUrl"] and "download=" in clip["audioUrl"]
     params = fake["selects"][0][1]
@@ -214,7 +214,7 @@ def test_format_length():
     assert routes_public.format_length(145) == "2 min 25 s"
 
 
-PREVIEW = {"script": SCRIPT, "voiceId": "sw-ke-csagent-4", "language": "sw"}
+PREVIEW = {"script": SCRIPT, "voiceId": "amara", "language": "sw"}
 
 
 def test_preview_limit_counts_email_or_ip(fake, client):
@@ -249,7 +249,7 @@ def test_preview_parallel_overflow_releases_reservation(fake, client):
 
 
 def test_preview_tts_failure_gives_slot_back(fake, client, monkeypatch):
-    async def broken(text, voice_id, language):
+    async def broken(text, voice_id, language, purpose=None):
         raise routes_public.TtsError("busy", retryable=True)
 
     monkeypatch.setattr(routes_public, "render_mp3", broken)
@@ -262,3 +262,20 @@ def test_verify_rejects_filter_syntax(fake, client):
     for bad in ["VS-2026-ABC123,id.neq.x", "VS-2026-ABC12", "abc", "VS-2026-ABC123)"]:
         assert client.get(f"{BASE}/verify/{bad}").status_code == 404
     assert fake["selects"] == []
+
+
+def test_preview_passes_purpose_to_the_render(fake, client):
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com", "purpose": "radio-ad"})
+    assert res.status_code == 200, res.text
+    assert fake["rendered"][1:] == ("amara", "sw", "radio-ad")
+
+
+def test_preview_unknown_purpose_falls_back_to_general(fake, client):
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com", "purpose": "wedding-mc"})
+    assert res.status_code == 200, res.text
+    assert fake["rendered"][3] == "general"
+
+
+def test_preview_rejects_raw_library_voice(fake, client):
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "voiceId": "sw-ke-csagent-4", "email": "ann@example.com"})
+    assert res.status_code == 400

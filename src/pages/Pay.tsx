@@ -42,6 +42,7 @@ export default function Pay() {
           previewId: previewId(),
           script: flow.script,
           voiceId: flow.voiceId,
+          purpose: flow.purpose,
           language: flow.language,
           email: flow.email,
         });
@@ -59,7 +60,7 @@ export default function Pay() {
     } catch {
       setMode("error");
     }
-  }, [flow.script, flow.voiceId, flow.language, flow.email, onSuccess, onCancel]);
+  }, [flow.script, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel]);
 
   const onDemoPaid = useCallback(
     (ref: string) => {
