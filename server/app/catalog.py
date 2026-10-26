@@ -13,7 +13,6 @@ VOICES: dict[str, tuple[str, str]] = {
     "naledi": ("Naledi", "sw-ke-training-1"),
     "akinyi": ("Akinyi", "sw-ke-tutor-4"),
     "thandiwe": ("Thandiwe", "sw-ke-advisor-1"),
-    "adwoa": ("Adwoa", "sw-ke-advisor-4"),
     "folake": ("Folake", "sw-ke-advisor-6"),
     "selam": ("Selam", "sw-ke-training-3"),
     "ngozi": ("Ngozi", "sw-ke-tutor-5"),
@@ -26,6 +25,8 @@ VOICES: dict[str, tuple[str, str]] = {
     "chidi": ("Chidi", "sw-ke-concierge-4"),
     "tendai": ("Tendai", "sw-ke-csagent-8"),
     "otieno": ("Otieno", "sw-ke-assistant-2"),
+    # Listed as female by Google, but it sounds male.
+    "kofi": ("Kofi", "sw-ke-advisor-4"),
     "bongani": ("Bongani", "sw-ke-training-5"),
 }
 

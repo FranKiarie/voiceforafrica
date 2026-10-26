@@ -245,6 +245,14 @@
   flex: none;
 }
 
+.voice-nosample {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px dashed var(--field);
+}
+
 .voice-text {
   flex: 1;
   min-width: 0;

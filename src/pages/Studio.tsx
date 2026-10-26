@@ -166,22 +166,26 @@ export default function Studio() {
             </select>
           </label>
         </div>
-        <button
-          type="button"
-          className="studio-sample"
-          aria-pressed={sampling === voice.id}
-          onClick={() => toggleSample(voice.id)}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            {sampling === voice.id ? (
-              <path d="M7 5 h3 v14 h-3 Z M14 5 h3 v14 h-3 Z" fill="currentColor" />
-            ) : (
-              <path d="M8 5 L19 12 L8 19 Z" fill="currentColor" />
-            )}
-          </svg>
-          {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
-          <span className="faint">{` · ${voice.gender} · Kenyan accent`}</span>
-        </button>
+        {voice.sample ? (
+          <button
+            type="button"
+            className="studio-sample"
+            aria-pressed={sampling === voice.id}
+            onClick={() => toggleSample(voice.id)}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              {sampling === voice.id ? (
+                <path d="M7 5 h3 v14 h-3 Z M14 5 h3 v14 h-3 Z" fill="currentColor" />
+              ) : (
+                <path d="M8 5 L19 12 L8 19 Z" fill="currentColor" />
+              )}
+            </svg>
+            {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
+            <span className="faint">{` · ${voice.gender} · Kenyan accent`}</span>
+          </button>
+        ) : (
+          <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · Kenyan accent · sample coming soon`}</p>
+        )}
         {lang?.premiumOnly && (
           <p className="faint studio-hint">
             {lang.own} uses our Premium voice engine; same price on pay as you go.

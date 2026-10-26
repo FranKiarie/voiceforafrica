@@ -34,7 +34,11 @@ export const LANGUAGES: Language[] = [
 ];
 
 export type Gender = "Female" | "Male";
-export type Voice = { id: string; name: string; gender: Gender; style: string; meta: string };
+export type Voice = { id: string; name: string; gender: Gender; style: string; meta: string; sample: boolean };
+
+// Voices with a recorded hello in public/voices. The rest follow once the
+// speech quota allows; until then they have no play button.
+const WITH_SAMPLE = new Set(["amara", "thandiwe", "naledi", "akinyi", "folake", "selam", "zawadi", "kwame"]);
 
 // Google library voices with a Kenyan accent, shown under African first names.
 // The server maps each id to the library voice (server/app/catalog.py).
@@ -44,6 +48,7 @@ const voice = (id: string, name: string, gender: Gender, style: string): Voice =
   gender,
   style,
   meta: `${gender} · ${style} · Kenyan accent`,
+  sample: WITH_SAMPLE.has(id),
 });
 
 export const VOICES: Voice[] = [
@@ -51,13 +56,13 @@ export const VOICES: Voice[] = [
   voice("thandiwe", "Thandiwe", "Female", "Rich, soothing narrator"),
   voice("naledi", "Naledi", "Female", "Bright video host"),
   voice("akinyi", "Akinyi", "Female", "Friendly storyteller"),
-  voice("adwoa", "Adwoa", "Female", "Lively podcast host"),
   voice("folake", "Folake", "Female", "Energetic and colourful"),
   voice("selam", "Selam", "Female", "Light and precise"),
   voice("ngozi", "Ngozi", "Female", "Crisp and eager"),
   voice("zawadi", "Zawadi", "Female", "Laid-back and kind"),
   voice("kwame", "Kwame", "Male", "Confident newsreader"),
   voice("thabo", "Thabo", "Male", "Deep, intimate radio voice"),
+  voice("kofi", "Kofi", "Male", "Lively podcast host"),
   voice("abebe", "Abebe", "Male", "Seasoned and authoritative"),
   voice("sekou", "Sekou", "Male", "Commercial announcer"),
   voice("bongani", "Bongani", "Male", "Warm video host"),

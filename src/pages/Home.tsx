@@ -136,15 +136,19 @@ export default function Home() {
             const playing = playingId === v.id;
             return (
               <li className="voice-row" key={v.id}>
-                <Drum
-                  size={44}
-                  playing={playing}
-                  label={playing ? `Pause ${v.name}` : `Play ${v.name}`}
-                  onClick={() => toggleSample(v.id)}
-                />
+                {v.sample ? (
+                  <Drum
+                    size={44}
+                    playing={playing}
+                    label={playing ? `Pause ${v.name}` : `Play ${v.name}`}
+                    onClick={() => toggleSample(v.id)}
+                  />
+                ) : (
+                  <span className="voice-nosample" aria-hidden="true" />
+                )}
                 <div className="voice-text">
                   <span className="voice-name">{v.name}</span>
-                  <span className="voice-meta faint">{v.meta}</span>
+                  <span className="voice-meta faint">{v.sample ? v.meta : `${v.meta} · sample soon`}</span>
                 </div>
                 <PatternDot pattern="beads" size={22} />
               </li>
