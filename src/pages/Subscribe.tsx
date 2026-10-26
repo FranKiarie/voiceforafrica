@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { PatternStrip, Shell } from "../components/Shell";
+import { DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { formatKes, KES_PER_USD, type PatternId } from "../data";
 import { getFlow } from "../flow";
-import { createPlanCheckout, PLAN_PRICES_USD, type Billing, type Plan } from "../lib/api";
+import { API_MODE, confirmPlanCheckout, createPlanCheckout, PLAN_PRICES_USD, type Billing, type Plan } from "../lib/api";
 import { Link } from "../router";
 import "./Pay.css";
 import "./Subscribe.css";
@@ -33,7 +33,11 @@ const PLANS: Record<Plan, PlanInfo> = {
 };
 
 type Method = "card" | "mpesa";
-type Phase = "form" | "busy" | "demo" | "done";
+type Phase = "form" | "busy" | "demo" | "confirming" | "pending" | "done";
+
+const POLL_EVERY_MS = 2000;
+const POLL_FOR_MS = 30000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function isPlan(p: string): p is Plan {
   return Object.prototype.hasOwnProperty.call(PLANS, p);
@@ -87,6 +91,16 @@ export default function Subscribe() {
   const [error, setError] = useState("");
   const [chargeKes, setChargeKes] = useState<number | null>(null);
   const payBtn = useRef<HTMLButtonElement>(null);
+  const checkoutId = useRef("");
+  const pollRun = useRef(0);
+
+  // Leaving the page stops any confirmation poll still running.
+  useEffect(
+    () => () => {
+      pollRun.current++;
+    },
+    [],
+  );
 
   if (!isPlan(initial.plan)) {
     return (
@@ -123,6 +137,35 @@ export default function Subscribe() {
     requestAnimationFrame(() => payBtn.current?.focus());
   };
 
+  /** Paystack said yes; ask our server to verify it, every 2 s for up to 30 s. */
+  const confirmPayment = async () => {
+    const run = ++pollRun.current;
+    const id = checkoutId.current;
+    setPhase("confirming");
+    const deadline = Date.now() + POLL_FOR_MS;
+    for (;;) {
+      try {
+        const r = await confirmPlanCheckout(id);
+        if (run !== pollRun.current) return;
+        if (r.status === "active") {
+          setPhase("done");
+          return;
+        }
+        if (r.status === "failed" || r.status === "expired") {
+          backToForm("Paystack couldn't complete the payment. Try again.");
+          return;
+        }
+      } catch {
+        if (run !== pollRun.current) return;
+        // Network blip or server busy: keep asking until the deadline.
+      }
+      if (Date.now() + POLL_EVERY_MS > deadline) break;
+      await sleep(POLL_EVERY_MS);
+      if (run !== pollRun.current) return;
+    }
+    setPhase("pending");
+  };
+
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const clean = email.trim();
@@ -135,6 +178,7 @@ export default function Subscribe() {
     try {
       const co = await createPlanCheckout({ plan, billing, email: clean, method });
       setChargeKes(co.amountKes);
+      checkoutId.current = co.checkoutId;
       if (!co.accessCode) {
         setPhase("demo");
         return;
@@ -143,13 +187,20 @@ export default function Subscribe() {
       const Pop = paystackPop();
       if (!Pop) throw new Error("Paystack missing");
       new Pop().resumeTransaction(co.accessCode, {
-        onSuccess: () => setPhase("done"),
+        onSuccess: () => {
+          if (API_MODE === "live") void confirmPayment();
+          else setPhase("done");
+        },
         onCancel: () => backToForm("Payment not finished. Nothing was charged."),
       });
     } catch {
       backToForm("We couldn't open the payment. Nothing was charged. Try again.");
     }
   };
+
+  if (phase === "confirming" || phase === "pending") {
+    return <Confirming pending={phase === "pending"} onCheckAgain={() => void confirmPayment()} />;
+  }
 
   const shownKes = chargeKes ?? kes;
   const mpesaHint =
@@ -279,6 +330,44 @@ function Done({ name }: { name: string }) {
             My clips
           </Link>
         </div>
+      </div>
+    </Shell>
+  );
+}
+
+function Confirming({ pending, onCheckAgain }: { pending: boolean; onCheckAgain(): void }) {
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    title.current?.focus();
+  }, [pending]);
+  return (
+    <Shell>
+      <div className="narrow center sub-done">
+        {pending ? (
+          <>
+            <h1 ref={title} tabIndex={-1}>
+              Almost there
+            </h1>
+            <p className="muted" role="status">
+              We're still confirming your payment with Paystack. You'll get an email when your plan is on.
+            </p>
+            <div className="sub-done-actions">
+              <button type="button" className="btn btn-block" onClick={onCheckAgain}>
+                Check again
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 ref={title} tabIndex={-1}>
+              One moment
+            </h1>
+            <div role="status">
+              <DrumRoll />
+              <p className="muted">Confirming your payment…</p>
+            </div>
+          </>
+        )}
       </div>
     </Shell>
   );

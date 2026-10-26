@@ -7,3 +7,6 @@ dist
 .DS_Store
 *.log
 *.tsbuildinfo
+server/.venv
+__pycache__
+.pytest_cache

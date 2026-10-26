@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
-import { API_MODE, ApiError, listClips, type Clip } from "../lib/api";
+import { API_MODE, ApiError, getSession, listClips, signOut, type Clip } from "../lib/api";
 import { Link } from "../router";
 import "./Clips.css";
+import "./Signin.css"; // shared .signin-text-btn style for "Sign out"
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const NO_AUDIO = "Audio arrives when the voice service is live";
@@ -75,19 +76,37 @@ function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; playing: bo
 }
 
 export default function Clips() {
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const [signedIn, setSignedIn] = useState(() => getSession() !== null);
+  const [state, setState] = useState<State>(() =>
+    API_MODE === "live" && getSession() === null ? { kind: "signin" } : { kind: "loading" },
+  );
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (API_MODE === "live" && getSession() === null) {
+      setSignedIn(false);
+      setState({ kind: "signin" });
+      return;
+    }
     setState({ kind: "loading" });
     try {
       const clips = await listClips();
       setState({ kind: "ready", clips });
     } catch (e) {
-      if (API_MODE === "live" && e instanceof ApiError && e.status === 401) setState({ kind: "signin" });
-      else setState({ kind: "error" });
+      if (API_MODE === "live" && e instanceof ApiError && e.status === 401) {
+        signOut();
+        setSignedIn(false);
+        setState({ kind: "signin" });
+      } else setState({ kind: "error" });
     }
   }, []);
+
+  const leave = () => {
+    signOut();
+    setSignedIn(false);
+    setPlayingId(null);
+    if (API_MODE === "live") setState({ kind: "signin" });
+  };
 
   useEffect(() => {
     void load();
@@ -103,6 +122,11 @@ export default function Clips() {
         <div className="clips-head">
           <h1 className="clips-title">My clips</h1>
           <p className="muted">Clips you've made, with their licences.</p>
+          {signedIn && (
+            <button type="button" className="signin-text-btn" style={{ alignSelf: "flex-start", paddingLeft: 0 }} onClick={leave}>
+              Sign out
+            </button>
+          )}
         </div>
 
         {state.kind === "loading" && (

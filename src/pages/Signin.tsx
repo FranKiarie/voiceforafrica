@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Shell } from "../components/Shell";
-import { API_MODE, requestMagicLink } from "../lib/api";
+import { API_MODE, getSession, requestMagicLink, signOut } from "../lib/api";
 import { getFlow } from "../flow";
 import { Link } from "../router";
 import "./Signin.css";
@@ -12,6 +12,7 @@ export default function Signin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sentTo, setSentTo] = useState("");
+  const [session, setSession] = useState(() => getSession());
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,6 +32,32 @@ export default function Signin() {
       setBusy(false);
     }
   };
+
+  if (session) {
+    return (
+      <Shell>
+        <div className="narrow center signin">
+          <div className="signin-head">
+            <h1 className="signin-title">Signed in</h1>
+            <p className="muted">{session.email ? `You're signed in as ${session.email}.` : "You're signed in."}</p>
+          </div>
+          <Link href="/clips" className="btn btn-block">
+            Go to My clips
+          </Link>
+          <button
+            type="button"
+            className="signin-text-btn"
+            onClick={() => {
+              signOut();
+              setSession(null);
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>

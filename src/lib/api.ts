@@ -19,6 +19,86 @@ export type Plan = "starter" | "creator" | "pro" | "business";
 export type Billing = "monthly" | "yearly";
 export type PlanCheckout = { checkoutId: string; amountKes: number; amountUsd: number; accessCode?: string };
 
+export type PlanStatus = "pending" | "active" | "expired" | "failed";
+export type PlanConfirmation = { checkoutId: string; status: PlanStatus; plan: Plan; billing: Billing; periodEnd?: string };
+export type Session = { accessToken: string; expiresAt: number; email?: string };
+
+// ---- session --------------------------------------------------------------
+// The magic link lands on /clips#access_token=…&expires_in=…  (Supabase implicit flow).
+// We keep the token in localStorage and strip it from the address bar.
+
+const SESSION_KEY = "mv.session";
+
+function jwtEmail(token: string): string | undefined {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return undefined;
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const json = decodeURIComponent(
+      Array.from(atob(padded), (c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0")).join(""),
+    );
+    const email = (JSON.parse(json) as { email?: unknown }).email;
+    return typeof email === "string" && email ? email : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function captureSessionFromHash() {
+  if (typeof window === "undefined") return;
+  const hash = window.location.hash;
+  if (!hash || !hash.includes("access_token")) return;
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const accessToken = params.get("access_token");
+  if (accessToken) {
+    const expiresIn = Number(params.get("expires_in"));
+    const session: Session = {
+      accessToken,
+      expiresAt: Date.now() + (Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600) * 1000,
+      email: jwtEmail(accessToken),
+    };
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // Private mode: nothing is kept, so the user signs in again next time.
+    }
+  }
+  try {
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+  } catch {
+    // ignore
+  }
+}
+
+captureSessionFromHash();
+
+/** The stored session, or null when signed out or expired. */
+export function getSession(): Session | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Partial<Session>;
+    if (typeof s.accessToken !== "string" || typeof s.expiresAt !== "number") return null;
+    if (s.expiresAt <= Date.now()) return null;
+    return { accessToken: s.accessToken, expiresAt: s.expiresAt, email: s.email };
+  } catch {
+    return null;
+  }
+}
+
+export function isSignedIn(): boolean {
+  return getSession() !== null;
+}
+
+export function signOut() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -26,10 +106,14 @@ export class ApiError extends Error {
 }
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body) headers["Content-Type"] = "application/json";
+  const session = getSession();
+  if (session) headers.Authorization = `Bearer ${session.accessToken}`;
   const res = await fetch(`${BASE}/api/v1/voice-studio${path}`, {
     method,
     credentials: "include",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -184,6 +268,16 @@ export async function createPlanCheckout(input: { plan: Plan; billing: Billing; 
   const months = input.billing === "yearly" ? 10 : 1;
   const amountUsd = PLAN_USD[input.plan] * months;
   return { checkoutId: `demo-${Date.now()}`, amountUsd, amountKes: Math.ceil((amountUsd * 129.4) / 5) * 5 };
+}
+
+/**
+ * Asks the server to verify a plan payment with Paystack (by reference) and report the plan's state.
+ * Call after Paystack's onSuccess: webhooks do not reach this backend. Demo: always active.
+ */
+export async function confirmPlanCheckout(checkoutId: string): Promise<PlanConfirmation> {
+  if (API_MODE === "live") return call("GET", `/plans/${encodeURIComponent(checkoutId)}`);
+  await wait(400);
+  return { checkoutId, status: "active", plan: "creator", billing: "monthly" };
 }
 
 export const PLAN_PRICES_USD = PLAN_USD;
