@@ -380,8 +380,8 @@ function Done({ name }: { name: string }) {
           <Link href="/studio" className="btn btn-block">
             Paste your script
           </Link>
-          <Link href="/clips" className="btn btn-outline btn-block">
-            My clips
+          <Link href="/dashboard" className="btn btn-outline btn-block">
+            Your dashboard
           </Link>
         </div>
       </div>

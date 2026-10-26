@@ -94,7 +94,7 @@ export function MailIcon() {
 /** Where to go after signing in: a same-site ?next= path, else My clips. */
 function nextPath(): string {
   const next = new URLSearchParams(window.location.search).get("next") ?? "";
-  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/clips";
+  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/dashboard";
 }
 
 type Mode = "password" | "link";
@@ -139,7 +139,7 @@ export default function Signin() {
       } else {
         const { error: err } = await supabase.auth.signInWithOtp({
           email: value,
-          options: { emailRedirectTo: `${SITE_URL}/clips`, shouldCreateUser: true },
+          options: { emailRedirectTo: `${SITE_URL}/dashboard`, shouldCreateUser: true },
         });
         if (err) throw err;
         setSent({ kind: "link", email: value });
@@ -183,7 +183,7 @@ export default function Signin() {
     setError("");
     setBusy(true);
     try {
-      const { error: err } = await supabase.auth.resend({ type: "signup", email: value, options: { emailRedirectTo: `${SITE_URL}/clips` } });
+      const { error: err } = await supabase.auth.resend({ type: "signup", email: value, options: { emailRedirectTo: `${SITE_URL}/dashboard` } });
       if (err) throw err;
       setSent({ kind: "confirm", email: value });
     } catch (err) {
@@ -211,8 +211,8 @@ export default function Signin() {
             <h1 className="signin-title">Signed in</h1>
             <p className="muted signin-who">{who ? `You're signed in as ${who}.` : "You're signed in."}</p>
           </div>
-          <Link href="/clips" className="btn btn-block">
-            My clips
+          <Link href="/dashboard" className="btn btn-block">
+            Go to your dashboard
           </Link>
           <button
             type="button"

@@ -8,7 +8,7 @@ import "./Clips.css";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const NO_AUDIO = "Audio arrives when the voice service is live";
 
-function formatDate(iso: string): string {
+export function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
@@ -20,7 +20,7 @@ type State =
   | { kind: "signin" }
   | { kind: "ready"; clips: Clip[] };
 
-function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; playing: boolean; onToggle: () => void; onEnded: () => void }) {
+export function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; playing: boolean; onToggle: () => void; onEnded: () => void }) {
   const audio = useRef<HTMLAudioElement>(null);
   const hasAudio = Boolean(clip.audioUrl);
 

@@ -35,11 +35,11 @@ export default function Signup() {
       const { data, error: err } = await supabase.auth.signUp({
         email: value,
         password,
-        options: { emailRedirectTo: `${SITE_URL}/clips`, data: fullName ? { full_name: fullName } : {} },
+        options: { emailRedirectTo: `${SITE_URL}/dashboard`, data: fullName ? { full_name: fullName } : {} },
       });
       if (err) throw err;
       if (data.session) {
-        navigate("/clips");
+        navigate("/dashboard");
         return;
       }
       // With email confirmations on, an existing address comes back with no identities.

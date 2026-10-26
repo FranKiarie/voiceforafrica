@@ -15,7 +15,16 @@ export type PaygCheckout = { jobId: string; amountKes: number; accessCode?: stri
 export type JobStatus = "paying" | "generating" | "ready" | "failed";
 export type Job = { jobId: string; status: JobStatus; seconds?: number; audioUrl?: string; licenceId?: string };
 export type Licence = { id: string; tier: string; voice: string; length: string; issued: string; paidKes?: number };
-export type Clip = { id: string; licenceId: string; voice: string; length: string; createdAt: string; tier: string; audioUrl?: string };
+export type Clip = {
+  id: string;
+  licenceId: string;
+  voice: string;
+  length: string;
+  seconds?: number;
+  createdAt: string;
+  tier: string;
+  audioUrl?: string;
+};
 export type Plan = "starter" | "creator" | "pro" | "business";
 export type Billing = "monthly" | "yearly";
 export type PlanCheckout = { checkoutId: string; amountKes: number; amountUsd: number; accessCode?: string };
@@ -23,6 +32,13 @@ export type PlanCheckout = { checkoutId: string; amountKes: number; amountUsd: n
 export type PlanStatus = "pending" | "active" | "expired" | "failed";
 export type PlanConfirmation = { checkoutId: string; status: PlanStatus; plan: Plan; billing: Billing; periodEnd?: string };
 export type Session = { accessToken: string; expiresAt: number; email?: string };
+export type Account = {
+  email: string;
+  plan: { plan: Plan; billing: Billing; periodEnd: string } | null;
+  previewsLeft: number;
+  previewsPerDay: number;
+  spentKes: number;
+};
 
 // ---- session --------------------------------------------------------------
 // Supabase Auth owns the session: supabase-js reads the magic-link / OAuth hash
@@ -215,10 +231,21 @@ export async function listClips(): Promise<Clip[]> {
       licenceId: j.licenceId!,
       voice: j.voice,
       length: formatDuration(j.seconds ?? 0),
+      seconds: j.seconds ?? 0,
       createdAt: j.createdAt,
       tier: "Commercial",
     }))
     .reverse();
+}
+
+/** The signed-in account's plan, free previews left today and total spend. */
+export async function getAccount(): Promise<Account> {
+  if (API_MODE === "live") return call("GET", "/account");
+  await wait(200);
+  const spentKes = readList<DemoJob>(JOBS_KEY)
+    .filter((j) => j.status === "ready")
+    .reduce((sum, j) => sum + (j.paidKes ?? 0), 0);
+  return { email: "", plan: null, previewsLeft: 3, previewsPerDay: 3, spentKes };
 }
 
 const PLAN_USD: Record<Plan, number> = { starter: 15, creator: 50, pro: 100, business: 350 };

@@ -173,7 +173,7 @@ export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {
   const initial = (name || email || "?").charAt(0);
   return (
     <header className="site-header">
-      <Link href="/" className="brand">
+      <Link href={session ? "/dashboard" : "/"} className="brand">
         <img className="logo logo-light" src="/brand/mikaka-logo-primary.png" alt="Mikaka" />
         <img className="logo logo-dark" src="/brand/mikaka-logo-white.png" alt="Mikaka" />
         <span className="brand-rule" />
@@ -196,8 +196,8 @@ export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {
           ))}
           {session ? (
             <>
-              <Link href="/clips" aria-current={path === "/clips" ? "page" : undefined}>
-                My clips
+              <Link href="/dashboard" aria-current={path === "/dashboard" ? "page" : undefined}>
+                Dashboard
               </Link>
               <Link
                 href="/signin"

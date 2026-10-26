@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import types
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -35,7 +36,9 @@ SCRIPT = "Karibu Mikaka Voice. This is a short test script for a preview clip."
 @pytest.fixture
 def fake(monkeypatch):
     state = {"count": 0, "count_params": None, "uploads": [], "inserts": [], "selects": [], "licence": None, "jobs": [],
-             "user": None, "updates": [], "deletes": [], "counts_after": None}
+             "user": None, "updates": [], "deletes": [], "counts_after": None,
+             # Rows per table, filtered like PostgREST would; tables not listed keep the old behaviour.
+             "tables": {}}
 
     async def count(table, params):
         first = state["count_params"] is None
@@ -62,11 +65,16 @@ def fake(monkeypatch):
         return f"https://signed.example/{path}?e={expires_in}" + (f"&download={download_name}" if download_name else "")
 
     async def select_one(table, params):
+        if table in state["tables"]:
+            rows = await select(table, {**params, "limit": "1"})
+            return rows[0] if rows else None
         state["selects"].append((table, params))
         return state["licence"]
 
     async def select(table, params):
         state["selects"].append((table, params))
+        if table in state["tables"]:
+            return _postgrest(state["tables"][table], params)
         return state["jobs"]
 
     async def user_from_token(token):
@@ -85,6 +93,39 @@ def fake(monkeypatch):
     monkeypatch.setattr(routes_public, "render_mp3", render_mp3)
     monkeypatch.setattr(routes_public, "preview_text", lambda s: s[:50])
     return state
+
+
+def _postgrest(rows, params):
+    """Just enough PostgREST for these tests: eq./in./gt. filters, order, limit and select."""
+    out = []
+    for row in rows:
+        keep = True
+        for col, rule in params.items():
+            if col in ("select", "order", "limit"):
+                continue
+            op, _, arg = rule.partition(".")
+            value = row.get(col)
+            if op == "eq":
+                keep = str(value) == arg
+            elif op == "in":
+                keep = str(value) in arg.strip("()").split(",")
+            elif op == "gt":
+                keep = value is not None and datetime.fromisoformat(value) > datetime.fromisoformat(arg)
+            else:
+                raise AssertionError(f"fake PostgREST does not know {rule!r}")
+            if not keep:
+                break
+        if keep:
+            out.append(row)
+    if params.get("order"):
+        col, _, direction = params["order"].partition(".")
+        out.sort(key=lambda r: r[col], reverse=direction == "desc")
+    if params.get("limit"):
+        out = out[: int(params["limit"])]
+    if params.get("select") and params["select"] != "*":
+        cols = params["select"].split(",")
+        out = [{c: r.get(c) for c in cols} for r in out]
+    return out
 
 
 @pytest.fixture
@@ -173,7 +214,7 @@ def test_magic_link(fake, client, monkeypatch):
     monkeypatch.setattr(db, "send_magic_link", send_magic_link)
     res = client.post(f"{BASE}/auth/magic-link", json={"email": " Ann@Example.com "})
     assert res.status_code == 204
-    assert sent["args"][0] == "ann@example.com" and sent["args"][1].endswith("/clips")
+    assert sent["args"][0] == "ann@example.com" and sent["args"][1].endswith("/dashboard")
 
     async def throttled(email, redirect_to):
         raise db.DbError("rate", 429)
@@ -202,6 +243,7 @@ def test_clips_with_token(fake, client):
     assert clip["id"] == "job-1" and clip["licenceId"] == "VS-2026-ABC123"
     assert clip["voice"] == "Jabari" and clip["length"] == "45 s" and clip["tier"] == "Commercial"
     assert clip["createdAt"] == "2026-10-20T09:00:00+00:00"
+    assert clip["seconds"] == 45
     assert "e=86400" in clip["audioUrl"] and "download=" in clip["audioUrl"]
     params = fake["selects"][0][1]
     assert params["email"] == "eq.ann@example.com" and params["status"] == "eq.ready"
@@ -304,3 +346,195 @@ def test_preview_says_when_the_daily_voice_limit_is_reached(fake, client, monkey
     assert res.status_code == 503
     assert "today's limit" in res.json()["detail"]
     assert len(fake["deletes"]) == 1
+
+
+def test_clips_still_says_sign_in_to_see_your_clips(fake, client):
+    # Same text for no token, a bad token, a user without an email and an unusable email.
+    for headers, user in [({}, None), ({"Authorization": "Bearer bad"}, None),
+                          ({"Authorization": "Bearer good-token"}, {"id": "u1"}),
+                          ({"Authorization": "Bearer good-token"}, {"email": "ann\x00@example.com"})]:
+        fake["user"] = user
+        res = client.get(f"{BASE}/clips", headers=headers)
+        assert res.status_code == 401
+        assert res.json() == {"detail": "Sign in to see your clips."}
+    assert fake["selects"] == []
+
+
+def test_clips_sign_in_outage_is_503(fake, client, monkeypatch):
+    async def down(token):
+        raise db.DbError("auth down", 503)
+
+    monkeypatch.setattr(db, "user_from_token", down)
+    res = client.get(f"{BASE}/clips", headers={"Authorization": "Bearer good-token"})
+    assert res.status_code == 503
+    assert res.json() == {"detail": "Sign-in is unavailable right now. Please try again."}
+
+
+def test_clips_seconds_falls_back_to_projected_then_zero(fake, client):
+    fake["user"] = {"email": "ann@example.com"}
+    fake["jobs"] = [
+        {"id": "job-1", "voice_id": "wanjiru", "audio_seconds": None, "projected_seconds": 130, "created_at": "x"},
+        {"id": "job-2", "voice_id": "wanjiru", "audio_seconds": None, "projected_seconds": None, "created_at": "x"},
+    ]
+    res = client.get(f"{BASE}/clips", headers={"Authorization": "Bearer good-token"})
+    assert res.status_code == 200, res.text
+    first, second = res.json()
+    assert first["seconds"] == 130 and first["length"] == "2 min 10 s"
+    assert second["seconds"] == 0 and second["length"] == "0 s"
+    assert set(first) == {"id", "licenceId", "voice", "length", "seconds", "createdAt", "tier"}
+
+
+# ---- account --------------------------------------------------------------
+
+AUTH = {"Authorization": "Bearer good-token"}
+
+
+def _iso(days: float) -> str:
+    return (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+
+
+def _sub(sub_id, plan, status, period_end, amount_kes, created_days_ago, email="ann@example.com", billing="monthly"):
+    return {"id": sub_id, "email": email, "plan": plan, "billing": billing, "status": status,
+            "period_start": _iso(-created_days_ago), "period_end": period_end, "amount_kes": amount_kes,
+            "created_at": _iso(-created_days_ago)}
+
+
+def _job(job_id, status, amount_kes, email="ann@example.com"):
+    return {"id": job_id, "email": email, "status": status, "amount_kes": amount_kes, "created_at": _iso(-1)}
+
+
+@pytest.fixture
+def ann(fake):
+    fake["user"] = {"email": "Ann@Example.com"}
+    fake["tables"] = {"voice_subscriptions": [], "voice_jobs": []}
+    return fake
+
+
+def test_account_requires_sign_in(fake, client):
+    res = client.get(f"{BASE}/account")
+    assert res.status_code == 401
+    assert res.json() == {"detail": "Sign in to see your account."}
+    res = client.get(f"{BASE}/account", headers={"Authorization": "Bearer bad"})
+    assert res.status_code == 401
+    assert res.json() == {"detail": "Sign in to see your account."}
+    assert fake["selects"] == [] and fake["count_params"] is None
+
+
+def test_account_with_an_active_plan(ann, client):
+    period_end = _iso(20)
+    ann["tables"]["voice_subscriptions"] = [
+        _sub("vs_old", "starter", "expired", _iso(-10), 300, 40),
+        _sub("vs_now", "creator", "active", period_end, 1500, 10),
+        _sub("vs_try", "pro", "pending", None, 4000, 0),
+    ]
+    ann["count"] = 1
+    res = client.get(f"{BASE}/account", headers={**AUTH, "Fly-Client-IP": "41.90.1.2"})
+    assert res.status_code == 200, res.text
+    assert res.json() == {
+        "email": "ann@example.com",
+        "plan": {"plan": "creator", "billing": "monthly", "periodEnd": period_end},
+        "previewsLeft": 2,
+        "previewsPerDay": 3,
+        "spentKes": 1800,
+    }
+    # Same email-OR-IP window the preview endpoint enforces.
+    table, params = ann["count_params"]
+    assert table == "voice_previews"
+    assert params["or"] == '(email.eq."ann@example.com",ip.eq."41.90.1.2")'
+    assert params["created_at"].startswith("gte.") and params["created_at"].endswith("T00:00:00Z")
+    [plan_q] = [p for t, p in ann["selects"] if t == "voice_subscriptions" and p.get("status") == "eq.active"]
+    assert plan_q["email"] == "eq.ann@example.com" and plan_q["order"] == "created_at.desc"
+    assert plan_q["period_end"].startswith("gt.") and plan_q["limit"] == "1"
+
+
+def test_account_picks_the_newest_active_plan(ann, client):
+    newest_end = _iso(300)
+    ann["tables"]["voice_subscriptions"] = [
+        _sub("vs_a", "starter", "active", _iso(5), 300, 25),
+        _sub("vs_b", "pro", "active", newest_end, 40000, 2, billing="yearly"),
+    ]
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 200, res.text
+    assert res.json()["plan"] == {"plan": "pro", "billing": "yearly", "periodEnd": newest_end}
+
+
+def test_account_expired_or_past_period_plan_is_null(ann, client):
+    ann["tables"]["voice_subscriptions"] = [
+        _sub("vs_exp", "creator", "expired", _iso(-3), 1500, 33),
+        # Still marked active, but its period ended yesterday.
+        _sub("vs_lapsed", "pro", "active", _iso(-1), 4000, 31),
+        _sub("vs_fail", "business", "failed", None, 9000, 1),
+        _sub("vs_other", "pro", "active", _iso(10), 4000, 1, email="bob@example.com"),
+    ]
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["plan"] is None
+    assert body["spentKes"] == 5500  # the expired and the lapsed-but-active plan were still paid for
+
+
+def test_account_previews_left_clamps_at_zero(ann, client):
+    ann["count"] = 7
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 200, res.text
+    assert res.json()["previewsLeft"] == 0 and res.json()["previewsPerDay"] == 3
+
+
+def test_account_preview_count_failure_shows_the_full_allowance(ann, client, monkeypatch):
+    async def broken(table, params):
+        raise db.DbError("count down", 503)
+
+    monkeypatch.setattr(db, "count", broken)
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 200, res.text
+    assert res.json()["previewsLeft"] == 3
+
+
+def test_account_spent_kes_sums_ready_clips_and_paid_plans(ann, client):
+    ann["tables"]["voice_jobs"] = [
+        _job("vj_1", "ready", 195),
+        _job("vj_2", "ready", 390),
+        _job("vj_3", "failed", 1000),
+        _job("vj_4", "paying", 2000),
+        _job("vj_5", "generating", 3000),
+        _job("vj_6", "ready", 777, email="bob@example.com"),
+    ]
+    ann["tables"]["voice_subscriptions"] = [
+        _sub("vs_1", "starter", "expired", _iso(-5), 300, 35),
+        _sub("vs_2", "creator", "active", _iso(25), 1500, 5),
+        _sub("vs_3", "pro", "pending", None, 4000, 0),
+        _sub("vs_4", "pro", "failed", None, 4000, 0),
+    ]
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 200, res.text
+    assert res.json()["spentKes"] == 195 + 390 + 300 + 1500
+    spend_qs = [(t, p) for t, p in ann["selects"] if p.get("select") == "amount_kes"]
+    assert sorted(t for t, _ in spend_qs) == ["voice_jobs", "voice_subscriptions"]
+    for _, p in spend_qs:
+        assert p["email"] == "eq.ann@example.com" and p["limit"] == "1000"
+
+
+def test_account_with_nothing_bought(ann, client):
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 200, res.text
+    assert res.json() == {"email": "ann@example.com", "plan": None, "previewsLeft": 3,
+                          "previewsPerDay": 3, "spentKes": 0}
+
+
+@pytest.mark.parametrize("broken_call,broken_table", [
+    ("select_one", "voice_subscriptions"),  # the plan
+    ("select", "voice_subscriptions"),  # plan spend
+    ("select", "voice_jobs"),  # clip spend
+])
+def test_account_db_failure_is_503(ann, client, monkeypatch, broken_call, broken_table):
+    working = getattr(db, broken_call)
+
+    async def flaky(table, params):
+        if table == broken_table:
+            raise db.DbError("down", 503)
+        return await working(table, params)
+
+    monkeypatch.setattr(db, broken_call, flaky)
+    res = client.get(f"{BASE}/account", headers=AUTH)
+    assert res.status_code == 503
+    assert res.json() == {"detail": "Your account is unavailable right now. Please try again."}

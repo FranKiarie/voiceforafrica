@@ -51,8 +51,8 @@ export default function ResetPassword() {
             <h1 className="signin-title">Password changed</h1>
             <p className="muted">Your new password is saved. You're signed in.</p>
           </div>
-          <Link href="/clips" className="btn btn-block">
-            Go to My clips
+          <Link href="/dashboard" className="btn btn-block">
+            Go to your dashboard
           </Link>
         </div>
       </Shell>

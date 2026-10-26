@@ -1,4 +1,4 @@
-"""Public endpoints: free previews, licence checks, sign-in links and the clip list.
+"""Public endpoints: free previews, licence checks, sign-in links, the clip list and the account summary.
 
 Email rule for every module: emails are lower-cased (and stripped) before they are
 stored or compared, so "Ann@X.com" and "ann@x.com" are the same customer.
@@ -78,9 +78,13 @@ def client_ip(request: Request) -> str | None:
     return _ip_key(request.client.host if request.client else None)
 
 
+def _utc_stamp(moment: datetime) -> str:
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _midnight_utc() -> str:
     now = datetime.now(timezone.utc)
-    return now.replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _utc_stamp(now.replace(hour=0, minute=0, second=0, microsecond=0))
 
 
 def _today_filter(email: str, ip: str | None) -> dict[str, str]:
@@ -221,7 +225,7 @@ class MagicLinkIn(BaseModel):
 async def magic_link(body: MagicLinkIn) -> Response:
     email = normalise_email(body.email)
     try:
-        await db.send_magic_link(email, redirect_to=f"{settings.public_site_url.rstrip('/')}/clips")
+        await db.send_magic_link(email, redirect_to=f"{settings.public_site_url.rstrip('/')}/dashboard")
     except db.DbError as e:
         if e.status_code == 429:
             raise HTTPException(429, "Too many sign-in emails. Try again in a few minutes.") from e
@@ -229,11 +233,15 @@ async def magic_link(body: MagicLinkIn) -> Response:
     return Response(status_code=204)
 
 
-# ---- clips ----------------------------------------------------------------
+# ---- signed-in customer ----------------------------------------------------
 
 
-@router.get("/clips")
-async def list_clips(authorization: str | None = Header(default=None)) -> list[dict]:
+async def _signed_in_email(authorization: str | None, message: str) -> str:
+    """Lower-cased email of the Supabase user behind `Authorization: Bearer <token>`.
+
+    Raises 401 with `message` when there is no usable signed-in user, and 503 when
+    Supabase auth cannot be reached. The email is safe to pass to db.eq().
+    """
     token = ""
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
@@ -242,18 +250,30 @@ async def list_clips(authorization: str | None = Header(default=None)) -> list[d
     except db.DbError as e:
         raise HTTPException(503, "Sign-in is unavailable right now. Please try again.") from e
     if not user or not user.get("email"):
-        raise HTTPException(401, "Sign in to see your clips.")
+        raise HTTPException(401, message)
     email = str(user["email"]).strip().lower()
     try:
-        email_filter = db.eq(email)
+        db.eq(email)
     except ValueError as e:
-        raise HTTPException(401, "Sign in to see your clips.") from e
+        raise HTTPException(401, message) from e
+    return email
 
+
+def _row_kes(rows: list[dict]) -> int:
+    return sum(int(r.get("amount_kes") or 0) for r in rows)
+
+
+# ---- clips ----------------------------------------------------------------
+
+
+@router.get("/clips")
+async def list_clips(authorization: str | None = Header(default=None)) -> list[dict]:
+    email = await _signed_in_email(authorization, "Sign in to see your clips.")
     try:
         jobs = await db.select(
             "voice_jobs",
             {
-                "email": email_filter,
+                "email": db.eq(email),
                 "status": "eq.ready",
                 "select": "id,voice_id,licence_id,audio_path,audio_seconds,projected_seconds,created_at",
                 "order": "created_at.desc",
@@ -275,11 +295,13 @@ async def list_clips(authorization: str | None = Header(default=None)) -> list[d
     links = await asyncio.gather(*(link(j) for j in jobs))
     clips: list[dict] = []
     for j, audio_url in zip(jobs, links):
+        seconds = max(0, int(round(j.get("audio_seconds") or j.get("projected_seconds") or 0)))
         clip = {
             "id": j["id"],
             "licenceId": j.get("licence_id") or "",
             "voice": voice_name(j.get("voice_id") or ""),
-            "length": format_length(j.get("audio_seconds") or j.get("projected_seconds")),
+            "length": format_length(seconds),
+            "seconds": seconds,
             "createdAt": j.get("created_at") or "",
             "tier": "Commercial",
         }
@@ -287,3 +309,65 @@ async def list_clips(authorization: str | None = Header(default=None)) -> list[d
             clip["audioUrl"] = audio_url
         clips.append(clip)
     return clips
+
+
+# ---- account --------------------------------------------------------------
+
+# Spend is summed here over plain rows of amount_kes; 1,000 paid clips or plan
+# payments per customer is far past anyone today.
+ACCOUNT_ROW_LIMIT = "1000"
+
+
+@router.get("/account")
+async def account(request: Request, authorization: str | None = Header(default=None)) -> dict:
+    email = await _signed_in_email(authorization, "Sign in to see your account.")
+    email_filter = db.eq(email)
+    limit = settings.previews_per_day
+
+    plan_row, jobs, subs, used = await asyncio.gather(
+        db.select_one(
+            "voice_subscriptions",
+            {
+                "email": email_filter,
+                "status": "eq.active",
+                "period_end": f"gt.{_utc_stamp(datetime.now(timezone.utc))}",
+                "select": "plan,billing,period_end",
+                "order": "created_at.desc",
+            },
+        ),
+        db.select(
+            "voice_jobs",
+            {"email": email_filter, "status": "eq.ready", "select": "amount_kes", "limit": ACCOUNT_ROW_LIMIT},
+        ),
+        db.select(
+            "voice_subscriptions",
+            {
+                "email": email_filter,
+                "status": "in.(active,expired)",
+                "select": "amount_kes",
+                "limit": ACCOUNT_ROW_LIMIT,
+            },
+        ),
+        db.count("voice_previews", _today_filter(email, client_ip(request))),
+        return_exceptions=True,
+    )
+    for result in (plan_row, jobs, subs, used):
+        if isinstance(result, BaseException) and not isinstance(result, db.DbError):
+            raise result
+    for result in (plan_row, jobs, subs):
+        if isinstance(result, db.DbError):
+            raise HTTPException(503, "Your account is unavailable right now. Please try again.") from result
+
+    plan = None
+    if plan_row:
+        plan = {"plan": plan_row.get("plan"), "billing": plan_row.get("billing"), "periodEnd": plan_row.get("period_end")}
+    # The preview limit is enforced again when a preview is asked for, so a
+    # failed count only means the number shown may be optimistic.
+    previews_left = limit if isinstance(used, db.DbError) else max(0, limit - int(used))
+    return {
+        "email": email,
+        "plan": plan,
+        "previewsLeft": previews_left,
+        "previewsPerDay": limit,
+        "spentKes": _row_kes(jobs) + _row_kes(subs),
+    }

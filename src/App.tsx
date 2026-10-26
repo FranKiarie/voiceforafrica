@@ -10,6 +10,7 @@ import Ready from "./pages/Ready";
 import Legal from "./pages/Legal";
 import Signin from "./pages/Signin";
 import Clips from "./pages/Clips";
+import Dashboard from "./pages/Dashboard";
 import Subscribe from "./pages/Subscribe";
 import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
@@ -40,6 +41,7 @@ function Page({ path }: { path: string }) {
   if (path === "/signin") return <Signin />;
   if (path === "/signup") return <Signup />;
   if (path === "/reset-password") return <ResetPassword />;
+  if (path === "/dashboard") return <Dashboard />;
   if (path === "/clips") return <Clips />;
   if (path === "/subscribe") return <Subscribe />;
   if (path === "/terms" || path === "/privacy") return <Legal />;
