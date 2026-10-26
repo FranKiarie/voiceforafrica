@@ -1,0 +1,233 @@
+/* Site-wide motion: page transitions, scroll reveals and soft interactions.
+   Everything here switches off for visitors who ask for reduced motion. */
+
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body,
+.card,
+.site-footer,
+.field input,
+.field select,
+.field textarea {
+  transition: background-color 350ms ease, color 350ms ease, border-color 350ms ease;
+}
+
+/* Page change: the new page rises in. */
+.route {
+  animation: route-in 480ms var(--ease-out) both;
+}
+
+@keyframes route-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Scroll reveal, set up by useReveal() in App.tsx. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 650ms var(--ease-out), transform 650ms var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Buttons and links */
+.btn {
+  transition: transform 220ms var(--ease-spring), box-shadow 220ms ease, background-color 220ms ease, opacity 200ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -12px rgba(242, 122, 30, 0.75);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: none;
+}
+
+.btn-outline:hover:not(:disabled) {
+  box-shadow: 0 8px 18px -12px rgba(42, 26, 16, 0.45);
+  border-color: var(--text);
+}
+
+a {
+  transition: color 200ms ease, opacity 200ms ease;
+}
+
+.site-nav a {
+  position: relative;
+}
+
+.site-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms var(--ease-out);
+}
+
+.site-nav a:hover::after,
+.site-nav a[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+/* Form fields: a warm focus glow */
+.field input,
+.field select,
+.field textarea {
+  transition: border-color 200ms ease, box-shadow 220ms ease, background-color 350ms ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(242, 122, 30, 0.18);
+}
+
+/* Cards lift a little on hover */
+main article,
+main .card {
+  transition: transform 300ms var(--ease-out), box-shadow 300ms ease, border-color 300ms ease, background-color 350ms ease;
+}
+
+main article:hover,
+main .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 36px -24px rgba(42, 26, 16, 0.35);
+}
+
+/* Drums grow slightly under the finger */
+.drum button {
+  transition: transform 220ms var(--ease-spring), filter 200ms ease;
+}
+
+.drum button:hover {
+  transform: scale(1.05);
+  filter: brightness(1.04);
+}
+
+.drum button:active {
+  transform: scale(0.96);
+}
+
+/* Bead progress glides between steps */
+.bead {
+  transition: background-color 450ms ease, transform 450ms var(--ease-spring);
+}
+
+/* Dialogs fade their backdrop in */
+[role="dialog"] {
+  animation: dialog-in 380ms var(--ease-spring) both;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Theme switch */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--field);
+  background: transparent;
+  color: var(--faint);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.theme-toggle .knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--track);
+  position: relative;
+  transition: background-color 250ms ease;
+}
+
+.theme-toggle .knob::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold);
+  transition: transform 300ms var(--ease-spring);
+}
+
+.theme-toggle[aria-pressed="true"] .knob::after {
+  transform: translateX(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .route,
+  [role="dialog"] {
+    animation: none;
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .btn,
+  main article,
+  main .card,
+  .drum button,
+  .bead,
+  .site-nav a::after,
+  .theme-toggle .knob::after {
+    transition: none;
+  }
+  .btn:hover:not(:disabled),
+  main article:hover,
+  main .card:hover,
+  .drum button:hover {
+    transform: none;
+  }
+}

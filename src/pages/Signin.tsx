@@ -98,7 +98,7 @@ function nextPath(): string {
 }
 
 type Mode = "password" | "link";
-type Sent = { kind: "link" | "reset"; email: string } | null;
+type Sent = { kind: "link" | "reset" | "confirm"; email: string } | null;
 
 export default function Signin() {
   const session = useSession();
@@ -109,6 +109,7 @@ export default function Signin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState<Sent>(null);
+  const [unconfirmed, setUnconfirmed] = useState(false);
 
   const cleanEmail = () => {
     const value = email.trim();
@@ -128,6 +129,7 @@ export default function Signin() {
       return;
     }
     setError("");
+    setUnconfirmed(false);
     setBusy(true);
     try {
       if (mode === "password") {
@@ -145,7 +147,10 @@ export default function Signin() {
     } catch (err) {
       const kind = authErrorKind(err);
       if (kind === "credentials") setError("Wrong email or password.");
-      else if (kind === "unconfirmed") setError("Please confirm your email first — check your inbox.");
+      else if (kind === "unconfirmed") {
+        setError("Please confirm your email first — check your inbox.");
+        setUnconfirmed(true);
+      }
       else if (kind === "rate") setError(RATE_TEXT);
       else if (kind === "network") setError(NETWORK_TEXT);
       else setError(mode === "password" ? "We couldn't sign you in. Try again." : "We couldn't send the link. Check the address and try again.");
@@ -166,6 +171,24 @@ export default function Signin() {
     } catch (err) {
       const kind = authErrorKind(err);
       setError(kind === "rate" ? RATE_TEXT : kind === "network" ? NETWORK_TEXT : "We couldn't send the reset email. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Accounts made while email was failing never got their confirmation link.
+  const resendConfirmation = async () => {
+    const value = cleanEmail();
+    if (!value) return;
+    setError("");
+    setBusy(true);
+    try {
+      const { error: err } = await supabase.auth.resend({ type: "signup", email: value, options: { emailRedirectTo: `${SITE_URL}/clips` } });
+      if (err) throw err;
+      setSent({ kind: "confirm", email: value });
+    } catch (err) {
+      const kind = authErrorKind(err);
+      setError(kind === "rate" ? RATE_TEXT : kind === "network" ? NETWORK_TEXT : "We couldn't resend the confirmation email. Try again.");
     } finally {
       setBusy(false);
     }
@@ -215,7 +238,9 @@ export default function Signin() {
             <p className="muted">
               {sent.kind === "link"
                 ? `We sent a sign-in link to ${sent.email}. Open it on this device to sign in.`
-                : `If ${sent.email} has an account, we sent a link to set a new password. Open it to continue.`}
+                : sent.kind === "confirm"
+                  ? `We sent a new confirmation link to ${sent.email}. Open it to finish creating your account.`
+                  : `If ${sent.email} has an account, we sent a link to set a new password. Open it to continue.`}
             </p>
             <button
               type="button"
@@ -275,6 +300,11 @@ export default function Signin() {
             <p id="signin-error" className="signin-error" role="alert">
               {error}
             </p>
+          )}
+          {unconfirmed && (
+            <button type="button" className="signin-text-btn" onClick={resendConfirmation} disabled={busy}>
+              Resend confirmation email
+            </button>
           )}
           <button type="submit" className="btn btn-block" disabled={busy}>
             {mode === "password" ? (busy ? "Signing in…" : "Sign in") : busy ? "Sending…" : "Email me a link"}

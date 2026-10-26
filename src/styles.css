@@ -22,23 +22,23 @@
   --font-hand: "Caveat", cursive;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-world: "DM Sans", "Noto Sans Ethiopic", "Noto Sans Arabic", sans-serif;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a110c;
-    --card: #1f150f;
-    --paper: #f6ead7;
-    --text: #f6ead7;
-    --muted: #cdb89a;
-    --faint: #9c8670;
-    --line: #2e1f16;
-    --field: #5b4636;
-    --track: #3a271c;
-    --chip: #2a1d15;
-    --eyebrow: #e8a33c;
-  }
+/* Cream is the default everywhere. Dark brown only when the visitor turns it on. */
+:root[data-theme="dark"] {
+  --bg: #1a110c;
+  --card: #1f150f;
+  --paper: #f6ead7;
+  --text: #f6ead7;
+  --muted: #cdb89a;
+  --faint: #9c8670;
+  --line: #2e1f16;
+  --field: #5b4636;
+  --track: #3a271c;
+  --chip: #2a1d15;
+  --eyebrow: #e8a33c;
+  color-scheme: dark;
 }
 
 * {
@@ -253,13 +253,12 @@ p {
   display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  .brand .logo-light {
-    display: none;
-  }
-  .brand .logo-dark {
-    display: block;
-  }
+:root[data-theme="dark"] .brand .logo-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand .logo-dark {
+  display: block;
 }
 
 .brand-rule {

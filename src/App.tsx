@@ -1,4 +1,5 @@
 import { usePath } from "./router";
+import { useReveal } from "./reveal";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
 import Verify from "./pages/Verify";
@@ -19,6 +20,16 @@ import ResetPassword from "./pages/ResetPassword";
 // /terms + /privacy (shared Legal page).
 export default function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
+  useReveal(path);
+  // A new key per page replays the page-rise animation on every navigation.
+  return (
+    <div className="route" key={path}>
+      <Page path={path} />
+    </div>
+  );
+}
+
+function Page({ path }: { path: string }) {
   if (path === "/") return <Home />;
   if (path === "/pricing") return <Pricing />;
   if (path === "/verify" || path.startsWith("/verify/")) return <Verify />;

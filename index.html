@@ -4,8 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Voice-overs in your accent. African voices for your scripts: hear 45 seconds free, pay with M-Pesa." />
-    <meta name="theme-color" content="#FBF6EE" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1A110C" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FBF6EE" />
+    <script>
+      // Apply a saved dark-mode choice before first paint; cream otherwise.
+      try { if (localStorage.getItem("mv.theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}
+    </script>
     <link rel="icon" type="image/png" href="/brand/mikaka-mark.png" />
     <link rel="apple-touch-icon" href="/brand/mikaka-mark.png" />
     <link rel="canonical" href="https://voice.mikaka.io/" />

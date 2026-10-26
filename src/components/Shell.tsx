@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, usePath } from "../router";
+import { useTheme } from "../reveal";
 import type { PatternId } from "../data";
 import { useSession } from "../lib/supabase";
 
@@ -231,6 +232,16 @@ export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {
   );
 }
 
+function ThemeToggle() {
+  const [dark, toggle] = useTheme();
+  return (
+    <button type="button" className="theme-toggle" aria-pressed={dark} onClick={toggle}>
+      <span className="knob" aria-hidden="true" />
+      Dark mode
+    </button>
+  );
+}
+
 export function Footer() {
   return (
     <footer className="site-footer">
@@ -239,9 +250,10 @@ export function Footer() {
           <img src="/brand/mikaka-mark.png" alt="" width={22} height={22} />
           voice.mikaka.io · Payments by Paystack
         </span>
-        <nav aria-label="Footer" style={{ display: "flex", gap: 20 }}>
+        <nav aria-label="Footer" style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>
+          <ThemeToggle />
         </nav>
       </div>
     </footer>
