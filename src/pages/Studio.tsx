@@ -3,6 +3,7 @@ import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
 import { LANGUAGES, MAX_PAYG_CHARS, VOICES, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
+import { createPreview, type Preview } from "../lib/api";
 import "./Studio.css";
 
 const PREVIEW_KEY = "mv.previews";
@@ -33,6 +34,20 @@ function recordPreview(count: number) {
   }
 }
 
+// The preview the Listen and Pay pages use, kept for this tab only.
+const CURRENT_PREVIEW_KEY = "mv.preview";
+
+function savePreview(p: Preview) {
+  try {
+    sessionStorage.setItem(
+      CURRENT_PREVIEW_KEY,
+      JSON.stringify({ previewId: p.previewId, seconds: p.seconds, audioUrl: p.audioUrl }),
+    );
+  } catch {
+    // Storage blocked: Listen asks for the preview again.
+  }
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Studio() {
@@ -44,30 +59,42 @@ export default function Studio() {
   const [adult, setAdult] = useState(flow.adult);
   const [used, setUsed] = useState(previewsUsedToday);
   const [limitHit, setLimitHit] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const lang = LANGUAGES.find((l) => l.code === language);
   const q = quoteFor(script);
   const left = Math.max(0, PREVIEWS_PER_DAY - used);
   const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(email.trim()) && adult;
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!ready) return;
+    if (!ready || busy) return;
     const count = previewsUsedToday();
     if (count >= PREVIEWS_PER_DAY) {
       setUsed(count);
       setLimitHit(true);
       return;
     }
-    recordPreview(count + 1);
-    setUsed(count + 1);
-    setFlow({ language, voiceId, script, email: email.trim(), adult: true });
-    navigate("/listen");
+    setBusy(true);
+    setError("");
+    const trimmed = email.trim();
+    try {
+      const preview = await createPreview({ script, voiceId, language, email: trimmed });
+      recordPreview(count + 1);
+      setUsed(count + 1);
+      savePreview(preview);
+      setFlow({ language, voiceId, script, email: trimmed, adult: true });
+      navigate("/listen");
+    } catch {
+      setError("We couldn't make your preview just now. Check your connection and try again.");
+      setBusy(false);
+    }
   };
 
   return (
     <Shell step={1} footer={false}>
-      <form className="narrow studio" onSubmit={submit} noValidate>
+      <form className="narrow studio" onSubmit={(e) => void submit(e)} noValidate>
         <h1 className="studio-title">Paste your script</h1>
 
         <div className="studio-row">
@@ -140,9 +167,20 @@ export default function Studio() {
           </p>
         ) : null}
 
+        {error && (
+          <p className="studio-error" role="alert">
+            {error}
+          </p>
+        )}
+
         <div className="studio-submit">
-          <button type="submit" className="btn btn-block" disabled={!ready || left === 0}>
-            Hear 45 seconds free
+          <button
+            type="submit"
+            className="btn btn-block"
+            disabled={!ready || left === 0 || busy}
+            aria-busy={busy || undefined}
+          >
+            {busy ? "Getting your preview…" : "Hear 45 seconds free"}
           </button>
           <p className="faint center studio-note">
             Then KES 195 a minute if you like it · {left} free {left === 1 ? "preview" : "previews"} left today

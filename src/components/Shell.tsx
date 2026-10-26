@@ -146,6 +146,7 @@ const NAV = [
   { href: "/#voices", label: "Voices", path: "/voices" },
   { href: "/pricing", label: "Pricing", path: "/pricing" },
   { href: "/verify", label: "Verify a licence", path: "/verify" },
+  { href: "/clips", label: "My clips", path: "/clips" },
 ];
 
 export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {

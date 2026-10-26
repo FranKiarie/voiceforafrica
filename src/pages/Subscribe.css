@@ -1,0 +1,192 @@
+.sub {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sub-title {
+  margin: 0;
+  font-size: 36px;
+  line-height: 1.15;
+}
+
+.sub-summary {
+  overflow: hidden;
+}
+
+.sub-summary-body {
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sub-plan {
+  margin: 0;
+  font-size: 24px;
+}
+
+.sub-perks {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.sub-period {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--field);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.sub-period button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sub-period button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.sub-price {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.sub-amount {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.sub-kes {
+  flex-basis: 100%;
+  font-size: 15px;
+}
+
+.sub-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sub-methods {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sub-methods legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.sub-method {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--field);
+  border-radius: 14px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.sub-method:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.sub-method input {
+  margin: 3px 0 0;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.sub-error {
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.sub-error:empty {
+  min-height: 0;
+}
+
+.sub-foot {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.sub-missing,
+.sub-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.sub-missing h1,
+.sub-done h1 {
+  margin: 0;
+  font-size: 36px;
+  line-height: 1.15;
+}
+
+.sub-missing p,
+.sub-done p {
+  margin: 0;
+}
+
+.sub-done h1:focus {
+  outline: none;
+}
+
+.sub-done-actions {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sub-period button:focus-visible,
+.sub-method:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .sub-title,
+  .sub-missing h1,
+  .sub-done h1 {
+    font-size: 30px;
+  }
+
+  .sub-summary-body {
+    padding: 18px;
+  }
+}

@@ -1,70 +1,100 @@
 import { useEffect, useRef, useState } from "react";
-import { Drum, PatternStrip, Shell } from "../components/Shell";
-import { VOICES, formatClock, formatDuration, quoteFor } from "../data";
-import { getFlow, setFlow, useFlow } from "../flow";
+import { DrumRoll, Drum, PatternStrip, Shell } from "../components/Shell";
+import { VOICES, formatClock, quoteFor } from "../data";
+import { setFlow, useFlow } from "../flow";
+import { ApiError, getJob, type Job } from "../lib/api";
 import { Link, navigate } from "../router";
 import "./Ready.css";
 
-const ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const LICENCES_KEY = "mv.licences";
+const POLL_MS = 2000;
 const NOT_LIVE = "Your MP3 downloads here once the voice service is live.";
-
-type Licence = { id: string; tier: string; voice: string; length: string; issued: string; paidKes?: number };
-
-function newLicenceId(): string {
-  const bytes = new Uint32Array(6);
-  crypto.getRandomValues(bytes);
-  let s = "";
-  for (const b of bytes) s += ID_CHARS[b % ID_CHARS.length];
-  return `VS-${new Date().getFullYear()}-${s}`;
-}
-
-function saveLicence(lic: Licence) {
-  try {
-    const raw = localStorage.getItem(LICENCES_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    const list: Licence[] = Array.isArray(parsed) ? parsed : [];
-    if (list.some((l) => l && l.id === lic.id)) return;
-    list.push(lic);
-    localStorage.setItem(LICENCES_KEY, JSON.stringify(list));
-  } catch {
-    // Storage blocked: the licence still shows on this page.
-  }
-}
 
 export default function Ready() {
   const flow = useFlow();
   const q = quoteFor(flow.script);
   const voiceName = VOICES.find((v) => v.id === flow.voiceId)?.name ?? flow.voiceId;
+  const [job, setJob] = useState<Job | null>(null);
   const [playing, setPlaying] = useState(false);
   const [mp3Note, setMp3Note] = useState("");
   const [pdfNote, setPdfNote] = useState("");
-  const made = useRef(false);
-  const paid = Boolean(flow.paymentRef);
+  const audio = useRef<HTMLAudioElement>(null);
+  const jobId = flow.jobId;
+  const paid = Boolean(jobId && flow.paymentRef);
 
   useEffect(() => {
-    if (!paid) {
+    if (!paid || !jobId) {
       navigate("/listen");
       return;
     }
-    if (made.current) return;
-    made.current = true;
-    const current = getFlow();
-    if (current.licenceId) return;
-    const id = newLicenceId();
-    setFlow({ licenceId: id });
-    saveLicence({
-      id,
-      tier: "Commercial",
-      voice: voiceName,
-      length: formatDuration(q.projectedSeconds),
-      issued: new Date().toISOString().slice(0, 10),
-      paidKes: current.paidKes,
-    });
-  }, [paid, voiceName, q.projectedSeconds]);
+    let alive = true;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const j = await getJob(jobId);
+        if (!alive) return;
+        setJob(j);
+        if (j.status === "ready") {
+          if (j.licenceId) setFlow({ licenceId: j.licenceId });
+          return;
+        }
+        if (j.status === "failed") return;
+      } catch (e) {
+        if (!alive) return;
+        if (e instanceof ApiError && e.status === 404) {
+          setJob({ jobId, status: "failed" });
+          return;
+        }
+        // Network hiccup: keep trying.
+      }
+      timer = window.setTimeout(() => void poll(), POLL_MS);
+    };
+    void poll();
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, [paid, jobId]);
+
+  const audioUrl = job?.status === "ready" ? job.audioUrl : undefined;
+
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    if (playing) el.play().catch(() => setPlaying(false));
+    else el.pause();
+  }, [playing, audioUrl]);
 
   if (!paid) return null;
-  const id = flow.licenceId ?? "";
+
+  if (!job || job.status === "paying" || job.status === "generating") {
+    return (
+      <Shell step={4} footer={false}>
+        <div className="ready">
+          <DrumRoll />
+          <div role="status">
+            <h1 className="ready-title">Making your full clip…</h1>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (job.status === "failed") {
+    return (
+      <Shell step={4} footer={false}>
+        <div className="ready">
+          <h1 className="ready-title">Something went wrong</h1>
+          <p className="muted" role="alert">
+            Something went wrong making your clip. We'll refund you automatically.
+          </p>
+          <Link href="/studio">Back to the studio</Link>
+        </div>
+      </Shell>
+    );
+  }
+
+  const id = job.licenceId ?? flow.licenceId ?? "";
+  const seconds = job.seconds ?? q.projectedSeconds;
 
   return (
     <Shell step={4} footer={false}>
@@ -76,8 +106,19 @@ export default function Ready() {
 
         <div className="ready-head">
           <h1 className="ready-title">Your clip is ready</h1>
-          <p className="faint">{`${formatClock(q.projectedSeconds)} · ${voiceName}`}</p>
+          <p className="faint">{`${formatClock(seconds)} · ${voiceName}`}</p>
         </div>
+
+        {audioUrl && (
+          <audio
+            ref={audio}
+            src={audioUrl}
+            preload="metadata"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+          />
+        )}
 
         <Drum
           size={96}
@@ -87,9 +128,15 @@ export default function Ready() {
         />
 
         <div className="ready-download">
-          <button type="button" className="btn btn-block" onClick={() => setMp3Note(NOT_LIVE)}>
-            Download MP3
-          </button>
+          {audioUrl ? (
+            <a className="btn btn-block" href={audioUrl} download>
+              Download MP3
+            </a>
+          ) : (
+            <button type="button" className="btn btn-block" onClick={() => setMp3Note(NOT_LIVE)}>
+              Download MP3
+            </button>
+          )}
           <p className="ready-note muted" role="status">
             {mp3Note}
           </p>

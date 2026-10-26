@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Shell, PatternStrip } from "../components/Shell";
 import { Link } from "../router";
 import type { PatternId } from "../data";
+import type { Plan } from "../lib/api";
 import "./Pricing.css";
 
 type Tier = {
@@ -13,6 +14,7 @@ type Tier = {
   line: string;
   cta: string;
   kind: "studio" | "plan" | "contact";
+  plan?: Plan;
   primary?: boolean;
 };
 
@@ -26,7 +28,7 @@ const TIERS: Tier[] = [
     cta: "Paste your script",
     kind: "studio",
   },
-  { name: "Starter", pattern: "beads", monthly: 15, line: "200 minutes, 2 languages, WAV files. Commercial licence.", cta: "Choose Starter", kind: "plan" },
+  { name: "Starter", pattern: "beads", monthly: 15, line: "200 minutes, 2 languages, WAV files. Commercial licence.", cta: "Choose Starter", kind: "plan", plan: "starter" },
   {
     name: "Creator",
     pattern: "kitenge",
@@ -34,10 +36,11 @@ const TIERS: Tier[] = [
     line: "750 minutes, 5 languages, style control, two-voice dialogue.",
     cta: "Choose Creator",
     kind: "plan",
+    plan: "creator",
     primary: true,
   },
-  { name: "Pro", pattern: "adire", monthly: 100, line: "1,600 minutes, every language, Broadcast licence for TV and radio.", cta: "Choose Pro", kind: "plan" },
-  { name: "Business", pattern: "kente", monthly: 350, line: "6,000 minutes, Resale licence, 10 seats.", cta: "Choose Business", kind: "plan" },
+  { name: "Pro", pattern: "adire", monthly: 100, line: "1,600 minutes, every language, Broadcast licence for TV and radio.", cta: "Choose Pro", kind: "plan", plan: "pro" },
+  { name: "Business", pattern: "kente", monthly: 350, line: "6,000 minutes, Resale licence, 10 seats.", cta: "Choose Business", kind: "plan", plan: "business" },
   {
     name: "Enterprise",
     pattern: "ndebele",
@@ -73,7 +76,6 @@ function money(usd: number): string {
 
 export default function Pricing() {
   const [yearly, setYearly] = useState(false);
-  const [note, setNote] = useState(false);
 
   const priceOf = (t: Tier): { price: string; per: string } => {
     if (t.monthly === undefined) return { price: t.price ?? "", per: t.per ?? "" };
@@ -115,10 +117,10 @@ export default function Pricing() {
                     {t.cta}
                   </Link>
                 )}
-                {t.kind === "plan" && (
-                  <button type="button" className={cls} onClick={() => setNote(true)}>
+                {t.kind === "plan" && t.plan && (
+                  <Link href={`/subscribe?plan=${t.plan}&billing=${yearly ? "yearly" : "monthly"}`} className={cls}>
                     {t.cta}
-                  </button>
+                  </Link>
                 )}
                 {t.kind === "contact" && (
                   <a href="mailto:support@mikaka.io" className={cls}>
@@ -130,12 +132,6 @@ export default function Pricing() {
           );
         })}
       </section>
-
-      <div className="wide">
-        <p className="plan-note" role="status">
-          {note ? "Monthly plans open soon. Start with pay as you go today." : ""}
-        </p>
-      </div>
 
       <section className="wide pricing-compare">
         <details>

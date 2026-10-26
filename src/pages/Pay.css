@@ -15,6 +15,12 @@
   line-height: 1.15;
 }
 
+.pay-amount {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
 .pay-back {
   color: var(--muted);
   font-weight: 600;

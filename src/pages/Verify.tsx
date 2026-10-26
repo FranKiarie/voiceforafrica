@@ -1,11 +1,16 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Shell } from "../components/Shell";
+import { verifyLicence, type Licence } from "../lib/api";
 import { usePath } from "../router";
 import "./Verify.css";
 
-type Licence = { id: string; tier: string; voice: string; length: string; issued: string; paidKes?: number };
-
-type Result = { kind: "found"; licence: Licence } | { kind: "missing" } | { kind: "bad" } | null;
+type Result =
+  | { kind: "found"; licence: Licence }
+  | { kind: "missing" }
+  | { kind: "bad" }
+  | { kind: "loading" }
+  | { kind: "error" }
+  | null;
 
 const ID_RE = /^VS-\d{4}-[A-Z0-9]{6}$/i;
 
@@ -19,23 +24,6 @@ function idFromPath(path: string): string {
   }
 }
 
-function readLicences(): Licence[] {
-  try {
-    const raw = window.localStorage.getItem("mv.licences");
-    const list: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? (list as Licence[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function lookup(input: string): Result {
-  const id = input.trim().toUpperCase();
-  if (!ID_RE.test(id)) return { kind: "bad" };
-  const licence = readLicences().find((l) => typeof l?.id === "string" && l.id.toUpperCase() === id);
-  return licence ? { kind: "found", licence } : { kind: "missing" };
-}
-
 function formatIssued(value: string): string {
   const d = new Date(value);
   if (!value || Number.isNaN(d.getTime())) return value || "—";
@@ -46,15 +34,33 @@ export default function Verify() {
   const path = usePath();
   const [value, setValue] = useState(() => idFromPath(path));
   const [result, setResult] = useState<Result>(null);
+  const seq = useRef(0);
+
+  const lookup = useCallback(async (input: string) => {
+    const id = input.trim().toUpperCase();
+    const n = ++seq.current;
+    if (!ID_RE.test(id)) {
+      setResult({ kind: "bad" });
+      return;
+    }
+    setResult({ kind: "loading" });
+    try {
+      const licence = await verifyLicence(id);
+      if (n !== seq.current) return;
+      setResult(licence ? { kind: "found", licence } : { kind: "missing" });
+    } catch {
+      if (n === seq.current) setResult({ kind: "error" });
+    }
+  }, []);
 
   // Prefill (and check) when the page opens on /verify/<ID>.
   useEffect(() => {
     const id = idFromPath(path);
     if (id) {
       setValue(id);
-      setResult(lookup(id));
+      void lookup(id);
     }
-  }, [path]);
+  }, [path, lookup]);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -65,7 +71,7 @@ export default function Verify() {
     }
     setValue(id);
     window.history.replaceState({}, "", `/verify/${encodeURIComponent(id)}`);
-    setResult(lookup(id));
+    void lookup(id);
   };
 
   return (
@@ -92,12 +98,20 @@ export default function Verify() {
               aria-describedby={result?.kind === "bad" ? "verify-error" : undefined}
             />
           </label>
-          <button type="submit" className="btn">
-            Check
+          <button type="submit" className="btn" disabled={result?.kind === "loading"}>
+            {result?.kind === "loading" ? "Checking…" : "Check"}
           </button>
         </form>
 
         <div aria-live="polite">
+          {result?.kind === "loading" && <p className="muted">Checking the licence…</p>}
+
+          {result?.kind === "error" && (
+            <p className="verify-error" role="alert">
+              We couldn't reach the licence service. Check your connection and try again.
+            </p>
+          )}
+
           {result?.kind === "bad" && (
             <p id="verify-error" className="verify-error">
               That does not look like a licence ID. It reads like VS-2026-8F3K2Q.

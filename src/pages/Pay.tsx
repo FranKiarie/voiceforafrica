@@ -1,43 +1,74 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { DrumRoll, Shell } from "../components/Shell";
-import { formatKes, quoteFor } from "../data";
+import { formatKes } from "../data";
 import { setFlow, useFlow } from "../flow";
-import { payWithPaystack } from "../lib/paystack";
+import { API_MODE, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
+import { resumeWithPaystack } from "../lib/paystack";
 import { Link, navigate } from "../router";
 import "./Pay.css";
 
-type Mode = "waiting" | "demo" | "cancelled";
+type Mode = "waiting" | "demo" | "cancelled" | "error";
+
+function previewId(): string | undefined {
+  try {
+    const raw = sessionStorage.getItem("mv.preview");
+    const id = raw ? (JSON.parse(raw) as { previewId?: unknown }).previewId : undefined;
+    return typeof id === "string" ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export default function Pay() {
   const flow = useFlow();
-  const q = quoteFor(flow.script);
   const [mode, setMode] = useState<Mode>("waiting");
+  const [checkout, setCheckout] = useState<PaygCheckout | null>(null);
+  const checkoutRef = useRef<PaygCheckout | null>(null);
   const started = useRef(false);
 
-  const onSuccess = useCallback(
-    (ref: string) => {
-      setFlow({ paymentRef: ref, paidKes: q.kes });
-      navigate("/ready");
-    },
-    [q.kes],
-  );
+  const onSuccess = useCallback((ref: string) => {
+    setFlow({ paymentRef: ref });
+    navigate("/ready");
+  }, []);
   const onCancel = useCallback(() => setMode("cancelled"), []);
 
   const start = useCallback(async () => {
     setMode("waiting");
     try {
-      const result = await payWithPaystack({
-        email: flow.email,
-        amountKes: q.kes,
-        metadata: { purpose: "payg_job", voice: flow.voiceId, chars: q.chars },
-        onSuccess,
-        onCancel,
-      });
-      if (result === "demo") setMode("demo");
+      // The server prices the job; the browser never sends an amount.
+      let co = checkoutRef.current;
+      if (!co) {
+        co = await createPaygCheckout({
+          previewId: previewId(),
+          script: flow.script,
+          voiceId: flow.voiceId,
+          language: flow.language,
+          email: flow.email,
+        });
+        checkoutRef.current = co;
+        setCheckout(co);
+        setFlow({ jobId: co.jobId, paidKes: co.amountKes });
+      }
+      if (co.accessCode) {
+        await resumeWithPaystack(co.accessCode, { onSuccess, onCancel });
+      } else if (API_MODE === "demo") {
+        setMode("demo");
+      } else {
+        setMode("error");
+      }
     } catch {
-      setMode("cancelled");
+      setMode("error");
     }
-  }, [flow.email, flow.voiceId, q.kes, q.chars, onSuccess, onCancel]);
+  }, [flow.script, flow.voiceId, flow.language, flow.email, onSuccess, onCancel]);
+
+  const onDemoPaid = useCallback(
+    (ref: string) => {
+      const co = checkoutRef.current;
+      if (co) confirmDemoPayment(co.jobId);
+      onSuccess(ref);
+    },
+    [onSuccess],
+  );
 
   const empty = !flow.script.trim();
 
@@ -53,16 +84,23 @@ export default function Pay() {
 
   if (empty) return null;
 
+  const kes = checkout?.amountKes;
+  const payLabel = kes != null ? `Pay ${formatKes(kes)}` : "Try again";
+
   return (
     <Shell step={3} footer={false}>
       <div className="pay" aria-hidden={mode === "demo" ? true : undefined}>
         <DrumRoll />
-        {mode === "cancelled" ? (
+        {mode === "cancelled" || mode === "error" ? (
           <>
-            <h1 className="pay-title">Payment not finished</h1>
-            <p className="muted">Nothing was charged. Your clip is still here.</p>
+            <h1 className="pay-title">{mode === "error" ? "We couldn't open the payment" : "Payment not finished"}</h1>
+            <p className="muted" role={mode === "error" ? "alert" : undefined}>
+              {mode === "error"
+                ? "Nothing was charged. Check your connection and try again."
+                : "Nothing was charged. Your clip is still here."}
+            </p>
             <button type="button" className="btn" onClick={() => void start()}>
-              {`Pay ${formatKes(q.kes)}`}
+              {payLabel}
             </button>
             <Link href="/listen" className="pay-back">
               Back to the preview
@@ -71,14 +109,15 @@ export default function Pay() {
         ) : (
           <>
             <h1 className="pay-title">Waiting for your payment</h1>
+            {kes != null && <p className="pay-amount">{formatKes(kes)}</p>}
             <p className="muted" role="status">
               On M-Pesa? Check your phone and enter your PIN. Keep this page open.
             </p>
           </>
         )}
       </div>
-      {mode === "demo" && (
-        <TestCheckout email={flow.email} kes={q.kes} onSuccess={onSuccess} onCancel={onCancel} />
+      {mode === "demo" && kes != null && (
+        <TestCheckout email={flow.email} kes={kes} onSuccess={onDemoPaid} onCancel={onCancel} />
       )}
     </Shell>
   );

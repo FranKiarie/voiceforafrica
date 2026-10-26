@@ -103,15 +103,8 @@
   flex-grow: 1;
 }
 
-.plan-note {
-  min-height: 1.5em;
-  margin: 16px 0 0;
-  text-align: center;
-  font-weight: 600;
-}
-
 .pricing-compare {
-  padding-top: 24px;
+  padding-top: 56px;
   padding-bottom: 96px;
 }
 

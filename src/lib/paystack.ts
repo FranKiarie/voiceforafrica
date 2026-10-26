@@ -1,11 +1,12 @@
-// Paystack Inline checkout. With no public key set, the Pay page shows its own
-// test checkout instead and no money moves.
+// Paystack Inline checkout.
 //
-// Before live payments: the server must create the transaction (Paystack
-// "initialize" with the quote it computes itself) and return an access_code.
-// The page should then call `new PaystackPop().resumeTransaction(access_code)`
-// so the browser can't change the amount. The Paystack webhook, not this
-// page's onSuccess, is what confirms the payment.
+// The server creates the transaction (Paystack "initialize" with the price it
+// computes itself) and hands back an access_code. The browser only resumes that
+// transaction, so it can never change the amount. The Paystack webhook, not the
+// onSuccess callback here, is what confirms the payment on the server.
+//
+// In demo mode there is no access code and the Pay page shows its own test
+// checkout instead; no money moves.
 
 const INLINE_SRC = "https://js.paystack.co/v2/inline.js";
 
@@ -29,26 +30,15 @@ function loadInline(): Promise<void> {
   return loading;
 }
 
-export async function payWithPaystack(opts: {
-  email: string;
-  amountKes: number;
-  metadata: Record<string, unknown>;
-  onSuccess(ref: string): void;
-  onCancel(): void;
-}): Promise<"opened" | "demo"> {
-  const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-  if (!key) return "demo";
+/** Opens Paystack's checkout for a transaction the server already created. */
+export async function resumeWithPaystack(
+  accessCode: string,
+  opts: { onSuccess(ref: string): void; onCancel(): void },
+): Promise<void> {
   await loadInline();
   const popup = new (window as any).PaystackPop();
-  popup.newTransaction({
-    key,
-    email: opts.email,
-    amount: Math.round(opts.amountKes * 100),
-    currency: "KES",
-    channels: ["mobile_money", "card"],
-    metadata: opts.metadata,
+  popup.resumeTransaction(accessCode, {
     onSuccess: (t: { reference: string }) => opts.onSuccess(t.reference),
     onCancel: () => opts.onCancel(),
   });
-  return "opened";
 }

@@ -288,6 +288,23 @@ p {
   text-decoration: none;
 }
 
+@media (max-width: 480px) {
+  .site-header {
+    padding: 16px;
+  }
+  .brand .logo {
+    height: 30px;
+  }
+  .brand-voice {
+    font-size: 17px;
+  }
+  .site-nav {
+    width: 100%;
+    gap: 6px 18px;
+    font-size: 14px;
+  }
+}
+
 .site-nav a[aria-current="page"] {
   color: var(--text);
 }
