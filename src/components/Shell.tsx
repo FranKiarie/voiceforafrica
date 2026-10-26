@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, usePath } from "../router";
 import type { PatternId } from "../data";
+import { useSession } from "../lib/supabase";
 
 // Every cloth pattern, defined once per page. Use them as fill="url(#id)".
 export function PatternDefs() {
@@ -145,12 +146,30 @@ export function DrumRoll() {
 const NAV = [
   { href: "/#voices", label: "Voices", path: "/voices" },
   { href: "/pricing", label: "Pricing", path: "/pricing" },
-  { href: "/verify", label: "Verify a licence", path: "/verify" },
-  { href: "/clips", label: "My clips", path: "/clips" },
+  { href: "/verify", label: "Verify a licence", path: "/verify", wideOnly: true },
 ];
+
+// Header-only styles: the account chip, the Sign up pill, and a 4-item cap on phones.
+const HEADER_CSS = `
+.site-nav { align-items: center; }
+.nav-pill { border: 1px solid var(--field); border-radius: 999px; padding: 6px 16px; color: var(--text); line-height: 1.3; }
+.nav-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 180px; color: var(--text); }
+.nav-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; text-transform: uppercase; }
+.nav-email { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) { .nav-email { display: none; } }
+@media (max-width: 480px) {
+  .nav-wide-only { display: none; }
+  .nav-pill { padding: 4px 14px; }
+  .nav-avatar { width: 28px; height: 28px; font-size: 13px; }
+}
+`;
 
 export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {
   const path = usePath();
+  const session = useSession();
+  const email = session?.user.email ?? "";
+  const name = (session?.user.user_metadata?.full_name as string | undefined)?.trim() ?? "";
+  const initial = (name || email || "?").charAt(0);
   return (
     <header className="site-header">
       <Link href="/" className="brand">
@@ -163,11 +182,49 @@ export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {
         <span className="step">Step {step} of 4</span>
       ) : (
         <nav className="site-nav" aria-label="Main">
+          <style>{HEADER_CSS}</style>
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} aria-current={path === n.path ? "page" : undefined}>
+            <Link
+              key={n.href}
+              href={n.href}
+              className={n.wideOnly ? "nav-wide-only" : undefined}
+              aria-current={path === n.path ? "page" : undefined}
+            >
               {n.label}
             </Link>
           ))}
+          {session ? (
+            <>
+              <Link href="/clips" aria-current={path === "/clips" ? "page" : undefined}>
+                My clips
+              </Link>
+              <Link
+                href="/signin"
+                className="nav-chip"
+                title={email || undefined}
+                aria-label={email ? `Your account, ${email}` : "Your account"}
+                aria-current={path === "/signin" ? "page" : undefined}
+              >
+                <span className="nav-avatar" aria-hidden="true">
+                  {initial}
+                </span>
+                {email && (
+                  <span className="nav-email" aria-hidden="true">
+                    {email}
+                  </span>
+                )}
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/signin" aria-current={path === "/signin" ? "page" : undefined}>
+                Sign in
+              </Link>
+              <Link href="/signup" className="nav-pill" aria-current={path === "/signup" ? "page" : undefined}>
+                Sign up
+              </Link>
+            </>
+          )}
         </nav>
       )}
     </header>

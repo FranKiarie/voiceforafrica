@@ -3,6 +3,7 @@ import { DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { formatKes, KES_PER_USD, type PatternId } from "../data";
 import { getFlow } from "../flow";
 import { API_MODE, confirmPlanCheckout, createPlanCheckout, PLAN_PRICES_USD, type Billing, type Plan } from "../lib/api";
+import { supabase, useSession } from "../lib/supabase";
 import { Link } from "../router";
 import "./Pay.css";
 import "./Subscribe.css";
@@ -34,6 +35,18 @@ const PLANS: Record<Plan, PlanInfo> = {
 
 type Method = "card" | "mpesa";
 type Phase = "form" | "busy" | "demo" | "confirming" | "pending" | "done";
+
+const TEXT_BTN = {
+  background: "none",
+  border: 0,
+  padding: 0,
+  font: "inherit",
+  color: "inherit",
+  fontWeight: 600,
+  textDecoration: "underline",
+  textUnderlineOffset: 3,
+  cursor: "pointer",
+} as const;
 
 const POLL_EVERY_MS = 2000;
 const POLL_FOR_MS = 30000;
@@ -86,6 +99,10 @@ export default function Subscribe() {
   const initial = useRef(readQuery()).current;
   const [billing, setBilling] = useState<Billing>(initial.billing);
   const [email, setEmail] = useState(() => getFlow().email);
+  // Plans belong to an account: signed in, the account email is used and locked.
+  const session = useSession();
+  const accountEmail = session?.user?.email ?? "";
+  const useEmail = accountEmail || email;
   const [method, setMethod] = useState<Method>("card");
   const [phase, setPhase] = useState<Phase>("form");
   const [error, setError] = useState("");
@@ -168,7 +185,7 @@ export default function Subscribe() {
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const clean = email.trim();
+    const clean = useEmail.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
       setError("Enter the email address where we send your receipt.");
       return;
@@ -242,65 +259,102 @@ export default function Subscribe() {
           </div>
         </section>
 
-        <form className="sub-form" onSubmit={(e) => void submit(e)} noValidate>
-          <label className="field">
-            Email for your receipt
-            <input
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={error.startsWith("Enter") ? true : undefined}
-              aria-describedby={error ? "sub-error" : undefined}
-              disabled={phase === "busy"}
-            />
-          </label>
+        {session === undefined && (
+          <div className="center" role="status">
+            <DrumRoll />
+          </div>
+        )}
 
-          <fieldset className="sub-methods">
-            <legend>How you'll pay</legend>
-            <label className="sub-method">
+        {session === null && (
+          <section className="card" aria-labelledby="sub-account-title" style={{ padding: "28px 24px", textAlign: "center" }}>
+            <h2 id="sub-account-title" style={{ fontSize: 20, margin: "0 0 18px" }}>
+              Create an account to start a plan
+            </h2>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
+              <Link href="/signup" className="btn">
+                Create an account
+              </Link>
+              <Link
+                href={`/signin?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                className="btn btn-outline"
+              >
+                Sign in
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {session && (
+          <form className="sub-form" onSubmit={(e) => void submit(e)} noValidate>
+            <label className="field">
+              Email for your receipt
               <input
-                type="radio"
-                name="method"
-                value="card"
-                checked={method === "card"}
-                onChange={() => setMethod("card")}
+                type="email"
+                autoComplete="email"
+                inputMode="email"
+                required
+                value={useEmail}
+                readOnly={Boolean(accountEmail)}
+                aria-readonly={accountEmail ? true : undefined}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={error.startsWith("Enter") ? true : undefined}
+                aria-describedby={error ? "sub-error" : accountEmail ? "sub-account-note" : undefined}
+                disabled={phase === "busy"}
               />
-              <span>
-                <strong>Card</strong> — renews automatically
-              </span>
             </label>
-            <label className="sub-method">
-              <input
-                type="radio"
-                name="method"
-                value="mpesa"
-                checked={method === "mpesa"}
-                onChange={() => setMethod("mpesa")}
-              />
-              <span>
-                <strong>M-Pesa</strong> — {mpesaHint}
-              </span>
-            </label>
-          </fieldset>
+            {accountEmail && (
+              <p id="sub-account-note" className="faint" style={{ fontSize: 14, margin: 0 }}>
+                Using {accountEmail} · Not you?{" "}
+                <button type="button" style={TEXT_BTN} onClick={() => void supabase.auth.signOut().catch(() => undefined)}>
+                  Sign out
+                </button>
+              </p>
+            )}
 
-          <p id="sub-error" className="sub-error" role="alert">
-            {error}
-          </p>
+            <fieldset className="sub-methods">
+              <legend>How you'll pay</legend>
+              <label className="sub-method">
+                <input
+                  type="radio"
+                  name="method"
+                  value="card"
+                  checked={method === "card"}
+                  onChange={() => setMethod("card")}
+                />
+                <span>
+                  <strong>Card</strong> — renews automatically
+                </span>
+              </label>
+              <label className="sub-method">
+                <input
+                  type="radio"
+                  name="method"
+                  value="mpesa"
+                  checked={method === "mpesa"}
+                  onChange={() => setMethod("mpesa")}
+                />
+                <span>
+                  <strong>M-Pesa</strong> — {mpesaHint}
+                </span>
+              </label>
+            </fieldset>
 
-          <button ref={payBtn} type="submit" className="btn btn-block" disabled={phase === "busy"}>
-            {phase === "busy" ? "Opening payment…" : `Pay ${formatKes(shownKes)}`}
-          </button>
-        </form>
+            <p id="sub-error" className="sub-error" role="alert">
+              {error}
+            </p>
+
+            <button ref={payBtn} type="submit" className="btn btn-block" disabled={phase === "busy"}>
+              {phase === "busy" ? "Opening payment…" : `Pay ${formatKes(shownKes)}`}
+            </button>
+          </form>
+        )}
 
         <p className="faint sub-foot">Cancel any time. Unused minutes roll over on Creator and up.</p>
       </div>
 
       {phase === "demo" && (
         <TestCheckout
-          email={email.trim()}
+          email={useEmail.trim()}
           plan={info.name}
           kes={shownKes}
           method={method}

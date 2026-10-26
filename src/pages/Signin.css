@@ -84,3 +84,70 @@
   font-size: 14px;
   margin: 0;
 }
+
+.signin-text-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.signin-forgot {
+  align-self: flex-end;
+  font-size: 14px;
+  padding: 2px 4px;
+  margin-top: -6px;
+}
+
+.signin-who {
+  overflow-wrap: anywhere;
+}
+
+.signin-form .field label {
+  cursor: pointer;
+}
+
+/* Password input with a show/hide toggle inside it. */
+.pw-wrap {
+  position: relative;
+  display: flex;
+}
+
+.signin-form .pw-wrap input {
+  flex: 1;
+  padding-right: 52px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.pw-toggle[aria-pressed="true"] {
+  color: var(--eyebrow);
+}
+
+.pw-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.signin-hint {
+  font-size: 13px;
+  margin: 0;
+}
+
+.signin-error a {
+  color: inherit;
+  font-weight: 600;
+}

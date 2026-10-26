@@ -1,0 +1,25 @@
+.signup-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.signup-check input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+.signup-check a {
+  color: var(--text);
+}
+
+.signup-optional {
+  color: var(--faint);
+  font-weight: 400;
+}

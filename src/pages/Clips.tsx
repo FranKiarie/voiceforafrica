@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
-import { API_MODE, ApiError, getSession, listClips, signOut, type Clip } from "../lib/api";
+import { API_MODE, ApiError, listClips, type Clip } from "../lib/api";
+import { supabase, useSession } from "../lib/supabase";
 import { Link } from "../router";
 import "./Clips.css";
-import "./Signin.css"; // shared .signin-text-btn style for "Sign out"
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const NO_AUDIO = "Audio arrives when the voice service is live";
@@ -75,42 +75,51 @@ function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; playing: bo
   );
 }
 
+async function endSession() {
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // Network down: supabase-js still clears the local session.
+  }
+}
+
 export default function Clips() {
-  const [signedIn, setSignedIn] = useState(() => getSession() !== null);
-  const [state, setState] = useState<State>(() =>
-    API_MODE === "live" && getSession() === null ? { kind: "signin" } : { kind: "loading" },
-  );
+  const session = useSession();
+  const email = session?.user?.email ?? "";
+  const [state, setState] = useState<State>({ kind: "loading" });
   const [playingId, setPlayingId] = useState<string | null>(null);
 
+  // Live mode waits for the account; demo mode reads this browser either way.
+  const authKey = API_MODE === "demo" ? "demo" : session === undefined ? "loading" : session ? session.user.id : "out";
+
   const load = useCallback(async () => {
-    if (API_MODE === "live" && getSession() === null) {
-      setSignedIn(false);
-      setState({ kind: "signin" });
-      return;
-    }
     setState({ kind: "loading" });
     try {
       const clips = await listClips();
       setState({ kind: "ready", clips });
     } catch (e) {
       if (API_MODE === "live" && e instanceof ApiError && e.status === 401) {
-        signOut();
-        setSignedIn(false);
+        await endSession();
         setState({ kind: "signin" });
       } else setState({ kind: "error" });
     }
   }, []);
 
+  useEffect(() => {
+    if (authKey === "loading") return;
+    if (authKey === "out") {
+      setState({ kind: "signin" });
+      return;
+    }
+    void load();
+  }, [authKey, load]);
+
   const leave = () => {
-    signOut();
-    setSignedIn(false);
     setPlayingId(null);
-    if (API_MODE === "live") setState({ kind: "signin" });
+    void endSession();
   };
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const view: State = authKey === "loading" ? { kind: "loading" } : authKey === "out" ? { kind: "signin" } : state;
 
   const stop = useCallback(() => setPlayingId(null), []);
 
@@ -122,21 +131,24 @@ export default function Clips() {
         <div className="clips-head">
           <h1 className="clips-title">My clips</h1>
           <p className="muted">Clips you've made, with their licences.</p>
-          {signedIn && (
-            <button type="button" className="signin-text-btn" style={{ alignSelf: "flex-start", paddingLeft: 0 }} onClick={leave}>
-              Sign out
-            </button>
+          {session && (
+            <p className="faint clips-who">
+              <span>Signed in as {email || "your account"}</span>
+              <button type="button" className="clips-text-btn" onClick={leave}>
+                Sign out
+              </button>
+            </p>
           )}
         </div>
 
-        {state.kind === "loading" && (
+        {view.kind === "loading" && (
           <div className="clips-status" role="status">
             <DrumRoll />
             <span className="muted">Loading your clips…</span>
           </div>
         )}
 
-        {state.kind === "error" && (
+        {view.kind === "error" && (
           <div className="clips-status">
             <p role="alert" className="clips-error">
               We couldn't load your clips.
@@ -147,18 +159,23 @@ export default function Clips() {
           </div>
         )}
 
-        {state.kind === "signin" && (
+        {view.kind === "signin" && (
           <div className="card clips-empty">
             <div className="clips-empty-body">
               <p>Sign in to see your clips.</p>
-              <Link href="/signin" className="btn">
-                Sign in
-              </Link>
+              <div className="clips-actions">
+                <Link href="/signin?next=/clips" className="btn">
+                  Sign in
+                </Link>
+                <Link href="/signup" className="btn btn-outline">
+                  Create an account
+                </Link>
+              </div>
             </div>
           </div>
         )}
 
-        {state.kind === "ready" && state.clips.length === 0 && (
+        {view.kind === "ready" && view.clips.length === 0 && (
           <div className="card clips-empty">
             <PatternStrip pattern="beads" height={12} />
             <div className="clips-empty-body">
@@ -170,9 +187,9 @@ export default function Clips() {
           </div>
         )}
 
-        {state.kind === "ready" && state.clips.length > 0 && (
+        {view.kind === "ready" && view.clips.length > 0 && (
           <ul className="clips-list" aria-label="Your clips">
-            {state.clips.map((c) => (
+            {view.clips.map((c) => (
               <ClipRow
                 key={c.id}
                 clip={c}

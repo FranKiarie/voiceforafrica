@@ -11,6 +11,8 @@ import Signin from "./pages/Signin";
 import Clips from "./pages/Clips";
 import Subscribe from "./pages/Subscribe";
 import NotFound from "./pages/NotFound";
+import Signup from "./pages/Signup";
+import ResetPassword from "./pages/ResetPassword";
 
 // Routes: / home + voice library, /pricing, /verify, the try-before-you-pay flow
 // /studio → /listen → /pay → /ready, /signin, /clips, /subscribe?plan=…, and
@@ -25,6 +27,8 @@ export default function App() {
   if (path === "/pay") return <Pay />;
   if (path === "/ready") return <Ready />;
   if (path === "/signin") return <Signin />;
+  if (path === "/signup") return <Signup />;
+  if (path === "/reset-password") return <ResetPassword />;
   if (path === "/clips") return <Clips />;
   if (path === "/subscribe") return <Subscribe />;
   if (path === "/terms" || path === "/privacy") return <Legal />;

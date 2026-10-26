@@ -4,6 +4,7 @@ import { Link, navigate } from "../router";
 import { LANGUAGES, MAX_PAYG_CHARS, VOICES, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { createPreview, type Preview } from "../lib/api";
+import { supabase, useSession } from "../lib/supabase";
 import "./Studio.css";
 
 const PREVIEW_KEY = "mv.previews";
@@ -50,12 +51,28 @@ function savePreview(p: Preview) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const TEXT_BTN = {
+  background: "none",
+  border: 0,
+  padding: 0,
+  font: "inherit",
+  color: "inherit",
+  fontWeight: 600,
+  textDecoration: "underline",
+  textUnderlineOffset: 3,
+  cursor: "pointer",
+} as const;
+
 export default function Studio() {
   const flow = useFlow();
   const [language, setLanguage] = useState(flow.language);
   const [voiceId, setVoiceId] = useState(flow.voiceId);
   const [script, setScript] = useState(flow.script);
   const [email, setEmail] = useState(flow.email);
+  // Signed in: the account email is used and locked. Signed out: type any email.
+  const session = useSession();
+  const accountEmail = session?.user?.email ?? "";
+  const useEmail = accountEmail || email;
   const [adult, setAdult] = useState(flow.adult);
   const [used, setUsed] = useState(previewsUsedToday);
   const [limitHit, setLimitHit] = useState(false);
@@ -65,7 +82,7 @@ export default function Studio() {
   const lang = LANGUAGES.find((l) => l.code === language);
   const q = quoteFor(script);
   const left = Math.max(0, PREVIEWS_PER_DAY - used);
-  const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(email.trim()) && adult;
+  const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(useEmail.trim()) && adult;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -78,7 +95,7 @@ export default function Studio() {
     }
     setBusy(true);
     setError("");
-    const trimmed = email.trim();
+    const trimmed = useEmail.trim();
     try {
       const preview = await createPreview({ script, voiceId, language, email: trimmed });
       recordPreview(count + 1);
@@ -144,15 +161,27 @@ export default function Studio() {
 
         <label className="field">
           Email for your download link
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            inputMode="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          {accountEmail ? (
+            <input type="email" value={accountEmail} readOnly aria-readonly="true" aria-describedby="studio-account" />
+          ) : (
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          )}
         </label>
+        {accountEmail && (
+          <p id="studio-account" className="faint studio-hint">
+            Using {accountEmail} · Not you?{" "}
+            <button type="button" style={TEXT_BTN} onClick={() => void supabase.auth.signOut().catch(() => undefined)}>
+              Sign out
+            </button>
+          </p>
+        )}
 
         <label className="studio-check">
           <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} required />

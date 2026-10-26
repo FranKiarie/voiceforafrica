@@ -5,6 +5,7 @@
 // keeps licences and clips in localStorage and never moves money or makes audio.
 
 import { formatDuration, quoteFor, VOICES } from "../data";
+import { accessToken, supabase } from "./supabase";
 
 const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 export const API_MODE: "live" | "demo" = BASE ? "live" : "demo";
@@ -24,78 +25,31 @@ export type PlanConfirmation = { checkoutId: string; status: PlanStatus; plan: P
 export type Session = { accessToken: string; expiresAt: number; email?: string };
 
 // ---- session --------------------------------------------------------------
-// The magic link lands on /clips#access_token=…&expires_in=…  (Supabase implicit flow).
-// We keep the token in localStorage and strip it from the address bar.
+// Supabase Auth owns the session: supabase-js reads the magic-link / OAuth hash
+// itself (detectSessionInUrl), stores it and refreshes the token. These helpers
+// are thin wrappers kept for older importers.
 
-const SESSION_KEY = "mv.session";
-
-function jwtEmail(token: string): string | undefined {
-  try {
-    const part = token.split(".")[1];
-    if (!part) return undefined;
-    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-    const json = decodeURIComponent(
-      Array.from(atob(padded), (c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0")).join(""),
-    );
-    const email = (JSON.parse(json) as { email?: unknown }).email;
-    return typeof email === "string" && email ? email : undefined;
-  } catch {
-    return undefined;
-  }
+/** The current session, or null when signed out. */
+export async function getSession(): Promise<Session | null> {
+  const { data } = await supabase.auth.getSession();
+  const s = data.session;
+  if (!s) return null;
+  return {
+    accessToken: s.access_token,
+    expiresAt: (s.expires_at ?? Math.floor(Date.now() / 1000) + (s.expires_in ?? 3600)) * 1000,
+    email: s.user?.email ?? undefined,
+  };
 }
 
-function captureSessionFromHash() {
-  if (typeof window === "undefined") return;
-  const hash = window.location.hash;
-  if (!hash || !hash.includes("access_token")) return;
-  const params = new URLSearchParams(hash.replace(/^#/, ""));
-  const accessToken = params.get("access_token");
-  if (accessToken) {
-    const expiresIn = Number(params.get("expires_in"));
-    const session: Session = {
-      accessToken,
-      expiresAt: Date.now() + (Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600) * 1000,
-      email: jwtEmail(accessToken),
-    };
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } catch {
-      // Private mode: nothing is kept, so the user signs in again next time.
-    }
-  }
-  try {
-    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
-  } catch {
-    // ignore
-  }
+export async function isSignedIn(): Promise<boolean> {
+  return (await accessToken()) !== null;
 }
 
-captureSessionFromHash();
-
-/** The stored session, or null when signed out or expired. */
-export function getSession(): Session | null {
+export async function signOut(): Promise<void> {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw) as Partial<Session>;
-    if (typeof s.accessToken !== "string" || typeof s.expiresAt !== "number") return null;
-    if (s.expiresAt <= Date.now()) return null;
-    return { accessToken: s.accessToken, expiresAt: s.expiresAt, email: s.email };
+    await supabase.auth.signOut();
   } catch {
-    return null;
-  }
-}
-
-export function isSignedIn(): boolean {
-  return getSession() !== null;
-}
-
-export function signOut() {
-  try {
-    localStorage.removeItem(SESSION_KEY);
-  } catch {
-    // ignore
+    // Network down: supabase-js still clears the local session.
   }
 }
 
@@ -108,8 +62,8 @@ export class ApiError extends Error {
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   if (body) headers["Content-Type"] = "application/json";
-  const session = getSession();
-  if (session) headers.Authorization = `Bearer ${session.accessToken}`;
+  const token = await accessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}/api/v1/voice-studio${path}`, {
     method,
     credentials: "include",
