@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { DrumRoll, Shell } from "../components/Shell";
-import { formatKes, formatUsd, quoteFor } from "../data";
+import { Shell } from "../components/Shell";
+import { ACCENTS, PURPOSES, VOICES, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { API_MODE, ApiError, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
 import { resumeWithPaystack } from "../lib/paystack";
 import { Link, navigate } from "../router";
 import "./Pay.css";
 
-type Mode = "waiting" | "demo" | "cancelled" | "error";
+// "open": Paystack's window is up. "demo": the test checkout stands in for it.
+type Mode = "order" | "opening" | "open" | "demo";
 
 const NETWORK_TEXT = "Nothing was charged. Check your connection and try again.";
+const EXCERPT_CHARS = 160;
 
 function previewId(): string | undefined {
   try {
@@ -21,22 +23,30 @@ function previewId(): string | undefined {
   }
 }
 
+/** Step 3: the order and a Pay button. Paystack opens only when Pay is pressed. */
 export default function Pay() {
   const flow = useFlow();
-  const [mode, setMode] = useState<Mode>("waiting");
-  const [errorText, setErrorText] = useState(NETWORK_TEXT);
+  const [mode, setMode] = useState<Mode>("order");
+  const [message, setMessage] = useState("");
   const [checkout, setCheckout] = useState<PaygCheckout | null>(null);
   const checkoutRef = useRef<PaygCheckout | null>(null);
-  const started = useRef(false);
+  const payBtn = useRef<HTMLButtonElement>(null);
 
   const onSuccess = useCallback((ref: string) => {
     setFlow({ paymentRef: ref });
     navigate("/ready");
   }, []);
-  const onCancel = useCallback(() => setMode("cancelled"), []);
 
-  const start = useCallback(async () => {
-    setMode("waiting");
+  const backToOrder = useCallback((text: string) => {
+    setMode("order");
+    setMessage(text);
+    requestAnimationFrame(() => payBtn.current?.focus());
+  }, []);
+  const onCancel = useCallback(() => backToOrder("Payment not finished. Nothing was charged."), [backToOrder]);
+
+  const pay = useCallback(async () => {
+    setMode("opening");
+    setMessage("");
     try {
       // The server prices the job; the browser never sends an amount.
       let co = checkoutRef.current;
@@ -55,20 +65,19 @@ export default function Pay() {
       }
       if (co.accessCode) {
         await resumeWithPaystack(co.accessCode, { onSuccess, onCancel });
+        setMode("open");
       } else if (API_MODE === "demo") {
         setMode("demo");
       } else {
-        setErrorText("Nothing was charged. Payments aren't available right now; please try again shortly.");
-        setMode("error");
+        backToOrder("Nothing was charged. Payments aren't available right now; please try again shortly.");
       }
     } catch (err) {
       // The server explains 4xx problems (a bad email, too many attempts) in plain words.
-      if (err instanceof ApiError && err.status < 500) setErrorText(`Nothing was charged. ${err.message}`);
-      else if (err instanceof ApiError) setErrorText("Nothing was charged. Something went wrong on our side; please try again.");
-      else setErrorText(NETWORK_TEXT);
-      setMode("error");
+      if (err instanceof ApiError && err.status < 500) backToOrder(`Nothing was charged. ${err.message}`);
+      else if (err instanceof ApiError) backToOrder("Nothing was charged. Something went wrong on our side; please try again.");
+      else backToOrder(NETWORK_TEXT);
     }
-  }, [flow.script, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel]);
+  }, [flow.script, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel, backToOrder]);
 
   const onDemoPaid = useCallback(
     (ref: string) => {
@@ -82,56 +91,74 @@ export default function Pay() {
   const empty = !flow.script.trim();
 
   useEffect(() => {
-    if (empty) {
-      navigate("/studio");
-      return;
-    }
-    if (started.current) return;
-    started.current = true;
-    void start();
-  }, [empty, start]);
+    if (empty) navigate("/studio");
+  }, [empty]);
 
   if (empty) return null;
 
-  const kes = checkout?.amountKes;
-  // The server prices the script with the same formula; Paystack charges the shilling figure.
-  const usd = kes != null ? (checkout?.amountUsd ?? quoteFor(flow.script).usd) : null;
-  const payLabel = usd != null ? `Pay ${formatUsd(usd)}` : "Try again";
+  const q = quoteFor(flow.script);
+  // The server prices the script with the same formula; once it answers, its figures win.
+  const usd = checkout?.amountUsd ?? q.usd;
+  const kes = checkout?.amountKes ?? q.kes;
+  const voice = VOICES.find((v) => v.id === flow.voiceId) ?? VOICES[0];
+  const accent = ACCENTS.find((a) => a.id === voice.accent)?.label;
+  const purpose = PURPOSES.find((p) => p.id === flow.purpose)?.label ?? "Voice-over";
+  const script = flow.script.trim();
+  const excerpt = script.length > EXCERPT_CHARS ? `${script.slice(0, EXCERPT_CHARS).trimEnd()}…` : script;
 
   return (
     <Shell step={3} footer={false}>
       <div className="pay" aria-hidden={mode === "demo" ? true : undefined}>
-        <DrumRoll />
-        {mode === "cancelled" || mode === "error" ? (
-          <>
-            <h1 className="pay-title">{mode === "error" ? "We couldn't open the payment" : "Payment not finished"}</h1>
-            <p className="muted" role={mode === "error" ? "alert" : undefined}>
-              {mode === "error" ? errorText : "Nothing was charged. Your clip is still here."}
-            </p>
-            <button type="button" className="btn" onClick={() => void start()}>
-              {payLabel}
-            </button>
-            <Link href="/listen" className="pay-back">
-              Back to the preview
-            </Link>
-          </>
-        ) : (
-          <>
-            <h1 className="pay-title">Waiting for your payment</h1>
-            {kes != null && usd != null && (
-              <p className="pay-amount">
-                {formatUsd(usd)} <span className="faint pay-kes">{`charged as ${formatKes(kes)}`}</span>
-              </p>
+        <h1 className="pay-title">Your order</h1>
+
+        <section className="card pay-order" aria-label="Order summary">
+          <dl className="pay-lines">
+            <div>
+              <dt>Voice</dt>
+              <dd>{accent ? `${voice.name} · ${accent}` : voice.name}</dd>
+            </div>
+            <div>
+              <dt>For</dt>
+              <dd>{purpose}</dd>
+            </div>
+            <div>
+              <dt>Length</dt>
+              <dd>{`About ${formatDuration(q.projectedSeconds)}`}</dd>
+            </div>
+            {flow.email && (
+              <div>
+                <dt>Receipt to</dt>
+                <dd className="pay-email">{flow.email}</dd>
+              </div>
             )}
-            <p className="muted" role="status">
-              On M-Pesa? Check your phone and enter your PIN. Keep this page open.
-            </p>
-          </>
-        )}
+          </dl>
+          <blockquote className="pay-script">{excerpt}</blockquote>
+          <div className="pay-total">
+            <span>Total</span>
+            <span className="pay-amount">{formatUsd(usd)}</span>
+          </div>
+          <p className="faint pay-kes">{`Billed as ${formatDuration(q.billedSeconds)} · charged as ${formatKes(kes)} by M-Pesa or card`}</p>
+        </section>
+
+        <p className="pay-error" role="alert">
+          {message}
+        </p>
+
+        <button ref={payBtn} type="button" className="btn btn-block pay-btn" onClick={() => void pay()} disabled={mode === "opening"}>
+          {mode === "opening" ? "Opening Paystack…" : `Pay ${formatUsd(usd)}`}
+        </button>
+        <p className="faint pay-note" role="status">
+          {mode === "open"
+            ? "On M-Pesa? Check your phone and enter your PIN. Keep this page open."
+            : "Paystack opens when you press Pay."}
+        </p>
+
+        <div className="pay-links">
+          <Link href="/listen">Back to the preview</Link>
+          <Link href="/studio">Change the script or voice</Link>
+        </div>
       </div>
-      {mode === "demo" && kes != null && (
-        <TestCheckout email={flow.email} kes={kes} onSuccess={onDemoPaid} onCancel={onCancel} />
-      )}
+      {mode === "demo" && <TestCheckout email={flow.email} kes={kes} onSuccess={onDemoPaid} onCancel={onCancel} />}
     </Shell>
   );
 }

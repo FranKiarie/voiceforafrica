@@ -2,35 +2,116 @@
   width: 100%;
   max-width: 560px;
   margin: 0 auto;
-  padding: 48px 24px 96px;
+  padding: 32px 24px 96px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  text-align: center;
+  gap: 18px;
 }
 
 .pay-title {
+  margin: 0 0 6px;
   font-size: 32px;
   line-height: 1.15;
 }
 
-.pay-amount {
+.pay-order {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pay-lines {
   margin: 0;
-  font-size: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pay-lines div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 15px;
+}
+
+.pay-lines dt {
+  color: var(--muted);
+}
+
+.pay-lines dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  min-width: 0;
+}
+
+.pay-email {
+  overflow-wrap: anywhere;
+}
+
+.pay-script {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.pay-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.pay-amount {
+  font-size: 32px;
   font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .pay-kes {
-  display: block;
+  margin: -10px 0 0;
   font-size: 14px;
-  font-weight: 500;
+  text-align: right;
 }
 
-.pay-back {
-  color: var(--muted);
+.pay-error {
+  margin: 0;
+  color: var(--red);
   font-weight: 600;
+}
+
+.pay-error:empty {
+  display: none;
+}
+
+.pay-note {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.pay-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 6px;
   font-size: 15px;
+  font-weight: 600;
+}
+
+.pay-links a {
+  color: var(--muted);
 }
 
 /* Test checkout: a neutral stand-in for Paystack's own screen. Its colours

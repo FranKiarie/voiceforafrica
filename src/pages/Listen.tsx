@@ -165,9 +165,9 @@ export default function Listen() {
           <p className="muted listen-full">Full script · about {formatDuration(q.projectedSeconds)}</p>
           <p className="listen-price">{formatUsd(q.usd)}</p>
           <button type="button" className="btn btn-block" onClick={goPay}>
-            Pay {formatUsd(q.usd)}
+            Continue to payment
           </button>
-          <p className="faint listen-auto">{`Opens by itself when the preview ends · M-Pesa or card, charged as ${formatKes(q.kes)}`}</p>
+          <p className="faint listen-auto">{`Your order opens when the preview ends · M-Pesa or card, charged as ${formatKes(q.kes)}`}</p>
         </div>
 
         <Link href="/studio" className="muted listen-again">
