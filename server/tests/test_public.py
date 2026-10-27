@@ -23,6 +23,8 @@ if importlib.util.find_spec("app.tts") is None:
     async def _render(text, voice_id, language, purpose=None):  # noqa: E306
         return b"ID3", 1.0
     stub.render_mp3 = _render
+    stub.pick_model = lambda language: "gemini-3.8-flash-tts"
+    stub.preview_text = getattr(stub, "preview_text", lambda script: script)
     sys.modules["app.tts"] = stub
 
 from fastapi import FastAPI  # noqa: E402
@@ -147,8 +149,9 @@ def test_preview_happy_path(fake, client):
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["seconds"] == 47
-    assert body["audioUrl"].startswith("https://signed.example/previews/")
-    path = f"previews/{body['previewId']}.mp3"
+    assert body["audioUrl"].startswith("https://signed.example/renders/")
+    path = fake["uploads"][0][0]
+    assert path.startswith("renders/") and path.endswith(".mp3")
     assert fake["uploads"] == [(path, b"ID3fake")]
     table, row = fake["inserts"][0]
     assert table == "voice_previews"
@@ -161,6 +164,9 @@ def test_preview_happy_path(fake, client):
     _, params = fake["count_params"]
     assert '"ann@example.com"' in params["or"] and '"41.90.1.2"' in params["or"]
     assert params["created_at"].startswith("gte.") and params["created_at"].endswith("T00:00:00Z")
+    # The render is remembered so the same opening is never made twice.
+    cached = [r for t, r in fake["inserts"] if t == "voice_renders"]
+    assert cached and cached[0]["storage_path"] == path and cached[0]["seconds"] == 47
 
 
 def test_preview_rate_limited(fake, client):
@@ -538,3 +544,33 @@ def test_account_db_failure_is_503(ann, client, monkeypatch, broken_call, broken
     res = client.get(f"{BASE}/account", headers=AUTH)
     assert res.status_code == 503
     assert res.json() == {"detail": "Your account is unavailable right now. Please try again."}
+
+
+def test_cached_preview_is_free_and_skips_the_render(fake, client, monkeypatch):
+    from app import renders
+
+    async def hit(key):
+        return {"storage_path": f"renders/{key}.mp3", "seconds": 31}
+
+    async def never(*a, **k):
+        raise AssertionError("must not render a cached preview")
+
+    monkeypatch.setattr(renders, "find", hit)
+    monkeypatch.setattr(routes_public, "render_mp3", never)
+    fake["count"] = 99  # over the daily limit: a cached preview still plays
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"})
+    assert res.status_code == 200, res.text
+    assert res.json()["seconds"] == 31 and "/renders/" in res.json()["audioUrl"]
+    assert fake["inserts"] == [] and fake["uploads"] == []
+
+
+def test_cache_key_changes_with_voice_style_and_words():
+    from app import renders
+
+    base = renders.cache_key("Habari yako.", "wanjiru", "sw", "general")
+    assert base == renders.cache_key("Habari yako.", "wanjiru", "sw", "general")
+    assert base != renders.cache_key("Habari yako!", "wanjiru", "sw", "general")
+    assert base != renders.cache_key("Habari yako.", "kamau", "sw", "general")
+    assert base != renders.cache_key("Habari yako.", "wanjiru", "sw", "documentary")
+    # An old id for the same voice is the same audio.
+    assert base == renders.cache_key("Habari yako.", "amara", "sw", "general")

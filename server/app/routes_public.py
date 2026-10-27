@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from . import db
+from . import db, renders
 from .config import settings
 from .catalog import public_voice_id, purpose_or_default, voice_name
 from .pricing import MAX_PAYG_CHARS
@@ -125,6 +125,19 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
     if not LANG_RE.match(language):
         raise HTTPException(400, "Please choose a language.")
     email = normalise_email(body.email)
+
+    # The same opening in the same voice and style was made before: reuse it.
+    # A cached preview costs nothing, so it does not use a free preview.
+    text = preview_text(script)
+    key = renders.cache_key(text, voice_id, language, purpose)
+    cached = await renders.find(key)
+    if cached:
+        try:
+            audio_url = await db.signed_url(cached["storage_path"], 3600)
+            return {"previewId": str(uuid.uuid4()), "seconds": int(cached["seconds"]), "audioUrl": audio_url}
+        except db.DbError:
+            logger.warning("Cached preview %s could not be signed; rendering afresh", key[:12])
+
     ip = client_ip(request)
     limit = settings.previews_per_day
     limited = HTTPException(429, f"You've used today's {limit} free previews. Try again tomorrow.")
@@ -135,7 +148,7 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         # Reserve the slot before rendering, then recount, so parallel requests
         # cannot all pass the check above and each get a free render.
         preview_id = str(uuid.uuid4())
-        path = f"previews/{preview_id}.mp3"
+        path = renders.cache_path(key)
         await db.insert(
             "voice_previews",
             {
@@ -159,7 +172,6 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         await _drop_reservation(preview_id)
         raise limited
 
-    text = preview_text(script)
     try:
         mp3, seconds = await asyncio.wait_for(render_mp3(text, voice_id, language, purpose), PREVIEW_RENDER_SECONDS)
     except (TimeoutError, asyncio.TimeoutError) as e:
@@ -184,6 +196,7 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
     except db.DbError as e:
         await _drop_reservation(preview_id)
         raise HTTPException(502, "We couldn't save your preview. Please try again.") from e
+    await renders.remember(key, seconds, voice_id=voice_id, language=language, purpose=purpose, chars=len(text))
     return {"previewId": preview_id, "seconds": seconds, "audioUrl": audio_url}
 
 

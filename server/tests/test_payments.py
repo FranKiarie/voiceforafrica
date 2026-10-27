@@ -21,6 +21,8 @@ except Exception:  # noqa: BLE001
 
     stub.TtsError = TtsError
     stub.render_mp3 = render_mp3
+    stub.pick_model = lambda language: "gemini-3.8-flash-tts"
+    stub.preview_text = getattr(stub, "preview_text", lambda script: script)
     sys.modules["app.tts"] = stub
 
 from fastapi import FastAPI
@@ -270,7 +272,7 @@ def test_generate_issues_licence(env, monkeypatch):
     async def render(text, voice_id, language, purpose=None):
         return b"ID3audio", 9
 
-    monkeypatch.setattr(jobs, "render_mp3", render)
+    monkeypatch.setattr(jobs, "render_script", render)
     asyncio.run(jobs.generate(JOB_ID))
     row = env.db.tables["voice_jobs"][JOB_ID]
     assert row["status"] == "ready" and row["audio_seconds"] == 9
@@ -418,7 +420,7 @@ def test_generate_renders_with_the_jobs_purpose(env, monkeypatch):
         seen["args"] = (voice_id, purpose)
         return b"ID3audio", 9
 
-    monkeypatch.setattr(jobs, "render_mp3", render)
+    monkeypatch.setattr(jobs, "render_script", render)
     asyncio.run(jobs.generate(JOB_ID))
     assert seen["args"] == ("sw-ke-csagent-4", "news")
     [licence] = env.db.tables["voice_licences"].values()
@@ -446,7 +448,7 @@ def _run_resume(monkeypatch, fake, **kwargs):
         renders.append(text)
         return b"ID3audio", 7
 
-    monkeypatch.setattr(jobs, "render_mp3", render)
+    monkeypatch.setattr(jobs, "render_script", render)
 
     async def go():
         ids = await jobs.resume_stuck_jobs(**kwargs)
@@ -505,7 +507,7 @@ def test_generate_skips_job_no_longer_generating(monkeypatch):
     async def render(*a):
         raise AssertionError("must not render")
 
-    monkeypatch.setattr(jobs, "render_mp3", render)
+    monkeypatch.setattr(jobs, "render_script", render)
     asyncio.run(jobs.generate(JOB_ID))
     assert fake.tables["voice_jobs"][JOB_ID]["status"] == "ready"
 
@@ -519,7 +521,7 @@ def test_generate_finishes_from_existing_licence(monkeypatch):
     async def render(*a):
         raise AssertionError("must not render twice")
 
-    monkeypatch.setattr(jobs, "render_mp3", render)
+    monkeypatch.setattr(jobs, "render_script", render)
     asyncio.run(jobs.generate(JOB_ID))
     row = fake.tables["voice_jobs"][JOB_ID]
     assert row["status"] == "ready" and row["licence_id"] == "VS-2026-ABC234" and row["audio_seconds"] == 11

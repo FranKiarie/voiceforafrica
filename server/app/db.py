@@ -195,6 +195,14 @@ async def upload(path: str, data: bytes, content_type: str = "audio/mpeg") -> No
         raise DbError(f"upload {path} failed: {res.status_code} {res.text[:200]}", res.status_code)
 
 
+async def download(path: str) -> bytes:
+    url = f"{_base()}/storage/v1/object/{settings.storage_bucket}/{_object_path(path)}"
+    res = await _send("GET", url, headers=_headers())
+    if res.status_code >= 400:
+        raise DbError(f"download {path} failed: {res.status_code}", res.status_code)
+    return res.content
+
+
 async def signed_url(path: str, expires_in: int = 3600, download_name: str | None = None) -> str:
     """Signed GET link. Supabase answers {"signedURL": "/object/sign/<bucket>/<path>?token=..."}."""
     url = f"{_base()}/storage/v1/object/sign/{settings.storage_bucket}/{_object_path(path)}"
