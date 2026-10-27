@@ -13,7 +13,7 @@
   padding: 48px 24px 96px;
 }
 
-/* Hero: the greeting and the promise, with four cloth circles. */
+/* Hero: the greeting and the promise, on a kente edge. */
 .dash-hero {
   position: relative;
   overflow: hidden;
@@ -22,7 +22,7 @@
   justify-content: space-between;
   gap: 24px;
   min-height: 168px;
-  padding: 28px 32px;
+  padding: 28px 32px 36px;
   border-radius: 22px;
   background: var(--chip);
   border: 1px solid var(--line);
@@ -90,82 +90,13 @@
   }
 }
 
-.dash-hero-art {
-  position: relative;
-  flex: none;
-  width: 220px;
-  height: 120px;
-}
-
-.dash-cloth {
+/* A still kente edge along the bottom of the banner. */
+.dash-hero-strip {
   position: absolute;
-  display: block;
-  line-height: 0;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px var(--chip);
-  animation: cloth-float 7s ease-in-out infinite;
-}
-
-/* Each cloth bobs on its own beat and turns slowly, like fabric on a line. */
-.dash-cloth svg {
-  animation: cloth-turn 48s linear infinite;
-}
-
-.dash-cloth-1 {
-  animation-delay: -1.8s;
-}
-
-.dash-cloth-1 svg {
-  animation-direction: reverse;
-}
-
-.dash-cloth-2 {
-  animation-delay: -3.6s;
-}
-
-.dash-cloth-3 {
-  animation-delay: -5.2s;
-}
-
-.dash-cloth-3 svg {
-  animation-direction: reverse;
-  animation-duration: 36s;
-}
-
-@keyframes cloth-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes cloth-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.dash-cloth-0 {
+  left: 0;
   right: 0;
-  top: 12px;
-}
-
-.dash-cloth-1 {
-  right: 76px;
-  top: 58px;
-}
-
-.dash-cloth-2 {
-  right: 104px;
-  top: 0;
-}
-
-.dash-cloth-3 {
-  right: 166px;
-  top: 64px;
+  bottom: 0;
+  line-height: 0;
 }
 
 /* Number tiles */
@@ -569,12 +500,6 @@
     padding: 22px 20px;
     min-height: 0;
   }
-  .dash-hero-art {
-    position: absolute;
-    right: -96px;
-    top: -34px;
-    opacity: 0.22;
-  }
   .dash-title {
     font-size: 30px;
   }
@@ -607,8 +532,6 @@
   .dash-type-arrow {
     transition: none;
   }
-  .dash-cloth,
-  .dash-cloth svg,
   .dash-stat:hover .dash-stat-icon {
     animation: none;
   }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AppShell } from "../components/AppShell";
 import { Icon, type IconName } from "../components/icons";
-import { Drum, DrumRoll, PatternDot, PatternStrip, Shell } from "../components/Shell";
+import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { UsageChart, lastDays } from "../components/UsageChart";
 import {
   KES_PER_USD,
@@ -15,7 +15,6 @@ import {
   formatKes,
   formatUsd,
   quoteFor,
-  type PatternId,
   type Voice,
 } from "../data";
 import { getFlow, setFlow } from "../flow";
@@ -41,9 +40,6 @@ const TYPES: [string, IconName][] = [
   ["phone", "phone"],
   ["story", "book"],
 ];
-// Cloth circles in the hero: Kenyan kitenge, Ghanaian kente, Nigerian adire, South African Ndebele.
-const HERO_CLOTHS: PatternId[] = ["kitenge", "kente", "adire", "ndebele"];
-const HERO_SIZES = [96, 64, 72, 52];
 // Voices offered until the account has favourites of its own: one per region, all with samples.
 const SUGGESTED = ["wanjiru", "funmi", "kwame", "nakato", "awa", "selam"];
 
@@ -294,6 +290,8 @@ export default function Dashboard() {
   }, [authKey, load]);
 
   const view: State = authKey === "loading" ? { kind: "loading" } : authKey === "out" ? { kind: "signin" } : state;
+  // The sidebar is for signed-in accounts only: Shell shows it once a session exists. The demo has no session.
+  const Frame = API_MODE === "demo" ? AppShell : Shell;
   const stop = useCallback(() => setPlayingId(null), []);
   const clips = view.kind === "ready" ? view.clips : [];
   const days = useMemo(() => lastDays(clips), [clips]);
@@ -327,7 +325,7 @@ export default function Dashboard() {
   const monthSeconds = totalSeconds(clips.filter((c) => new Date(c.createdAt).getTime() >= days[0].date.getTime()));
 
   return (
-    <AppShell>
+    <Frame>
       <div className="dash">
         {API_MODE === "demo" && <p className="faint clips-demo">Demo mode: showing clips made in this browser.</p>}
 
@@ -342,12 +340,8 @@ export default function Dashboard() {
               </svg>
             </p>
           </div>
-          <div className="dash-hero-art" aria-hidden="true">
-            {HERO_CLOTHS.map((pattern, i) => (
-              <span key={pattern} className={`dash-cloth dash-cloth-${i}`}>
-                <PatternDot pattern={pattern} size={HERO_SIZES[i]} />
-              </span>
-            ))}
+          <div className="dash-hero-strip" aria-hidden="true">
+            <PatternStrip pattern="kente" height={10} />
           </div>
         </header>
 
@@ -470,6 +464,6 @@ export default function Dashboard() {
           </aside>
         </div>
       </div>
-    </AppShell>
+    </Frame>
   );
 }

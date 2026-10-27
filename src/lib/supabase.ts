@@ -26,10 +26,18 @@ export function useSession(): Session | null | undefined {
 // supabase-js keeps the session under sb-<project ref>-auth-token.
 const STORAGE_KEY = `sb-${new globalThis.URL(URL).hostname.split(".")[0]}-auth-token`;
 
-/** Whether this browser holds a saved session, read synchronously so a page can pick its frame before Auth answers. */
+/**
+ * Whether this browser holds a saved sign-in, read synchronously so a page can pick its frame before Auth answers.
+ * Only a well-formed session with a refresh token counts; Auth's own answer replaces this guess a moment later.
+ */
 export function hasStoredSession(): boolean {
   try {
-    return Boolean(localStorage.getItem(STORAGE_KEY));
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as {
+      access_token?: unknown;
+      refresh_token?: unknown;
+      user?: { id?: unknown };
+    } | null;
+    return Boolean(saved && typeof saved.access_token === "string" && typeof saved.refresh_token === "string" && saved.user?.id);
   } catch {
     return false;
   }
