@@ -1,0 +1,367 @@
+/* Signed-in frame: sidebar on the left, page beside it. Phones get a top bar and a drawer. */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+}
+
+.app-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+}
+
+.app-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 30px 18px 16px;
+  background: var(--card);
+}
+
+/* Vertical kanga border, flowing down while the top band flows left. */
+.app-pindo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.app-pindo svg {
+  display: block;
+  animation: pindo-flow 6s linear infinite;
+}
+
+@keyframes pindo-flow {
+  from {
+    transform: translateY(-30px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Nav icons lift and tilt like a hand on a drum when hovered. */
+.app-nav a svg {
+  transition: transform 220ms var(--ease-spring, ease);
+}
+
+.app-nav a:hover svg {
+  transform: translateY(-2px) rotate(-8deg);
+}
+
+.app-step {
+  max-width: 600px;
+  margin: 0 auto 4px;
+  padding: 0 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--faint);
+}
+
+/* Narrow flow pages (studio, pay, sign-in) already sit in the main column's padding. */
+.app-main .narrow {
+  padding-top: 12px;
+}
+
+.app-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.brand.app-brand .logo {
+  height: 30px;
+}
+
+.app-brand .brand-voice {
+  font-size: 17px;
+}
+
+.app-brand .brand-rule {
+  height: 22px;
+}
+
+.app-close-btn,
+.app-menu-btn,
+.app-out {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.app-close-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+}
+
+.app-close-btn:hover,
+.app-menu-btn:hover,
+.app-out:hover {
+  background: var(--chip);
+  color: var(--text);
+}
+
+.btn.app-new {
+  padding: 12px 18px;
+  font-size: 15px;
+  gap: 8px;
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.app-nav a:hover {
+  background: var(--chip);
+  color: var(--text);
+}
+
+.app-nav a[aria-current="page"] {
+  background: var(--chip);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.app-nav a[aria-current="page"] svg {
+  color: var(--accent);
+}
+
+.app-side-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.app-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.app-avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+}
+
+.app-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.app-name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-email {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-out {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+
+.app-side-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.app-side-links .theme-toggle {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.app-main {
+  min-width: 0;
+  padding: 36px 44px 88px;
+  animation: route-in 480ms var(--ease-out, ease) both;
+}
+
+/* The sidebar stays put between pages: only the page beside it rises in. */
+.route:has(> .app) {
+  animation: none;
+}
+
+/* Pages that also render outside the app frame drop their own centring here. */
+.app-main .clips {
+  max-width: 860px;
+  margin: 0;
+  padding: 0;
+}
+
+.app-top,
+.app-scrim {
+  display: none;
+}
+
+.app-close-btn:focus-visible,
+.app-menu-btn:focus-visible,
+.app-out:focus-visible,
+.app-nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .app-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .app-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn.app-top-new {
+    padding: 8px 14px;
+    font-size: 14px;
+    gap: 6px;
+  }
+
+  .app-menu-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app-side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(300px, 86vw);
+    /* A fixed grid child honours align-self, so stretch it between top and bottom. */
+    align-self: stretch;
+    height: auto;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 260ms var(--ease-out, ease), visibility 0s linear 260ms;
+    box-shadow: 0 0 40px rgb(26 17 12 / 0.25);
+  }
+
+  .app[data-open] .app-side {
+    transform: none;
+    visibility: visible;
+    transition: transform 260ms var(--ease-out, ease);
+  }
+
+  .app-close-btn {
+    display: inline-flex;
+  }
+
+  .app-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgb(26 17 12 / 0.45);
+  }
+
+  .app-main {
+    padding: 28px 24px 72px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-main {
+    padding: 22px 16px 64px;
+  }
+  .app-top .brand .logo {
+    height: 26px;
+  }
+  .app-top .brand-voice {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-side,
+  .app[data-open] .app-side,
+  .app-nav a svg {
+    transition: none;
+  }
+  .app-pindo svg,
+  .app-main {
+    animation: none;
+  }
+  .app-nav a:hover svg {
+    transform: none;
+  }
+}

@@ -253,7 +253,7 @@ export default function Subscribe() {
                 {billing === "yearly" ? " billed yearly — 2 months free" : " / month"}
               </span>
               <span className="sub-kes muted">
-                {billing === "yearly" ? `${formatKes(shownKes)} a year` : `${formatKes(shownKes)} a month`}
+                {`Charged as ${formatKes(shownKes)} a ${billing === "yearly" ? "year" : "month"}`}
               </span>
             </p>
           </div>
@@ -344,7 +344,7 @@ export default function Subscribe() {
             </p>
 
             <button ref={payBtn} type="submit" className="btn btn-block" disabled={phase === "busy"}>
-              {phase === "busy" ? "Opening payment…" : `Pay ${formatKes(shownKes)}`}
+              {phase === "busy" ? "Opening payment…" : `Pay $${usd.toLocaleString("en-US")}`}
             </button>
           </form>
         )}

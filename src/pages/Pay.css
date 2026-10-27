@@ -21,6 +21,12 @@
   font-weight: 700;
 }
 
+.pay-kes {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .pay-back {
   color: var(--muted);
   font-weight: 600;

@@ -11,13 +11,14 @@ import Legal from "./pages/Legal";
 import Signin from "./pages/Signin";
 import Clips from "./pages/Clips";
 import Dashboard from "./pages/Dashboard";
+import Voices from "./pages/Voices";
 import Subscribe from "./pages/Subscribe";
 import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 
 // Routes: / home + voice library, /pricing, /verify, the try-before-you-pay flow
-// /studio → /listen → /pay → /ready, /signin, /clips, /subscribe?plan=…, and
+// /studio → /listen → /pay → /ready, /signin, /dashboard, /clips, /voices, /subscribe?plan=…, and
 // /terms + /privacy (shared Legal page).
 export default function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
@@ -43,6 +44,7 @@ function Page({ path }: { path: string }) {
   if (path === "/reset-password") return <ResetPassword />;
   if (path === "/dashboard") return <Dashboard />;
   if (path === "/clips") return <Clips />;
+  if (path === "/voices") return <Voices />;
   if (path === "/subscribe") return <Subscribe />;
   if (path === "/terms" || path === "/privacy") return <Legal />;
   return <NotFound />;

@@ -4,14 +4,14 @@
 // Demo mode: no base URL, so every call is answered in the browser. The demo
 // keeps licences and clips in localStorage and never moves money or makes audio.
 
-import { formatDuration, quoteFor, VOICES } from "../data";
+import { KES_PER_USD, formatDuration, quoteFor, VOICES } from "../data";
 import { accessToken, supabase } from "./supabase";
 
 const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 export const API_MODE: "live" | "demo" = BASE ? "live" : "demo";
 
 export type Preview = { previewId: string; seconds: number; audioUrl?: string };
-export type PaygCheckout = { jobId: string; amountKes: number; accessCode?: string };
+export type PaygCheckout = { jobId: string; amountKes: number; amountUsd?: number; accessCode?: string };
 export type JobStatus = "paying" | "generating" | "ready" | "failed";
 export type Job = { jobId: string; status: JobStatus; seconds?: number; audioUrl?: string; licenceId?: string };
 export type Licence = { id: string; tier: string; voice: string; length: string; issued: string; paidKes?: number };
@@ -38,6 +38,7 @@ export type Account = {
   previewsLeft: number;
   previewsPerDay: number;
   spentKes: number;
+  spentUsd?: number;
 };
 
 // ---- session --------------------------------------------------------------
@@ -126,7 +127,7 @@ function newLicenceId(): string {
   return `VS-${new Date().getFullYear()}-${s}`;
 }
 
-type DemoJob = Job & { voice: string; paidKes: number; createdAt: string };
+type DemoJob = Job & { voice: string; paidKes: number; paidUsd?: number; createdAt: string };
 
 const voiceName = (id: string) => VOICES.find((v) => v.id === id)?.name ?? id;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -164,10 +165,11 @@ export async function createPaygCheckout(input: {
     seconds: q.projectedSeconds,
     voice: voiceName(input.voiceId),
     paidKes: q.kes,
+    paidUsd: q.usd,
     createdAt: new Date().toISOString(),
   };
   writeList(JOBS_KEY, [...readList<DemoJob>(JOBS_KEY), job]);
-  return { jobId: job.jobId, amountKes: q.kes };
+  return { jobId: job.jobId, amountKes: q.kes, amountUsd: q.usd };
 }
 
 /** Demo only: marks a job paid, as the Paystack webhook would on the server. */
@@ -242,10 +244,10 @@ export async function listClips(): Promise<Clip[]> {
 export async function getAccount(): Promise<Account> {
   if (API_MODE === "live") return call("GET", "/account");
   await wait(200);
-  const spentKes = readList<DemoJob>(JOBS_KEY)
-    .filter((j) => j.status === "ready")
-    .reduce((sum, j) => sum + (j.paidKes ?? 0), 0);
-  return { email: "", plan: null, previewsLeft: 3, previewsPerDay: 3, spentKes };
+  const paid = readList<DemoJob>(JOBS_KEY).filter((j) => j.status === "ready");
+  const spentKes = paid.reduce((sum, j) => sum + (j.paidKes ?? 0), 0);
+  const spentUsd = Math.round(paid.reduce((sum, j) => sum + (j.paidUsd ?? (j.paidKes ?? 0) / KES_PER_USD), 0) * 100) / 100;
+  return { email: "", plan: null, previewsLeft: 3, previewsPerDay: 3, spentKes, spentUsd };
 }
 
 const PLAN_USD: Record<Plan, number> = { starter: 15, creator: 50, pro: 100, business: 350 };

@@ -4,7 +4,7 @@ import { SAMPLE_IDS } from "./voice-samples";
 // on the private voice-studio branch.
 
 export const KES_PER_USD = 129.4;
-export const PAYG_USD_PER_MIN = 1.5;
+export const PAYG_USD_PER_MIN = 2;
 export const PREVIEW_SECONDS = 45;
 export const CHARS_PER_SECOND = 15;
 export const MAX_PAYG_CHARS = 4500;
@@ -189,7 +189,7 @@ export function quoteFor(script: string): Quote {
   const padded = (chars / CHARS_PER_SECOND) * 1.1;
   const billedSeconds = Math.max(60, Math.ceil(padded / 30) * 30);
   const usd = Math.round((billedSeconds / 60) * PAYG_USD_PER_MIN * 100) / 100;
-  const kes = Math.ceil((usd * KES_PER_USD) / 5) * 5;
+  const kes = kesFor(usd);
   return { chars, projectedSeconds, billedSeconds, usd, kes };
 }
 
@@ -209,3 +209,20 @@ export function formatClock(seconds: number): string {
 export function formatKes(kes: number): string {
   return `KES ${kes.toLocaleString("en-KE")}`;
 }
+
+/** Prices are shown in US dollars: $2, $2.50, $1,200. Paystack still charges the KES figure. */
+export function formatUsd(usd: number): string {
+  const whole = Math.abs(usd - Math.round(usd)) < 0.005;
+  const n = whole
+    ? Math.round(usd).toLocaleString("en-US")
+    : usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `$${n}`;
+}
+
+/** What a dollar figure costs in shillings: the checkout's own rounding, up to the next KES 5. */
+export function kesFor(usd: number): number {
+  return Math.ceil((usd * KES_PER_USD) / 5) * 5;
+}
+
+/** The pay-as-you-go price, e.g. "$2 a minute". */
+export const PAYG_PRICE = `${formatUsd(PAYG_USD_PER_MIN)} a minute`;

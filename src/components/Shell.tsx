@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { Link, usePath } from "../router";
 import { useTheme } from "../reveal";
 import type { PatternId } from "../data";
-import { useSession } from "../lib/supabase";
+import { hasStoredSession, useSession } from "../lib/supabase";
+import { AppShell } from "./AppShell";
 
 // Every cloth pattern, defined once per page. Use them as fill="url(#id)".
 export function PatternDefs() {
@@ -10,6 +11,13 @@ export function PatternDefs() {
     <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
       <defs>
         <pattern id="band" width="30" height="14" patternUnits="userSpaceOnUse">
+          <rect width="30" height="14" fill="#D0442A" />
+          <path d="M15 2 L22 7 L15 12 L8 7 Z" fill="#E8A33C" />
+          <circle cx="15" cy="7" r="1.6" fill="#1A110C" />
+          <circle cx="1.5" cy="7" r="1.5" fill="#F6EAD7" />
+          <circle cx="28.5" cy="7" r="1.5" fill="#F6EAD7" />
+        </pattern>
+        <pattern id="bandv" width="30" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(90)">
           <rect width="30" height="14" fill="#D0442A" />
           <path d="M15 2 L22 7 L15 12 L8 7 Z" fill="#E8A33C" />
           <circle cx="15" cy="7" r="1.6" fill="#1A110C" />
@@ -134,13 +142,31 @@ export function BeadProgress({ progress, count = 16, label, max, now }: { progre
   );
 }
 
-export function DrumRoll() {
+/** Loader: an ngoma beaten by two sticks in turn, the head rippling on each hit. */
+export function DrumRoll({ size = 96 }: { size?: number }) {
   return (
-    <div className="drumroll" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </div>
+    <svg className="drumbeat" width={size} height={Math.round(size * 0.84)} viewBox="0 0 120 100" aria-hidden="true">
+      <g className="drumbeat-sound" fill="none" stroke="#E8A33C" strokeWidth="2.5" strokeLinecap="round">
+        <path className="drumbeat-sound-l" d="M30 26 L22 18 M26 34 L16 32" />
+        <path className="drumbeat-sound-r" d="M90 26 L98 18 M94 34 L104 32" />
+      </g>
+      <g className="drumbeat-drum">
+        <path d="M30 46 L38 88 Q60 96 82 88 L90 46 Z" fill="#E8A33C" stroke="#C98A26" strokeWidth="2" />
+        <path d="M33 60 L41 70 L49 60 L57 70 L65 60 L73 70 L81 60 L87 64 L85 72 L35 72 L33 64 Z" fill="#D0442A" />
+        <path d="M32 50 L44 60 L56 50 L68 60 L80 50 L88 56" fill="none" stroke="#1A110C" strokeWidth="1.6" strokeLinejoin="round" />
+        <ellipse cx="60" cy="46" rx="30" ry="8" fill="#F6EAD7" stroke="#8A4B26" strokeWidth="2.5" />
+      </g>
+      <ellipse className="drumbeat-ripple drumbeat-ripple-l" cx="60" cy="46" rx="30" ry="8" fill="none" stroke="#E8A33C" strokeWidth="2" />
+      <ellipse className="drumbeat-ripple drumbeat-ripple-r" cx="60" cy="46" rx="30" ry="8" fill="none" stroke="#E8A33C" strokeWidth="2" />
+      <g className="drumbeat-stick drumbeat-stick-l">
+        <line x1="12" y1="12" x2="50" y2="40" stroke="#8A4B26" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="51" cy="41" r="4.5" fill="#F6EAD7" stroke="#8A4B26" strokeWidth="2" />
+      </g>
+      <g className="drumbeat-stick drumbeat-stick-r">
+        <line x1="108" y1="12" x2="70" y2="40" stroke="#8A4B26" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="69" cy="41" r="4.5" fill="#F6EAD7" stroke="#8A4B26" strokeWidth="2" />
+      </g>
+    </svg>
   );
 }
 
@@ -232,7 +258,7 @@ export function Header({ step }: { step?: 1 | 2 | 3 | 4 }) {
   );
 }
 
-function ThemeToggle() {
+export function ThemeToggle() {
   const [dark, toggle] = useTheme();
   return (
     <button type="button" className="theme-toggle" aria-pressed={dark} onClick={toggle}>
@@ -260,8 +286,15 @@ export function Footer() {
   );
 }
 
-/** Page frame: patterns, kanga band, header, content, footer. */
+/**
+ * Page frame: patterns, kanga band, header, content, footer.
+ * Signed-in visitors get the studio frame with its sidebar on every page except the home page.
+ */
 export function Shell({ step, children, footer = true }: { step?: 1 | 2 | 3 | 4; children: ReactNode; footer?: boolean }) {
+  const path = usePath();
+  const session = useSession();
+  const signedIn = session === undefined ? hasStoredSession() : Boolean(session);
+  if (signedIn && path !== "/") return <AppShell step={step}>{children}</AppShell>;
   return (
     <div className="page">
       <PatternDefs />

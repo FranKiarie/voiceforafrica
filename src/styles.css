@@ -406,45 +406,103 @@ p {
   transform: scale(1.25);
 }
 
-/* Drum-roll loader */
-.drumroll {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  height: 56px;
+/* Drum loader: two sticks beat the ngoma in turn; the head ripples and the drum gives a little on each hit. */
+.drumbeat {
+  display: block;
+  overflow: visible;
 }
 
-.drumroll span {
-  width: 24px;
-  height: 32px;
-  border-radius: 6px 6px 10px 10px;
-  box-shadow: inset 0 6px 0 #f6ead7;
-  animation: drum-bounce 0.9s ease-in-out infinite;
+.drumbeat * {
+  transform-box: view-box;
 }
 
-.drumroll span:nth-child(1) {
-  background: var(--red);
+.drumbeat-stick {
+  animation: beat-left 0.9s cubic-bezier(0.5, 0, 0.6, 1) infinite;
+  transform-origin: 12px 12px;
 }
 
-.drumroll span:nth-child(2) {
-  background: var(--gold);
-  height: 40px;
-  animation-delay: 0.15s;
+.drumbeat-stick-r {
+  animation-name: beat-right;
+  transform-origin: 108px 12px;
 }
 
-.drumroll span:nth-child(3) {
-  background: var(--green);
-  animation-delay: 0.3s;
-}
-
-@keyframes drum-bounce {
-  0%,
-  100% {
-    transform: translateY(0);
+@keyframes beat-left {
+  0%, 50%, 100% {
+    transform: rotate(-50deg);
   }
-  40%,
-  60% {
-    transform: translateY(-12px);
+  22% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes beat-right {
+  0%, 100% {
+    transform: rotate(50deg);
+  }
+  50% {
+    transform: rotate(50deg);
+  }
+  72% {
+    transform: rotate(0deg);
+  }
+}
+
+.drumbeat-drum {
+  transform-origin: 60px 92px;
+  animation: drum-give 0.45s ease-out infinite;
+  animation-delay: 0.155s;
+}
+
+@keyframes drum-give {
+  0%, 100% {
+    transform: none;
+  }
+  10% {
+    transform: scale(1.03, 0.96);
+  }
+}
+
+.drumbeat-ripple {
+  transform-origin: 60px 46px;
+  opacity: 0;
+  animation: drum-ripple 0.9s ease-out infinite;
+  animation-delay: 0.2s;
+}
+
+.drumbeat-ripple-r {
+  animation-delay: 0.65s;
+}
+
+@keyframes drum-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  55%,
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.drumbeat-sound-l,
+.drumbeat-sound-r {
+  opacity: 0;
+  animation: drum-sound 0.9s ease-out infinite;
+  animation-delay: 0.2s;
+}
+
+.drumbeat-sound-r {
+  animation-delay: 0.65s;
+}
+
+@keyframes drum-sound {
+  0% {
+    opacity: 1;
+  }
+  35%,
+  100% {
+    opacity: 0;
   }
 }
 
@@ -482,7 +540,7 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .kanga svg,
   .drum .ring,
-  .drumroll span,
+  .drumbeat *,
   .stamp,
   .tick {
     animation: none;

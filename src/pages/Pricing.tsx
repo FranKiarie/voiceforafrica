@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Shell, PatternStrip } from "../components/Shell";
 import { Link } from "../router";
-import type { PatternId } from "../data";
+import { PAYG_USD_PER_MIN, formatUsd, type PatternId } from "../data";
 import type { Plan } from "../lib/api";
 import "./Pricing.css";
 
@@ -22,9 +22,9 @@ const TIERS: Tier[] = [
   {
     name: "Pay as you go",
     pattern: "band",
-    price: "$1.50",
+    price: formatUsd(PAYG_USD_PER_MIN),
     per: "/ min",
-    line: "About KES 195 a minute. Hear 45 seconds first, no account. One language.",
+    line: "Hear 45 seconds first, no account. One language. Pay by M-Pesa or card.",
     cta: "Paste your script",
     kind: "studio",
   },
@@ -69,25 +69,21 @@ const ROWS: [string, ...string[]][] = [
   ["Support", "Help page", "Email", "Email", "WhatsApp", "WhatsApp + call", "Named manager"],
 ];
 
-function money(usd: number): string {
-  const s = usd.toFixed(2).replace(/\.?0+$/, "");
-  return `$${s}`;
-}
 
 export default function Pricing() {
   const [yearly, setYearly] = useState(false);
 
   const priceOf = (t: Tier): { price: string; per: string } => {
     if (t.monthly === undefined) return { price: t.price ?? "", per: t.per ?? "" };
-    if (yearly) return { price: money((t.monthly * 10) / 12), per: "/ month, billed yearly" };
-    return { price: money(t.monthly), per: "/ month" };
+    if (yearly) return { price: formatUsd((t.monthly * 10) / 12), per: "/ month, billed yearly" };
+    return { price: formatUsd(t.monthly), per: "/ month" };
   };
 
   return (
     <Shell>
       <section className="pricing-intro">
         <h1>Pricing</h1>
-        <p className="muted">Pay per clip, or save with a plan once you make more than 10 minutes a month.</p>
+        <p className="muted">Pay per clip, or save with a plan once you make more than 8 minutes a month.</p>
         <div className="period" role="group" aria-label="Billing period">
           <button type="button" aria-pressed={!yearly} onClick={() => setYearly(false)}>
             Monthly
@@ -163,7 +159,7 @@ export default function Pricing() {
             </table>
           </div>
         </details>
-        <p className="faint pricing-foot">Kenyans pay in shillings by M-Pesa or card. Others pay in dollars by card.</p>
+        <p className="faint pricing-foot">Prices are in US dollars. You pay the same amount in Kenyan shillings by M-Pesa or card; your bank converts card payments.</p>
       </section>
     </Shell>
   );

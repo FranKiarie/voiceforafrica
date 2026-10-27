@@ -399,14 +399,16 @@ def _iso(days: float) -> str:
     return (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
 
 
-def _sub(sub_id, plan, status, period_end, amount_kes, created_days_ago, email="ann@example.com", billing="monthly"):
+def _sub(sub_id, plan, status, period_end, amount_kes, created_days_ago, email="ann@example.com", billing="monthly",
+         amount_usd=None):
     return {"id": sub_id, "email": email, "plan": plan, "billing": billing, "status": status,
             "period_start": _iso(-created_days_ago), "period_end": period_end, "amount_kes": amount_kes,
-            "created_at": _iso(-created_days_ago)}
+            "amount_usd": amount_usd, "created_at": _iso(-created_days_ago)}
 
 
-def _job(job_id, status, amount_kes, email="ann@example.com"):
-    return {"id": job_id, "email": email, "status": status, "amount_kes": amount_kes, "created_at": _iso(-1)}
+def _job(job_id, status, amount_kes, email="ann@example.com", amount_usd=None):
+    return {"id": job_id, "email": email, "status": status, "amount_kes": amount_kes, "amount_usd": amount_usd,
+            "created_at": _iso(-1)}
 
 
 @pytest.fixture
@@ -442,6 +444,7 @@ def test_account_with_an_active_plan(ann, client):
         "previewsLeft": 2,
         "previewsPerDay": 3,
         "spentKes": 1800,
+        "spentUsd": 0,
     }
     # Same email-OR-IP window the preview endpoint enforces.
     table, params = ann["count_params"]
@@ -498,23 +501,24 @@ def test_account_preview_count_failure_shows_the_full_allowance(ann, client, mon
 
 def test_account_spent_kes_sums_ready_clips_and_paid_plans(ann, client):
     ann["tables"]["voice_jobs"] = [
-        _job("vj_1", "ready", 195),
-        _job("vj_2", "ready", 390),
+        _job("vj_1", "ready", 195, amount_usd=1.5),
+        _job("vj_2", "ready", 390, amount_usd=3.0),
         _job("vj_3", "failed", 1000),
         _job("vj_4", "paying", 2000),
         _job("vj_5", "generating", 3000),
         _job("vj_6", "ready", 777, email="bob@example.com"),
     ]
     ann["tables"]["voice_subscriptions"] = [
-        _sub("vs_1", "starter", "expired", _iso(-5), 300, 35),
-        _sub("vs_2", "creator", "active", _iso(25), 1500, 5),
+        _sub("vs_1", "starter", "expired", _iso(-5), 300, 35, amount_usd=2.32),
+        _sub("vs_2", "creator", "active", _iso(25), 1500, 5, amount_usd=11.6),
         _sub("vs_3", "pro", "pending", None, 4000, 0),
         _sub("vs_4", "pro", "failed", None, 4000, 0),
     ]
     res = client.get(f"{BASE}/account", headers=AUTH)
     assert res.status_code == 200, res.text
     assert res.json()["spentKes"] == 195 + 390 + 300 + 1500
-    spend_qs = [(t, p) for t, p in ann["selects"] if p.get("select") == "amount_kes"]
+    assert res.json()["spentUsd"] == 18.42
+    spend_qs = [(t, p) for t, p in ann["selects"] if p.get("select") == "amount_kes,amount_usd"]
     assert sorted(t for t, _ in spend_qs) == ["voice_jobs", "voice_subscriptions"]
     for _, p in spend_qs:
         assert p["email"] == "eq.ann@example.com" and p["limit"] == "1000"
@@ -524,7 +528,7 @@ def test_account_with_nothing_bought(ann, client):
     res = client.get(f"{BASE}/account", headers=AUTH)
     assert res.status_code == 200, res.text
     assert res.json() == {"email": "ann@example.com", "plan": None, "previewsLeft": 3,
-                          "previewsPerDay": 3, "spentKes": 0}
+                          "previewsPerDay": 3, "spentKes": 0, "spentUsd": 0}
 
 
 @pytest.mark.parametrize("broken_call,broken_table", [

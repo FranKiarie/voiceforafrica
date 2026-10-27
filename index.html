@@ -25,7 +25,33 @@
     <title>Mikaka Voice · Voice-overs in your accent</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Shown until the app starts: the same drum the in-page loaders beat (styles in src/styles.css). -->
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center" aria-hidden="true">
+        <svg class="drumbeat" width="96" height="81" viewBox="0 0 120 100">
+          <g class="drumbeat-sound" fill="none" stroke="#E8A33C" stroke-width="2.5" stroke-linecap="round">
+            <path class="drumbeat-sound-l" d="M30 26 L22 18 M26 34 L16 32" />
+            <path class="drumbeat-sound-r" d="M90 26 L98 18 M94 34 L104 32" />
+          </g>
+          <g class="drumbeat-drum">
+            <path d="M30 46 L38 88 Q60 96 82 88 L90 46 Z" fill="#E8A33C" stroke="#C98A26" stroke-width="2" />
+            <path d="M33 60 L41 70 L49 60 L57 70 L65 60 L73 70 L81 60 L87 64 L85 72 L35 72 L33 64 Z" fill="#D0442A" />
+            <path d="M32 50 L44 60 L56 50 L68 60 L80 50 L88 56" fill="none" stroke="#1A110C" stroke-width="1.6" stroke-linejoin="round" />
+            <ellipse cx="60" cy="46" rx="30" ry="8" fill="#F6EAD7" stroke="#8A4B26" stroke-width="2.5" />
+          </g>
+          <ellipse class="drumbeat-ripple drumbeat-ripple-l" cx="60" cy="46" rx="30" ry="8" fill="none" stroke="#E8A33C" stroke-width="2" />
+          <ellipse class="drumbeat-ripple drumbeat-ripple-r" cx="60" cy="46" rx="30" ry="8" fill="none" stroke="#E8A33C" stroke-width="2" />
+          <g class="drumbeat-stick drumbeat-stick-l">
+            <line x1="12" y1="12" x2="50" y2="40" stroke="#8A4B26" stroke-width="4" stroke-linecap="round" />
+            <circle cx="51" cy="41" r="4.5" fill="#F6EAD7" stroke="#8A4B26" stroke-width="2" />
+          </g>
+          <g class="drumbeat-stick drumbeat-stick-r">
+            <line x1="108" y1="12" x2="70" y2="40" stroke="#8A4B26" stroke-width="4" stroke-linecap="round" />
+            <circle cx="69" cy="41" r="4.5" fill="#F6EAD7" stroke="#8A4B26" stroke-width="2" />
+          </g>
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

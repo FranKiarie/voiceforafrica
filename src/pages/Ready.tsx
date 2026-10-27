@@ -168,9 +168,9 @@ export default function Ready() {
         </section>
 
         <div className="ready-foot faint">
-          <p>We emailed you a link to come back to this clip for 7 days.</p>
+          <p>Sign in with this email to find this clip in My clips for 7 days.</p>
           <p>
-            Making more than 10 minutes a month? <Link href="/pricing">Plans from $15</Link>
+            Making more than 8 minutes a month? <Link href="/pricing">Plans from $15</Link>
           </p>
         </div>
       </div>

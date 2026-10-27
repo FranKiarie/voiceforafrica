@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppShell } from "../components/AppShell";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { API_MODE, ApiError, listClips, type Clip } from "../lib/api";
 import { supabase, useSession } from "../lib/supabase";
@@ -85,7 +86,8 @@ async function endSession() {
 
 export default function Clips() {
   const session = useSession();
-  const email = session?.user?.email ?? "";
+  // Shell already gives signed-in visitors the sidebar; the demo has no session, so it asks for it.
+  const Frame = API_MODE === "demo" ? AppShell : Shell;
   const [state, setState] = useState<State>({ kind: "loading" });
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -114,31 +116,18 @@ export default function Clips() {
     void load();
   }, [authKey, load]);
 
-  const leave = () => {
-    setPlayingId(null);
-    void endSession();
-  };
-
   const view: State = authKey === "loading" ? { kind: "loading" } : authKey === "out" ? { kind: "signin" } : state;
 
   const stop = useCallback(() => setPlayingId(null), []);
 
   return (
-    <Shell>
+    <Frame>
       <div className="clips">
         {API_MODE === "demo" && <p className="faint clips-demo">Demo mode: showing clips made in this browser.</p>}
 
         <div className="clips-head">
           <h1 className="clips-title">My clips</h1>
           <p className="muted">Clips you've made, with their licences.</p>
-          {session && (
-            <p className="faint clips-who">
-              <span>Signed in as {email || "your account"}</span>
-              <button type="button" className="clips-text-btn" onClick={leave}>
-                Sign out
-              </button>
-            </p>
-          )}
         </div>
 
         {view.kind === "loading" && (
@@ -205,6 +194,6 @@ export default function Clips() {
           Pay-as-you-go clips stay here for 7 days. Plans keep them longer. <Link href="/pricing">See plans</Link>
         </p>
       </div>
-    </Shell>
+    </Frame>
   );
 }

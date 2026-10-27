@@ -1,20 +1,12 @@
 import { useState } from "react";
 import { Drum, PatternDot, Shell } from "../components/Shell";
 import { Link } from "../router";
-import { DEFAULT_VOICE, LANGUAGES, LIVE_ACCENTS, VOICES, accentLabel } from "../data";
+import { DEFAULT_VOICE, LANGUAGES, LIVE_ACCENTS, PAYG_PRICE, VOICES, accentLabel } from "../data";
 import { useVoiceSample } from "../lib/sample";
+import { ICONS } from "../components/icons";
 import "./Home.css";
 
 const DOTS = ["#D0442A", "#E8A33C", "#3F57B8", "#2E9E6B"];
-
-const ICONS = {
-  mic: "M12 3 a3 3 0 0 1 3 3 v6 a3 3 0 0 1 -6 0 v-6 a3 3 0 0 1 3 -3 Z M5 11 a7 7 0 0 0 14 0 M12 18 v3",
-  radio: "M4 9 h16 v11 h-16 Z M7 9 L17 4 M8 14.5 a1.5 1.5 0 1 0 0.01 0 M13 13 h4 M13 16 h4",
-  phone: "M5 4 h4 l2 5 -2.5 1.5 a11 11 0 0 0 5 5 l1.5 -2.5 5 2 v4 a2 2 0 0 1 -2 2 A16 16 0 0 1 3 6 a2 2 0 0 1 2 -2 Z",
-  book: "M4 5 a2 2 0 0 1 2 -2 h13 v16 h-13 a2 2 0 0 0 -2 2 Z M4 19 v2 M8 7 h7",
-  chat: "M4 5 h11 v8 h-7 l-4 3 Z M9 16 v2 h7 l4 3 v-11 h-3",
-  bell: "M6 16 v-5 a6 6 0 0 1 12 0 v5 l2 2 h-16 Z M10 20 a2 2 0 0 0 4 0",
-};
 
 const USES = [
   { title: "Voice-overs", line: "For YouTube, TikTok, explainers and adverts online.", icon: ICONS.mic },
@@ -57,17 +49,17 @@ export default function Home() {
   return (
     <Shell>
       <section className="home-hero">
-        <p className="home-eyebrow">KARIBU</p>
+        <p className="home-eyebrow">VOICE FOR AFRICA</p>
         <h1 className="home-title">
-          Voice-overs
+          African voices,
           <br />
-          <span className="hand">in your accent.</span>
+          <span className="hand">given a platform.</span>
         </h1>
-        <p className="home-lede muted">Paste a script, hear 45 seconds free, pay with M-Pesa.</p>
+        <p className="home-lede muted">Voice-overs in your accent. Paste a script, hear 45 seconds free, pay with M-Pesa or card.</p>
         <Link className="btn home-cta" href="/studio">
           Paste your script
         </Link>
-        <p className="home-price faint">KES 195 a minute, or plans from $15</p>
+        <p className="home-price faint">{`${PAYG_PRICE}, or plans from $15`}</p>
         <div className="home-sample">
           <Drum
             size={96}

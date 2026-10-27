@@ -23,6 +23,18 @@ export function useSession(): Session | null | undefined {
   return session;
 }
 
+// supabase-js keeps the session under sb-<project ref>-auth-token.
+const STORAGE_KEY = `sb-${new globalThis.URL(URL).hostname.split(".")[0]}-auth-token`;
+
+/** Whether this browser holds a saved session, read synchronously so a page can pick its frame before Auth answers. */
+export function hasStoredSession(): boolean {
+  try {
+    return Boolean(localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return false;
+  }
+}
+
 /** Bearer token for the voice backend, refreshed by supabase-js when needed. */
 export async function accessToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();

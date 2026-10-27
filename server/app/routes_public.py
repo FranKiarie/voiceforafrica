@@ -276,6 +276,10 @@ def _row_kes(rows: list[dict]) -> int:
     return sum(int(r.get("amount_kes") or 0) for r in rows)
 
 
+def _row_usd(rows: list[dict]) -> float:
+    return sum(float(r.get("amount_usd") or 0) for r in rows)
+
+
 # ---- clips ----------------------------------------------------------------
 
 
@@ -350,14 +354,14 @@ async def account(request: Request, authorization: str | None = Header(default=N
         ),
         db.select(
             "voice_jobs",
-            {"email": email_filter, "status": "eq.ready", "select": "amount_kes", "limit": ACCOUNT_ROW_LIMIT},
+            {"email": email_filter, "status": "eq.ready", "select": "amount_kes,amount_usd", "limit": ACCOUNT_ROW_LIMIT},
         ),
         db.select(
             "voice_subscriptions",
             {
                 "email": email_filter,
                 "status": "in.(active,expired)",
-                "select": "amount_kes",
+                "select": "amount_kes,amount_usd",
                 "limit": ACCOUNT_ROW_LIMIT,
             },
         ),
@@ -383,4 +387,6 @@ async def account(request: Request, authorization: str | None = Header(default=N
         "previewsLeft": previews_left,
         "previewsPerDay": limit,
         "spentKes": _row_kes(jobs) + _row_kes(subs),
+        # Prices are shown in dollars; the stored dollar price avoids converting rounded shillings back.
+        "spentUsd": round(_row_usd(jobs) + _row_usd(subs), 2),
     }

@@ -1,0 +1,157 @@
+/* Audio made per day: one series, so no legend; the card title names it. */
+.uchart {
+  --bar: #e06a14;
+  --bar-hover: #b9530d;
+  --grid: var(--line);
+}
+
+:root[data-theme="dark"] .uchart {
+  --bar: #f27a1e;
+  --bar-hover: #f6a05c;
+}
+
+.uchart-frame {
+  position: relative;
+  height: 176px;
+  margin: 26px 0 0 52px;
+}
+
+.uchart-tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--grid);
+}
+
+.uchart-tick span {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.uchart-plot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  border-radius: 4px;
+}
+
+.uchart-plot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.uchart-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 6px 6px 0 0;
+}
+
+.uchart-col.is-active {
+  background: color-mix(in srgb, var(--chip) 70%, transparent);
+}
+
+.uchart-bar {
+  width: min(16px, calc(100% - 2px));
+  border-radius: 4px 4px 0 0;
+  background: var(--bar);
+  transition: background-color 120ms ease;
+}
+
+.uchart-col.is-active .uchart-bar {
+  background: var(--bar-hover);
+}
+
+.uchart-peak {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -6px);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.uchart-peak.is-start {
+  left: 0;
+  transform: translateY(-6px);
+}
+
+.uchart-peak.is-end {
+  left: auto;
+  right: 0;
+  transform: translateY(-6px);
+}
+
+.uchart-tip {
+  position: absolute;
+  top: -8px;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 6px 18px rgb(26 17 12 / 0.18);
+}
+
+.uchart-tip.is-start {
+  transform: translate(-12px, -100%);
+}
+
+.uchart-tip.is-end {
+  transform: translate(calc(-100% + 12px), -100%);
+}
+
+.uchart-tip-day {
+  font-weight: 600;
+}
+
+.uchart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 14px;
+}
+
+.uchart-x {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0 0 52px;
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .uchart-frame,
+  .uchart-x {
+    margin-left: 44px;
+  }
+  .uchart-frame {
+    height: 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uchart-bar {
+    transition: none;
+  }
+}

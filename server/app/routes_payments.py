@@ -101,7 +101,8 @@ async def payg_checkout(body: PaygCheckout):
         return _not_configured()
     await _check_checkout_rate("voice_jobs", email)
 
-    q = quote(script)
+    # quote() trims the way the browser does, so the charge matches the price the page showed.
+    q = quote(body.script or "")
     job_id = "vj_" + secrets.token_hex(12)
     await db.insert(
         "voice_jobs",
@@ -135,7 +136,7 @@ async def payg_checkout(body: PaygCheckout):
     except paystack.PaystackError as exc:
         logger.warning("payg checkout %s failed to start: %s", job_id, exc)
         raise HTTPException(502, "We could not start the payment. Please try again.")
-    return {"jobId": job_id, "amountKes": q["kes"], "accessCode": tx.get("access_code")}
+    return {"jobId": job_id, "amountKes": q["kes"], "amountUsd": q["usd"], "accessCode": tx.get("access_code")}
 
 
 @router.get("/jobs/{job_id}")

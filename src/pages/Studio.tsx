@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { LANGUAGES, LIVE_ACCENTS, MAX_PAYG_CHARS, PURPOSES, VOICES, accentLabel, formatDuration, quoteFor } from "../data";
+import { LANGUAGES, LIVE_ACCENTS, MAX_PAYG_CHARS, PAYG_PRICE, PURPOSES, VOICES, accentLabel, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { ApiError, createPreview, type Preview } from "../lib/api";
 import { useVoiceSample } from "../lib/sample";
@@ -286,7 +286,7 @@ export default function Studio() {
             {busy ? "Getting your preview…" : "Hear 45 seconds free"}
           </button>
           <p className="faint center studio-note">
-            Then KES 195 a minute if you like it · {left} free {left === 1 ? "preview" : "previews"} left today
+            Then {PAYG_PRICE} if you like it · {left} free {left === 1 ? "preview" : "previews"} left today
           </p>
         </div>
       </form>

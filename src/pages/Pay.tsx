@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { DrumRoll, Shell } from "../components/Shell";
-import { formatKes } from "../data";
+import { formatKes, formatUsd, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { API_MODE, ApiError, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
 import { resumeWithPaystack } from "../lib/paystack";
@@ -94,7 +94,9 @@ export default function Pay() {
   if (empty) return null;
 
   const kes = checkout?.amountKes;
-  const payLabel = kes != null ? `Pay ${formatKes(kes)}` : "Try again";
+  // The server prices the script with the same formula; Paystack charges the shilling figure.
+  const usd = kes != null ? (checkout?.amountUsd ?? quoteFor(flow.script).usd) : null;
+  const payLabel = usd != null ? `Pay ${formatUsd(usd)}` : "Try again";
 
   return (
     <Shell step={3} footer={false}>
@@ -116,7 +118,11 @@ export default function Pay() {
         ) : (
           <>
             <h1 className="pay-title">Waiting for your payment</h1>
-            {kes != null && <p className="pay-amount">{formatKes(kes)}</p>}
+            {kes != null && usd != null && (
+              <p className="pay-amount">
+                {formatUsd(usd)} <span className="faint pay-kes">{`charged as ${formatKes(kes)}`}</span>
+              </p>
+            )}
             <p className="muted" role="status">
               On M-Pesa? Check your phone and enter your PIN. Keep this page open.
             </p>

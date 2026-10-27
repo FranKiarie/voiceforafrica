@@ -101,11 +101,11 @@ def test_client_recreated_after_close():
 # pricing.quote must equal quoteFor in src/data.ts (values computed with node).
 
 @pytest.mark.parametrize("script,expected", [
-    ("a" * 20, (20, 1, 60, 1.5, 195)),
-    ("a" * 832, (832, 55, 90, 2.25, 295)),
-    ("a" * 4500, (4500, 300, 330, 8.25, 1070)),
-    ("  ﻿" + "b" * 100 + "  ", (100, 7, 60, 1.5, 195)),
-    ("😀" * 400, (800, 53, 60, 1.5, 195)),
+    ("a" * 20, (20, 1, 60, 2.0, 260)),
+    ("a" * 832, (832, 55, 90, 3.0, 390)),
+    ("a" * 4500, (4500, 300, 330, 11.0, 1425)),
+    ("  ﻿" + "b" * 100 + "  ", (100, 7, 60, 2.0, 260)),
+    ("😀" * 400, (800, 53, 60, 2.0, 260)),
 ])
 def test_quote_matches_frontend(script, expected):
     q = pricing.quote(script)

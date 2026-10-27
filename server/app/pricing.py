@@ -3,7 +3,7 @@
 import math
 
 KES_PER_USD = 129.4
-PAYG_USD_PER_MIN = 1.5
+PAYG_USD_PER_MIN = 2.0
 CHARS_PER_SECOND = 15
 MAX_PAYG_CHARS = 4500
 PLAN_USD = {"starter": 15, "creator": 50, "pro": 100, "business": 350}

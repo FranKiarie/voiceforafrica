@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BeadProgress, Drum, Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, quoteFor } from "../data";
+import { PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
 import { useFlow } from "../flow";
 import { createPreview, type Preview } from "../lib/api";
 import "./Listen.css";
@@ -163,11 +163,11 @@ export default function Listen() {
 
         <div className="listen-buy">
           <p className="muted listen-full">Full script · about {formatDuration(q.projectedSeconds)}</p>
-          <p className="listen-price">{formatKes(q.kes)}</p>
+          <p className="listen-price">{formatUsd(q.usd)}</p>
           <button type="button" className="btn btn-block" onClick={goPay}>
-            Pay {formatKes(q.kes)}
+            Pay {formatUsd(q.usd)}
           </button>
-          <p className="faint listen-auto">Opens by itself when the preview ends · M-Pesa or card</p>
+          <p className="faint listen-auto">{`Opens by itself when the preview ends · M-Pesa or card, charged as ${formatKes(q.kes)}`}</p>
         </div>
 
         <Link href="/studio" className="muted listen-again">
