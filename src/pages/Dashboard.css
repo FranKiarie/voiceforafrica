@@ -13,7 +13,7 @@
   padding: 48px 24px 96px;
 }
 
-/* Hero: the greeting and the promise, on a kente edge. */
+/* Hero: the greeting and the promise. */
 .dash-hero {
   position: relative;
   overflow: hidden;
@@ -22,7 +22,7 @@
   justify-content: space-between;
   gap: 24px;
   min-height: 168px;
-  padding: 28px 32px 36px;
+  padding: 28px 32px;
   border-radius: 22px;
   background: var(--chip);
   border: 1px solid var(--line);
@@ -88,15 +88,6 @@
   to {
     stroke-dashoffset: 0;
   }
-}
-
-/* A still kente edge along the bottom of the banner. */
-.dash-hero-strip {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  line-height: 0;
 }
 
 /* Number tiles */

@@ -340,9 +340,6 @@ export default function Dashboard() {
               </svg>
             </p>
           </div>
-          <div className="dash-hero-strip" aria-hidden="true">
-            <PatternStrip pattern="kente" height={10} />
-          </div>
         </header>
 
         {ready && (

@@ -21,33 +21,31 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
-  padding: 22px 30px 18px 16px;
+  padding: 22px 16px 18px;
   background: var(--card);
+  border-right: 1px solid var(--line);
 }
 
-/* Vertical kanga border, flowing down while the top band flows left. */
-.app-pindo {
+/* First stop for keyboard users: jump past the sidebar to the page. */
+.app-skip {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 14px;
-  overflow: hidden;
-  pointer-events: none;
+  left: 12px;
+  top: -60px;
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: none;
 }
 
-.app-pindo svg {
-  display: block;
-  animation: pindo-flow 6s linear infinite;
+.app-skip:focus {
+  top: 20px;
 }
 
-@keyframes pindo-flow {
-  from {
-    transform: translateY(-30px);
-  }
-  to {
-    transform: translateY(0);
-  }
+.app-main:focus {
+  outline: none;
 }
 
 /* Nav icons lift and tilt like a hand on a drum when hovered. */
@@ -357,7 +355,6 @@
   .app-nav a svg {
     transition: none;
   }
-  .app-pindo svg,
   .app-main {
     animation: none;
   }

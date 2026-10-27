@@ -82,6 +82,9 @@ export function AppShell({ step, children }: { step?: 1 | 2 | 3 | 4; children: R
 
   return (
     <div className="app" data-open={open || undefined}>
+      <a className="app-skip" href="#app-main">
+        Skip to content
+      </a>
       <PatternDefs />
       <KangaBand />
 
@@ -115,12 +118,6 @@ export function AppShell({ step, children }: { step?: 1 | 2 | 3 | 4; children: R
           role={open ? "dialog" : undefined}
           aria-modal={open || undefined}
         >
-          {/* The kanga's border (pindo) runs down the sidebar edge and meets the band across the top. */}
-          <div className="app-pindo" aria-hidden="true">
-            <svg width="14" height="3030">
-              <rect width="14" height="3030" fill="url(#bandv)" />
-            </svg>
-          </div>
           <div className="app-side-head">
             <Brand onClick={close} />
             <button type="button" className="app-close-btn" aria-label="Close menu" onClick={close}>
@@ -168,7 +165,7 @@ export function AppShell({ step, children }: { step?: 1 | 2 | 3 | 4; children: R
 
         {open && <div className="app-scrim" aria-hidden="true" onClick={close} />}
 
-        <main ref={main} className="app-main">
+        <main ref={main} id="app-main" tabIndex={-1} className="app-main">
           {step && <p className="app-step">{`Step ${step} of 4`}</p>}
           {children}
         </main>

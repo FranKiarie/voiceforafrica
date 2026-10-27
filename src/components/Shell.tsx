@@ -17,13 +17,6 @@ export function PatternDefs() {
           <circle cx="1.5" cy="7" r="1.5" fill="#F6EAD7" />
           <circle cx="28.5" cy="7" r="1.5" fill="#F6EAD7" />
         </pattern>
-        <pattern id="bandv" width="30" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(90)">
-          <rect width="30" height="14" fill="#D0442A" />
-          <path d="M15 2 L22 7 L15 12 L8 7 Z" fill="#E8A33C" />
-          <circle cx="15" cy="7" r="1.6" fill="#1A110C" />
-          <circle cx="1.5" cy="7" r="1.5" fill="#F6EAD7" />
-          <circle cx="28.5" cy="7" r="1.5" fill="#F6EAD7" />
-        </pattern>
         <pattern id="beads" width="30" height="12" patternUnits="userSpaceOnUse">
           <rect width="30" height="12" fill="#F6EAD7" />
           {[["2.5", "#D0442A"], ["7.5", "#D0442A"], ["12.5", "#1A110C"], ["17.5", "#3F57B8"], ["22.5", "#E8A33C"], ["27.5", "#2E9E6B"]].map(([cx, f]) => (
