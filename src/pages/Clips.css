@@ -9,7 +9,7 @@
 }
 
 .clips-demo {
-  font-size: 13px;
+  font-size: 15px;
   margin: 0;
 }
 
@@ -97,7 +97,7 @@
 }
 
 .clip-meta {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .clip-licence {
@@ -105,7 +105,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .clip-licence .mono {
@@ -118,7 +118,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 4px 16px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -129,7 +129,7 @@
 }
 
 .clips-foot {
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
 }
 
@@ -158,7 +158,7 @@
   border: 0;
   background: none;
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
@@ -223,7 +223,7 @@ details[open] > .versions-toggle .versions-chev {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   text-align: left;
   text-decoration: none;
@@ -242,7 +242,7 @@ details[open] > .versions-toggle .versions-chev {
 .versions-locked {
   flex-wrap: wrap;
   border: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--faint);
 }
 
@@ -253,7 +253,7 @@ details[open] > .versions-toggle .versions-chev {
 }
 
 .versions-unlock {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
@@ -261,7 +261,7 @@ details[open] > .versions-toggle .versions-chev {
 
 .versions-note {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   white-space: normal;
 }

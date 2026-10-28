@@ -16,7 +16,7 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--chip);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -49,11 +49,11 @@
 .listen-clock,
 .listen-short {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .listen-short {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .listen-buy {
@@ -81,9 +81,9 @@
 
 .listen-auto {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .listen-again {
-  font-size: 14px;
+  font-size: 15px;
 }

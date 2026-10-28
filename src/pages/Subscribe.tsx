@@ -303,7 +303,7 @@ export default function Subscribe() {
               />
             </label>
             {accountEmail && (
-              <p id="sub-account-note" className="faint" style={{ fontSize: 14, margin: 0 }}>
+              <p id="sub-account-note" className="faint" style={{ fontSize: 15, margin: 0 }}>
                 Using {accountEmail} · Not you?{" "}
                 <button type="button" style={TEXT_BTN} onClick={() => void supabase.auth.signOut().catch(() => undefined)}>
                   Sign out

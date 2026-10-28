@@ -32,7 +32,7 @@
 }
 
 .tr-small {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .tr-drop-text .faint {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .tr-drop-btn {
@@ -103,7 +103,7 @@
 }
 
 .tr-drop-hint {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   max-width: 420px;
 }
@@ -122,14 +122,14 @@
 }
 
 .tr-file-meta {
-  font-size: 14px;
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
 
 .tr-guide-link {
   align-self: center;
   margin-top: -6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--muted);
   text-underline-offset: 3px;
@@ -143,7 +143,7 @@
 
 .tr-hint {
   margin-top: -10px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .tr-check {
@@ -165,12 +165,12 @@
 
 .tr-check-hint {
   display: block;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .tr-error {
   color: var(--red);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.5;
 }
@@ -180,7 +180,7 @@
 }
 
 .tr-notice {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .tr-submit {
@@ -191,7 +191,7 @@
 }
 
 .tr-note {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
@@ -237,7 +237,7 @@
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -294,7 +294,7 @@
 
 .tr-kes {
   margin-top: -10px;
-  font-size: 13px;
+  font-size: 15px;
   text-align: right;
 }
 
@@ -407,7 +407,7 @@
   padding: 8px 12px;
   border-radius: 10px;
   background: var(--chip);
-  font-size: 13px;
+  font-size: 15px;
   overflow-wrap: anywhere;
   user-select: all;
 }
@@ -468,14 +468,14 @@
 .tr-partial {
   padding: 12px 20px 16px;
   border-top: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .tr-foot {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 14px;
+  font-size: 15px;
   text-align: center;
 }
 

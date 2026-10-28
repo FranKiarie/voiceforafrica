@@ -12,7 +12,7 @@
 }
 
 .home-eyebrow {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 3px;
   color: var(--eyebrow);
@@ -39,7 +39,7 @@
 }
 
 .home-price {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .home-sample {
@@ -51,7 +51,7 @@
 }
 
 .home-sample-caption {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* Language marquee */
@@ -111,7 +111,7 @@
 }
 
 .lang-en {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .lang-dot {
@@ -123,7 +123,7 @@
   max-width: 720px;
   padding: 0 24px;
   text-align: center;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 /* What you can make */
@@ -180,7 +180,7 @@
 }
 
 .make-text p {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
@@ -207,7 +207,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .voices-filter select {
@@ -217,7 +217,7 @@
   border-radius: 999px;
   padding: 8px 14px;
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .voices-filter select option {
@@ -267,7 +267,7 @@
 }
 
 .voice-meta {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .voices-soon {
@@ -275,7 +275,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 15px;
   padding-top: 8px;
 }
 

@@ -34,7 +34,7 @@
   border-radius: 999px;
   padding: 8px 18px;
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   background: transparent;
   color: var(--muted);
@@ -94,7 +94,7 @@
 }
 
 .tier-price .faint {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* Grows so every card's button sits at the bottom. */
@@ -112,7 +112,7 @@
 
 .tier-extra {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .tier-extra a {
@@ -145,7 +145,7 @@
   width: 100%;
   min-width: 900px;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .compare-scroll thead th {
@@ -237,7 +237,7 @@
 
 .pricing-foot {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 @media (max-width: 480px) {

@@ -59,7 +59,7 @@
 .verify-error {
   margin: 0;
   color: var(--red);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -111,7 +111,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 20px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .verify-dl dt {
@@ -125,7 +125,7 @@
 
 .verify-note {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   text-align: center;
 }
 

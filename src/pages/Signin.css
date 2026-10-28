@@ -35,12 +35,12 @@
 
 .signin-error {
   color: var(--red);
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
 }
 
 .signin-note {
-  font-size: 13px;
+  font-size: 15px;
   margin: 0;
   text-align: center;
 }
@@ -81,7 +81,7 @@
 }
 
 .signin-new {
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
 }
 
@@ -92,7 +92,7 @@
 
 .signin-forgot {
   align-self: flex-end;
-  font-size: 14px;
+  font-size: 15px;
   padding: 2px 4px;
   margin-top: -6px;
 }
@@ -143,7 +143,7 @@
 }
 
 .signin-hint {
-  font-size: 13px;
+  font-size: 15px;
   margin: 0;
 }
 

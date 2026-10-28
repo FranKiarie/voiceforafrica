@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
-// Blocks that fade up as they scroll into view. Kept generic so every page gets
-// the same motion without each one opting in.
+// Blocks that rise in as they scroll into view. Kept generic so every page gets
+// the same motion without each one opting in. The motion lives in motion.css:
+// data-reveal="wait" holds a block back, data-reveal="in" plays a short rise.
 const TARGETS = [
   "main h1",
   "main h2",
@@ -16,67 +17,154 @@ const TARGETS = [
   "main .beads",
 ].join(",");
 
-const SKIP = "[role='dialog'], header, .kanga, [class*='marquee'], [class*='lang-']";
+const SKIP = "[role='dialog'], .co-layer, header, .kanga, [class*='marquee'], [class*='lang-']";
 
-/** Marks blocks on the current page and reveals them as they enter the viewport. */
+// Siblings that arrive together ripple in 40 ms apart, never more than 160 ms late.
+const STAGGER_MS = 40;
+const STAGGER_CAP_MS = 160;
+
+/** Plays the rise on blocks coming into view, rippling siblings that share a parent. */
+function reveal(els: HTMLElement[]) {
+  const seen = new Map<Element | null, number>();
+  for (const el of els) {
+    const i = seen.get(el.parentElement) ?? 0;
+    seen.set(el.parentElement, i + 1);
+    const delay = Math.min(i * STAGGER_MS, STAGGER_CAP_MS);
+    if (delay) el.style.setProperty("--reveal-delay", `${delay}ms`);
+    else el.style.removeProperty("--reveal-delay");
+    el.dataset.reveal = "in";
+  }
+}
+
+/** Every reveal target in `root` (itself included), in document order. */
+function targetsIn(root: Element): HTMLElement[] {
+  const found = Array.from(root.querySelectorAll<HTMLElement>(TARGETS));
+  if (root instanceof HTMLElement && root.matches(TARGETS)) found.unshift(root);
+  return found;
+}
+
+/**
+ * Holds back blocks below the fold and lets them rise in as they scroll into view.
+ * Anything on screen when a page opens is shown straight away, so no page opens
+ * blank. Blocks that arrive later (loaded clips, the next step of a form) rise in
+ * where they land.
+ */
 export function useReveal(path: string) {
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            e.target.classList.add("is-in");
-            io.unobserve(e.target);
-          }
-        }
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
-    );
+    if (typeof IntersectionObserver === "undefined") return;
 
-    const mark = () => {
-      // Stagger siblings that share a parent so lists and grids ripple in.
-      const seen = new Map<Element | null, number>();
-      for (const el of document.querySelectorAll<HTMLElement>(TARGETS)) {
-        if (el.closest(SKIP)) continue;
-        if (el.dataset.reveal === undefined) {
-          // Only the outermost hidden block animates; its children ride along.
-          if (el.parentElement?.closest("[data-reveal]:not(.is-in)")) continue;
-          const i = seen.get(el.parentElement) ?? 0;
-          seen.set(el.parentElement, i + 1);
-          el.dataset.reveal = "";
-          el.style.setProperty("--reveal-delay", `${Math.min(i * 70, 420)}ms`);
-        }
-        // Re-observe anything still hidden: an earlier observer may have been torn down.
-        if (!el.classList.contains("is-in")) io.observe(el);
+    const io = new IntersectionObserver((entries) => {
+      const due: HTMLElement[] = [];
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        io.unobserve(e.target);
+        const el = e.target as HTMLElement;
+        if (el.dataset.reveal === "wait") due.push(el);
       }
+      if (due.length) reveal(due);
+    });
+
+    const hold = (el: HTMLElement) => {
+      el.dataset.reveal = "wait";
+      io.observe(el);
     };
 
-    mark();
-    // Pages that load data after mounting (clips, pricing toggles) add blocks later.
-    const mo = new MutationObserver(() => mark());
-    const main = document.querySelector("main");
-    if (main) mo.observe(main, { childList: true, subtree: true });
+    const known = new WeakSet<Element>();
+    // `opening` is true while a page mounts (or a whole new page frame appears, as
+    // when signing in swaps the site frame for the studio): what is on screen then
+    // stays exactly as it is. Blocks that arrive later rise in, even on screen.
+    const mark = (els: HTMLElement[], opening: boolean) => {
+      const fold = window.innerHeight;
+      const fresh = new Set<Element>();
+      const now: HTMLElement[] = [];
+      for (const el of els) {
+        if (known.has(el)) continue;
+        known.add(el);
+        if (el.closest(SKIP)) continue;
+        // Not rendered (a closed disclosure, a hidden panel): leave it alone.
+        if (el.getClientRects().length === 0) continue;
+        // Inside a block that is still held back, or rising in right now: it rides along.
+        const host = el.parentElement?.closest<HTMLElement>("[data-reveal]");
+        if (host && (host.dataset.reveal === "wait" || fresh.has(host))) continue;
+        const onScreen = el.getBoundingClientRect().top < fold;
+        if (opening) {
+          // An earlier run (React's dev double effect) may have held it back.
+          if (onScreen) delete el.dataset.reveal;
+          else hold(el);
+          continue;
+        }
+        fresh.add(el);
+        if (onScreen) {
+          el.dataset.reveal = "in";
+          now.push(el);
+        } else {
+          hold(el);
+        }
+      }
+      if (now.length) reveal(now);
+    };
+
+    mark(Array.from(document.querySelectorAll<HTMLElement>(TARGETS)), true);
+
+    // Pages that load data after mounting (clips, pricing toggles, the next step) add blocks later.
+    const mo = new MutationObserver((records) => {
+      const opening: HTMLElement[] = [];
+      const late: HTMLElement[] = [];
+      for (const r of records) {
+        r.addedNodes.forEach((n) => {
+          if (!(n instanceof Element) || !n.isConnected) return;
+          const frame = n.matches("main") || n.querySelector("main") !== null;
+          (frame ? opening : late).push(...targetsIn(n));
+        });
+      }
+      if (opening.length) mark(opening, true);
+      if (late.length) mark(late, false);
+    });
+    mo.observe(document.getElementById("root") ?? document.body, { childList: true, subtree: true });
+
+    // Once a block has risen in, drop the marker so nothing replays it later
+    // (a panel shown again, a resize across a breakpoint).
+    const settle = (e: AnimationEvent) => {
+      const el = e.target;
+      if (e.animationName !== "reveal-in" || !(el instanceof HTMLElement) || el.dataset.reveal !== "in") return;
+      delete el.dataset.reveal;
+      el.style.removeProperty("--reveal-delay");
+    };
+    document.addEventListener("animationend", settle);
+
     // Safety net for browsers that throttle the observer: reveal whatever is on
-    // screen after a beat, and again whenever the page scrolls.
+    // screen (or already scrolled past) after a beat, and again whenever the page scrolls.
     let frame = 0;
     const sweep = () => {
       frame = 0;
-      document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-in)").forEach((el) => {
-        if (el.getBoundingClientRect().top < window.innerHeight * 0.95) el.classList.add("is-in");
+      const fold = window.innerHeight;
+      const due: HTMLElement[] = [];
+      document.querySelectorAll<HTMLElement>('[data-reveal="wait"]').forEach((el) => {
+        if (el.getBoundingClientRect().top < fold) {
+          io.unobserve(el);
+          due.push(el);
+        }
       });
+      if (due.length) reveal(due);
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(sweep);
     };
     const fallback = window.setTimeout(sweep, 1200);
     window.addEventListener("scroll", onScroll, { passive: true });
+
     return () => {
       window.clearTimeout(fallback);
       window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("animationend", settle);
       if (frame) window.cancelAnimationFrame(frame);
       io.disconnect();
       mo.disconnect();
+      // Never leave a block held back once nothing is watching for it.
+      document.querySelectorAll<HTMLElement>('[data-reveal="wait"]').forEach((el) => {
+        delete el.dataset.reveal;
+      });
     };
   }, [path]);
 }

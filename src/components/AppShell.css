@@ -53,15 +53,18 @@
   transition: transform 220ms var(--ease-spring, ease);
 }
 
-.app-nav a:hover svg {
-  transform: translateY(-2px) rotate(-8deg);
+/* Mouse only: on a phone a tapped icon would stay tilted. */
+@media (hover: hover) and (pointer: fine) {
+  .app-nav a:hover svg {
+    transform: translateY(-2px) rotate(-8deg);
+  }
 }
 
 .app-step {
   max-width: 600px;
   margin: 0 auto 4px;
   padding: 0 24px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--faint);
 }
@@ -197,7 +200,7 @@
 }
 
 .app-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -205,7 +208,7 @@
 }
 
 .app-email {
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -224,11 +227,11 @@
   gap: 10px;
   flex-wrap: wrap;
   padding: 0 4px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .app-side-links .theme-toggle {
-  font-size: 12px;
+  font-size: 13px;
   padding: 5px 10px;
 }
 
@@ -289,7 +292,7 @@
 
   .btn.app-top-new {
     padding: 8px 14px;
-    font-size: 14px;
+    font-size: 15px;
     gap: 6px;
   }
 

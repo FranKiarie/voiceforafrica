@@ -1,75 +1,114 @@
-/* Site-wide motion: page transitions, scroll reveals and soft interactions.
-   Everything here switches off for visitors who ask for reduced motion. */
+/* Site-wide motion: quick, calm and small.
+   - Page change: the page content rises 6 px from 40% opacity (220 ms).
+   - Scroll reveal (useReveal in reveal.ts): blocks below the fold rise 8 px (300 ms).
+   - Every control answers a press at once (a small scale or a warm tint, 90 ms).
+   - Hover-only lifts and shadows are kept to mouse users, so phones never get a stuck hover.
+   Everything that moves switches off for visitors who ask for reduced motion. */
 
 :root {
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* AppShell.css still uses this for its nav icons; nothing in this file springs. */
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --t-press: 90ms;
+  --t-quick: 160ms;
+  --t-page: 220ms;
+  --t-reveal: 300ms;
+  --t-details: 200ms;
+  --press: 0.98;
+  --press-small: 0.96;
+  --press-wide: 0.985;
+  --press-drum: 0.94;
+  --lift: -1px;
+  --lift-card: -2px;
+  --grow-drum: 1.04;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* No smooth scrolling on the whole page: a page change starts at the top at once.
+   In-page links (/#voices, the transcription guide) ask for smooth scrolling themselves. */
 
+/* Theme switch: colours fade rather than snap. */
 body,
 .card,
-.site-footer,
-.field input,
-.field select,
-.field textarea {
-  transition: background-color 350ms ease, color 350ms ease, border-color 350ms ease;
+.site-footer {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
 }
 
-/* Page change: the new page rises in. */
-.route {
-  animation: route-in 480ms var(--ease-out) both;
+/* ---------- Page change ---------- */
+/* Only the content moves; the header and the studio sidebar stay put.
+   It starts at 40% opacity, so a page never flashes empty. */
+.page > main,
+.app .app-main {
+  animation: route-in var(--t-page) var(--ease-out) backwards;
 }
 
 @keyframes route-in {
   from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+    opacity: 0.4;
+    transform: translateY(6px);
   }
 }
 
-/* Scroll reveal, set up by useReveal() in App.tsx. */
-[data-reveal] {
+/* ---------- Scroll reveal ---------- */
+/* Set up by useReveal() in reveal.ts. Only blocks that start below the fold wait;
+   anything on screen when a page opens is never hidden. */
+[data-reveal="wait"] {
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 650ms var(--ease-out), transform 650ms var(--ease-out);
-  transition-delay: var(--reveal-delay, 0ms);
 }
 
-[data-reveal].is-in {
-  opacity: 1;
+[data-reveal="in"] {
+  animation: reveal-in var(--t-reveal) var(--ease-out) var(--reveal-delay, 0ms) backwards;
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  transition:
+    transform var(--t-quick) var(--ease-out),
+    box-shadow 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    opacity 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* styles.css lifts .btn on any :hover, which sticks after a tap on a phone. */
+.btn:hover {
   transform: none;
 }
 
-/* Buttons and links */
-.btn {
-  transition: transform 220ms var(--ease-spring), box-shadow 220ms ease, background-color 220ms ease, opacity 200ms ease;
+/* While a button works (paying, signing in, making a preview) it breathes gently. */
+@keyframes busy-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
-.btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px -12px rgba(242, 122, 30, 0.75);
+.btn[aria-busy="true"] {
+  animation: busy-pulse 1.2s ease-in-out infinite;
+  cursor: progress;
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
-  box-shadow: none;
+/* These buttons are only disabled while busy. The upload and preview buttons are also
+   disabled while the form is incomplete, so they pulse only when they say aria-busy. */
+.btn:disabled:not(.tr-submit .btn):not(.studio-submit .btn) {
+  animation: busy-pulse 1.2s ease-in-out infinite;
+  cursor: progress;
 }
 
-.btn-outline:hover:not(:disabled) {
-  box-shadow: 0 8px 18px -12px rgba(42, 26, 16, 0.45);
-  border-color: var(--text);
-}
-
+/* ---------- Links ---------- */
 a {
-  transition: color 200ms ease, opacity 200ms ease;
+  transition: color 200ms ease, opacity var(--t-quick) ease;
 }
 
 .site-nav a {
@@ -87,76 +126,113 @@ a {
   background: var(--accent);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 260ms var(--ease-out);
+  transition: transform 220ms var(--ease-out);
 }
 
-.site-nav a:hover::after,
 .site-nav a[aria-current="page"]::after {
   transform: scaleX(1);
 }
 
-/* Form fields: a warm focus glow */
+/* ---------- Form fields: a warm focus glow ---------- */
 .field input,
 .field select,
-.field textarea {
-  transition: border-color 200ms ease, box-shadow 220ms ease, background-color 350ms ease;
+.field textarea,
+.voices-filter select {
+  transition: border-color var(--t-quick) ease, box-shadow var(--t-quick) ease, background-color 300ms ease;
 }
 
 .field input:focus,
 .field select:focus,
-.field textarea:focus {
+.field textarea:focus,
+.voices-filter select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 4px rgba(242, 122, 30, 0.18);
 }
 
-/* Cards lift a little on hover */
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Cards ---------- */
 main article,
 main .card {
-  transition: transform 300ms var(--ease-out), box-shadow 300ms ease, border-color 300ms ease, background-color 350ms ease;
+  transition:
+    transform 260ms var(--ease-out),
+    box-shadow 260ms ease,
+    border-color 260ms ease,
+    background-color 300ms ease;
 }
 
-main article:hover,
-main .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 36px -24px rgba(42, 26, 16, 0.35);
-}
-
-/* Drums grow slightly under the finger */
+/* ---------- Drums ---------- */
 .drum button {
-  transition: transform 220ms var(--ease-spring), filter 200ms ease;
+  transition: transform var(--t-quick) var(--ease-out), filter var(--t-quick) ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.drum button:hover {
-  transform: scale(1.05);
-  filter: brightness(1.04);
-}
-
-.drum button:active {
-  transform: scale(0.96);
-}
-
-/* Bead progress glides between steps */
+/* Bead progress glides between steps. */
 .bead {
-  transition: background-color 450ms ease, transform 450ms var(--ease-spring);
+  transition: background-color 300ms ease, transform 300ms var(--ease-out);
 }
 
-/* Dialogs fade their backdrop in */
-[role="dialog"] {
-  animation: dialog-in 380ms var(--ease-spring) both;
+/* ---------- Checkout panel ---------- */
+/* A short rise without overshoot. `translate` leaves the panel's own centring transform alone. */
+.co-layer .co-backdrop {
+  animation: fade-in 200ms ease backwards;
 }
 
-@keyframes dialog-in {
+.co-layer .co-panel {
+  animation: panel-in 240ms var(--ease-out) backwards;
+}
+
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.98);
-  }
-  to {
-    opacity: 1;
   }
 }
 
-/* Theme switch */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+/* ---------- Disclosures ---------- */
+/* Opening "Compare all features" or "Other versions" fades the content in; closing is instant. */
+@supports selector(::details-content) {
+  details::details-content {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity var(--t-details) ease, transform var(--t-details) var(--ease-out);
+  }
+
+  details[open]::details-content {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports not selector(::details-content) {
+  details[open] > :not(summary) {
+    animation: details-in var(--t-details) var(--ease-out);
+  }
+}
+
+/* The clips page opens its versions list with a button rather than <details>. */
+.clip-versions:not([hidden]) {
+  animation: details-in var(--t-details) var(--ease-out);
+}
+
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ---------- Theme switch ---------- */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -167,14 +243,8 @@ main .card:hover {
   border-radius: 999px;
   padding: 6px 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: 15px;
   cursor: pointer;
-  transition: border-color 200ms ease, color 200ms ease;
-}
-
-.theme-toggle:hover {
-  color: var(--text);
-  border-color: var(--text);
 }
 
 .theme-toggle .knob {
@@ -183,7 +253,7 @@ main .card:hover {
   border-radius: 999px;
   background: var(--track);
   position: relative;
-  transition: background-color 250ms ease;
+  transition: background-color 200ms ease;
 }
 
 .theme-toggle .knob::after {
@@ -195,39 +265,259 @@ main .card:hover {
   height: 10px;
   border-radius: 50%;
   background: var(--gold);
-  transition: transform 300ms var(--ease-spring);
+  transition: transform 220ms var(--ease-out);
 }
 
 .theme-toggle[aria-pressed="true"] .knob::after {
   transform: translateX(12px);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+/* ---------- Hover: mouse and trackpad only ---------- */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled):not([aria-busy="true"]) {
+    transform: translateY(var(--lift));
+    box-shadow: 0 8px 18px -12px rgba(242, 122, 30, 0.7);
   }
-  .route,
-  [role="dialog"] {
+
+  .btn-outline:hover:not(:disabled):not([aria-busy="true"]),
+  .btn-ink:hover:not(:disabled):not([aria-busy="true"]) {
+    box-shadow: 0 8px 18px -12px rgba(42, 26, 16, 0.45);
+  }
+
+  .btn-outline:hover:not(:disabled):not([aria-busy="true"]) {
+    border-color: var(--text);
+  }
+
+  .site-nav a:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Cards lift a little; cards you type into stay still. */
+  main article:not(:has(input, select, textarea)):hover,
+  main .card:not(form):not(:has(input, select, textarea)):hover {
+    transform: translateY(var(--lift-card));
+    box-shadow: 0 14px 30px -22px rgba(42, 26, 16, 0.35);
+  }
+
+  .drum button:not([aria-disabled="true"]):hover {
+    transform: scale(var(--grow-drum));
+    filter: brightness(1.04);
+  }
+
+  .theme-toggle:hover {
+    color: var(--text);
+    border-color: var(--text);
+  }
+}
+
+/* ---------- Press: instant feedback on every screen, touch included ---------- */
+.theme-toggle,
+.nav-pill,
+.nav-chip,
+.period button,
+.sub-period button,
+.co-tab,
+.co-pay,
+.vcard-use,
+.dash-use,
+.dash-types button,
+.versions-get,
+.app-nav a,
+.app-menu-btn,
+.app-close-btn,
+.app-out,
+.sub-method,
+.tr-drop {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform var(--t-quick) var(--ease-out),
+    background-color var(--t-quick) ease,
+    border-color var(--t-quick) ease,
+    color var(--t-quick) ease,
+    opacity var(--t-quick) ease;
+}
+
+.signin-text-btn,
+.tr-text-btn,
+.co-cancel,
+.studio-sample,
+.versions-toggle,
+.pw-toggle,
+summary {
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--t-quick) ease, color var(--t-quick) ease;
+}
+
+main a:not(.btn):not(.versions-get),
+.site-nav a,
+.site-footer a,
+.app-side-links a,
+.brand {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Buttons sink slightly. */
+.btn:active:not(:disabled):not([aria-busy="true"]) {
+  transform: scale(var(--press));
+  box-shadow: none;
+  transition-duration: var(--t-press);
+}
+
+.btn-outline:active:not(:disabled):not([aria-busy="true"]) {
+  background-color: var(--chip);
+}
+
+.drum button:active:not([aria-disabled="true"]) {
+  transform: scale(var(--press-drum));
+  transition-duration: var(--t-press);
+}
+
+/* Pills and chips. */
+.theme-toggle:active,
+.nav-pill:active,
+.nav-chip:active,
+.period button:not(:disabled):active,
+.sub-period button:not(:disabled):active,
+.co-tab:not(:disabled):active,
+.vcard-use:active,
+.dash-use:active,
+.app-menu-btn:active,
+.app-close-btn:active,
+.app-out:active {
+  transform: scale(var(--press-small));
+  transition-duration: var(--t-press);
+}
+
+/* Transparent pills also take a warm tint, so the press shows even without motion. */
+.theme-toggle:active,
+.nav-pill:active,
+.vcard-use:active,
+.dash-use:active,
+.app-menu-btn:active,
+.app-close-btn:active,
+.app-out:active,
+.period button:not([aria-pressed="true"]):active,
+.sub-period button:not([aria-pressed="true"]):active {
+  background-color: var(--chip);
+}
+
+.co-tab:not([aria-pressed="true"]):not(:disabled):active {
+  background-color: var(--co-soft, var(--chip));
+}
+
+/* Full-width rows, the voice rows' Use buttons and the upload drop zone. */
+.dash-types button:active,
+.versions-get:active,
+.app-nav a:active,
+.sub-method:active,
+.tr-drop:active {
+  background-color: var(--chip);
+  transform: scale(var(--press-wide));
+  transition-duration: var(--t-press);
+}
+
+.tr-drop:active {
+  border-color: var(--accent);
+}
+
+.co-pay:not(:disabled):active {
+  transform: scale(var(--press));
+  opacity: 0.88;
+  transition-duration: var(--t-press);
+}
+
+/* Text links and text buttons dim for a moment. */
+main a:not(.btn):not(.versions-get):active,
+.site-nav a:not(.nav-pill):not(.nav-chip):active,
+.site-footer a:active,
+.app-side-links a:active,
+.brand:active,
+.signin-text-btn:not(:disabled):active,
+.tr-text-btn:active,
+.co-cancel:active,
+.studio-sample:active,
+.versions-toggle:active,
+.pw-toggle:active,
+summary:active {
+  opacity: 0.6;
+  transition-duration: var(--t-press);
+}
+
+select:not(:disabled):active {
+  border-color: var(--accent);
+}
+
+/* ---------- Keyboard focus ---------- */
+/* A clear warm ring on every button, link, chip and disclosure. Pages that draw their
+   own ring keep it (this has the lowest specificity on purpose). */
+:where(a, button, summary, select, [role="button"]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-press: 0ms;
+    --t-quick: 0ms;
+    --t-details: 0ms;
+    --press: 1;
+    --press-small: 1;
+    --press-wide: 1;
+    --press-drum: 1;
+    --lift: 0px;
+    --lift-card: 0px;
+    --grow-drum: 1;
+  }
+
+  [data-reveal="wait"],
+  [data-reveal="in"] {
+    opacity: 1;
     animation: none;
   }
-  [data-reveal] {
-    opacity: 1;
-    transform: none;
-    transition: none;
+
+  .page > main,
+  .app .app-main,
+  .co-layer .co-backdrop,
+  .co-layer .co-panel,
+  .clip-versions:not([hidden]),
+  details[open] > :not(summary),
+  .btn[aria-busy="true"] {
+    animation: none;
   }
+
+  .btn:disabled:not(.tr-submit .btn):not(.studio-submit .btn) {
+    animation: none;
+  }
+
+  @supports selector(::details-content) {
+    details::details-content {
+      transition: none;
+      transform: none;
+    }
+  }
+
+  body,
+  .card,
+  .site-footer,
   .btn,
+  a,
   main article,
   main .card,
   .drum button,
   .bead,
   .site-nav a::after,
+  .theme-toggle .knob,
   .theme-toggle .knob::after {
     transition: none;
   }
-  .btn:hover:not(:disabled),
-  main article:hover,
-  main .card:hover,
-  .drum button:hover {
-    transform: none;
+}
+
+/* Printing never waits for a scroll. */
+@media print {
+  [data-reveal] {
+    opacity: 1 !important;
+    animation: none !important;
   }
 }

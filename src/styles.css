@@ -50,9 +50,11 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 16px;
-  line-height: 1.5;
+  /* Easy reading: 17 px body, roomy lines; nothing you read is under 15 px. */
+  font-size: 17px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -68,8 +70,15 @@ h3 {
   margin: 0;
 }
 
+/* Tight tracking suits big headings; small ones read better with less. */
+h3 {
+  letter-spacing: -0.012em;
+  line-height: 1.35;
+}
+
 p {
   margin: 0;
+  text-wrap: pretty;
 }
 
 .page {
@@ -164,7 +173,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--faint);
 }
 
@@ -300,7 +309,7 @@ p {
   .site-nav {
     width: 100%;
     gap: 6px 18px;
-    font-size: 14px;
+    font-size: 15px;
   }
 }
 
@@ -309,7 +318,7 @@ p {
 }
 
 .step {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--faint);
 }
@@ -326,7 +335,7 @@ p {
   gap: 16px;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--faint);
 }
 

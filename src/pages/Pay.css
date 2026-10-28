@@ -56,7 +56,7 @@
   border-radius: 12px;
   background: var(--chip);
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   white-space: pre-line;
   overflow-wrap: anywhere;
@@ -80,7 +80,7 @@
 
 .pay-kes {
   margin: -10px 0 0;
-  font-size: 14px;
+  font-size: 15px;
   text-align: right;
 }
 
@@ -96,7 +96,7 @@
 
 .pay-note {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   text-align: center;
 }
 
@@ -182,7 +182,7 @@
 }
 
 .co-email {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--co-sub);
   overflow-wrap: anywhere;
 }
@@ -192,7 +192,7 @@
 }
 
 .co-tag {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--co-sub);
   border: 1px dashed var(--co-dash);
@@ -234,7 +234,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--co-sub);
 }
 
@@ -249,7 +249,7 @@
 }
 
 .co-note {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--co-sub);
 }
 
@@ -285,7 +285,7 @@
   background: none;
   color: var(--co-sub);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;

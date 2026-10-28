@@ -41,7 +41,7 @@ export default function Legal() {
             </li>
           </ul>
         )}
-        <p className="faint" style={{ marginTop: 32, fontSize: 14 }}>
+        <p className="faint" style={{ marginTop: 32, fontSize: 15 }}>
           Draft — final wording after legal review.
         </p>
       </div>
