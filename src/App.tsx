@@ -16,10 +16,13 @@ import Subscribe from "./pages/Subscribe";
 import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
+import Transcribe from "./pages/Transcribe";
+import Dubbing from "./pages/Dubbing";
 
 // Routes: / home + voice library, /pricing, /verify, the try-before-you-pay flow
-// /studio → /listen → /pay → /ready, /signin, /dashboard, /clips, /voices, /subscribe?plan=…, and
-// /terms + /privacy (shared Legal page).
+// /studio → /listen → /pay → /ready, /transcribe (+ /transcribe/<id> for one
+// transcript), /dubbing (Enterprise), /signin, /dashboard, /clips, /voices,
+// /subscribe?plan=…, and /terms + /privacy (shared Legal page).
 export default function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
   useReveal(path);
@@ -39,6 +42,8 @@ function Page({ path }: { path: string }) {
   if (path === "/listen") return <Listen />;
   if (path === "/pay") return <Pay />;
   if (path === "/ready") return <Ready />;
+  if (path === "/transcribe" || path.startsWith("/transcribe/")) return <Transcribe />;
+  if (path === "/dubbing") return <Dubbing />;
   if (path === "/signin") return <Signin />;
   if (path === "/signup") return <Signup />;
   if (path === "/reset-password") return <ResetPassword />;

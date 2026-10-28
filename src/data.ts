@@ -226,3 +226,74 @@ export function kesFor(usd: number): number {
 
 /** The pay-as-you-go price, e.g. "$2 a minute". */
 export const PAYG_PRICE = `${formatUsd(PAYG_USD_PER_MIN)} a minute`;
+
+// ---- transcription -------------------------------------------------------------
+// Mirrors server/app/pricing.py and server/app/transcribe.py; the server's price
+// is the one charged, from a length it measures itself.
+
+export const TRANSCRIBE_USD_PER_MIN = 0.1;
+export const MAX_TRANSCRIBE_HOURS = 3;
+export const MAX_UPLOAD_MB = 500;
+
+/** The transcription price, e.g. "$0.10 a minute". */
+export const TRANSCRIBE_PRICE = `${formatUsd(TRANSCRIBE_USD_PER_MIN)} a minute`;
+
+/** Transcription minutes included each month, per plan (Enterprise: agreed). */
+export const PLAN_TRANSCRIBE_MINUTES: Record<"starter" | "creator" | "pro" | "business", number> = {
+  starter: 60,
+  creator: 300,
+  pro: 1000,
+  business: 3000,
+};
+
+export type TranscribeQuote = { seconds: number; minutes: number; usd: number; kes: number };
+
+/** Every started minute, 1-minute minimum. */
+export function transcribeQuote(seconds: number): TranscribeQuote {
+  const whole = Math.ceil(Math.max(0, seconds));
+  const minutes = Math.max(1, Math.ceil(whole / 60));
+  const usd = Math.round(minutes * TRANSCRIBE_USD_PER_MIN * 100) / 100;
+  return { seconds: whole, minutes, usd, kes: kesFor(usd) };
+}
+
+/** Upload formats: extension → the label the guide shows. The server holds the same list. */
+export const TRANSCRIBE_FORMATS: { ext: string; label: string; note: string }[] = [
+  { ext: "mp3", label: "MP3", note: "Best all-round choice" },
+  { ext: "m4a", label: "M4A / AAC", note: "iPhone and Android voice recorders" },
+  { ext: "opus", label: "OPUS / OGG", note: "WhatsApp voice notes" },
+  { ext: "wav", label: "WAV", note: "Big files; fine for short recordings" },
+  { ext: "flac", label: "FLAC", note: "Lossless, smaller than WAV" },
+  { ext: "webm", label: "WEBM", note: "Browser and Zoom recordings" },
+  { ext: "amr", label: "AMR", note: "Older phone call recorders" },
+  { ext: "aiff", label: "AIFF", note: "Mac recordings" },
+  { ext: "mp4", label: "MP4 / MOV", note: "Video: we only read the sound" },
+];
+export const TRANSCRIBE_ACCEPT = ".mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm,.amr,.aiff,.aif,.mp4,.mov";
+
+/** Language hints. "" detects automatically. advanced: read by the advanced model. */
+export const TRANSCRIBE_LANGUAGES: { code: string; label: string; advanced?: boolean }[] = [
+  { code: "", label: "Detect automatically" },
+  { code: "en", label: "English" },
+  { code: "sw", label: "Swahili" },
+  { code: "am", label: "Amharic" },
+  { code: "ha", label: "Hausa" },
+  { code: "af", label: "Afrikaans" },
+  { code: "ar", label: "Arabic" },
+  { code: "fr", label: "French" },
+  { code: "pt", label: "Portuguese" },
+  { code: "ln", label: "Lingala" },
+  { code: "yo", label: "Yoruba", advanced: true },
+  { code: "ig", label: "Igbo", advanced: true },
+  { code: "zu", label: "Zulu", advanced: true },
+  { code: "xh", label: "Xhosa", advanced: true },
+  { code: "so", label: "Somali", advanced: true },
+  { code: "rw", label: "Kinyarwanda", advanced: true },
+  { code: "lg", label: "Luganda", advanced: true },
+  { code: "ki", label: "Kikuyu", advanced: true },
+  { code: "luo", label: "Dholuo", advanced: true },
+  { code: "sn", label: "Shona", advanced: true },
+  { code: "om", label: "Oromo", advanced: true },
+  { code: "ti", label: "Tigrinya", advanced: true },
+  { code: "wo", label: "Wolof", advanced: true },
+  { code: "tw", label: "Twi", advanced: true },
+];

@@ -165,6 +165,8 @@ export function DrumRoll({ size = 96 }: { size?: number }) {
 
 const NAV = [
   { href: "/#voices", label: "Voices", path: "/voices" },
+  { href: "/transcribe", label: "Transcribe", path: "/transcribe" },
+  { href: "/dubbing", label: "Dubbing", path: "/dubbing", wideOnly: true },
   { href: "/pricing", label: "Pricing", path: "/pricing" },
   { href: "/verify", label: "Verify a licence", path: "/verify", wideOnly: true },
 ];

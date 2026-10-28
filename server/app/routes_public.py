@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from . import db, renders
+from . import db, renders, variants
 from .config import settings
 from .catalog import public_voice_id, purpose_or_default, voice_name
 from .pricing import MAX_PAYG_CHARS
@@ -320,6 +320,8 @@ async def list_clips(authorization: str | None = Header(default=None)) -> list[d
             return None
 
     links = await asyncio.gather(*(link(j) for j in jobs))
+    # One buyer, one plan: the same version menu for every clip in the list.
+    versions = variants.menu(await variants.plan_for(email))
     clips: list[dict] = []
     for j, audio_url in zip(jobs, links):
         seconds = max(0, int(round(j.get("audio_seconds") or j.get("projected_seconds") or 0)))
@@ -331,6 +333,7 @@ async def list_clips(authorization: str | None = Header(default=None)) -> list[d
             "seconds": seconds,
             "createdAt": j.get("created_at") or "",
             "tier": "Commercial",
+            "versions": versions,
         }
         if audio_url:
             clip["audioUrl"] = audio_url

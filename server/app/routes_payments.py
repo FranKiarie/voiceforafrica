@@ -4,7 +4,7 @@ Payments run on Mikaka's Paystack account, whose webhook points at Mikaka's
 own backend, so in practice the source of truth is verify-by-reference when
 the browser polls GET /jobs/{id} or GET /plans/{id}. The webhook below is kept
 for completeness and uses the same guarded code paths. In every path the
-reference prefix (vj_ / vs_) and our own row decide what was bought; Paystack
+reference prefix (vj_ / vs_ / vt_) and our own row decide what was bought; Paystack
 metadata is only a hint.
 
 Webhook idempotency comes from the atomic status transitions (paying ->
@@ -25,10 +25,10 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict
 
-from . import db, jobs, paystack
+from . import db, jobs, paystack, transcripts, variants
 from .config import settings
 from .catalog import public_voice_id, purpose_or_default
 from .pricing import MAX_PAYG_CHARS, PLAN_USD, plan_amount, quote
@@ -157,7 +157,39 @@ async def job_status(job_id: str):
         out["licenceId"] = job["licence_id"]
     if job.get("status") == "ready":
         out["audioUrl"] = await jobs.audio_link(job)
+        out["versions"] = variants.menu(await variants.plan_for(job.get("email")))
     return out
+
+
+@router.get("/jobs/{job_id}/download")
+async def job_download(job_id: str, version: str = "mp3"):
+    """One audio version of a ready clip, as an attachment. MP3 redirects to the stored file."""
+    job = await jobs.load_job(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found.")
+    if job.get("status") != "ready" or not job.get("audio_path"):
+        raise HTTPException(409, "This clip is not ready yet.")
+    chosen = variants.VERSIONS.get(version)
+    if chosen is None:
+        raise HTTPException(400, "Choose one of the listed versions.")
+    plan = await variants.plan_for(job.get("email"))
+    if not variants.allowed(plan, version):
+        raise HTTPException(403, f"{chosen.label} comes with the {variants.PLAN_LABEL[chosen.min_plan]} plan and up.")
+    if version == "mp3":
+        return RedirectResponse(await jobs.audio_link(job), status_code=302)
+    try:
+        data = await variants.convert(await db.download(job["audio_path"]), version)
+    except (db.DbError, variants.ConvertError):
+        logger.exception("Could not make %s of job %s", version, job_id)
+        raise HTTPException(503, "We could not prepare that version. Please try again.")
+    return Response(
+        data,
+        media_type=chosen.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{variants.file_name(job, version)}"',
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
 
 
 @router.post("/plans/checkout")
@@ -244,6 +276,10 @@ async def _handle_charge(reference: str, data: dict) -> None:
             )
         else:
             await jobs.mark_paid_and_generate(reference, data)
+    elif reference.startswith("vt_"):
+        if purpose and purpose != "vt_transcript":
+            logger.warning("Charge %s has purpose %r; deciding by reference", reference, purpose)
+        await transcripts.mark_paid_and_start(reference, data)
     else:
         if purpose and purpose != "vs_plan":
             logger.warning("Charge %s has purpose %r; deciding by reference", reference, purpose)

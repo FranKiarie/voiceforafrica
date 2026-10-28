@@ -4,6 +4,7 @@ import { VOICES, formatClock, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { ApiError, getJob, type Job } from "../lib/api";
 import { Link, navigate } from "../router";
+import { VersionList, VersionsChevron } from "./Clips";
 import "./Ready.css";
 
 const POLL_MS = 2000;
@@ -140,6 +141,15 @@ export default function Ready() {
           <p className="ready-note muted" role="status">
             {mp3Note}
           </p>
+          {job.versions && job.versions.length > 0 && (
+            <details className="ready-versions">
+              <summary className="versions-toggle">
+                Other versions
+                <VersionsChevron />
+              </summary>
+              <VersionList jobId={job.jobId} versions={job.versions} />
+            </details>
+          )}
         </div>
 
         <section className="card ready-licence" aria-label="Licence">

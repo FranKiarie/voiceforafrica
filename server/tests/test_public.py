@@ -400,7 +400,8 @@ def test_clips_seconds_falls_back_to_projected_then_zero(fake, client):
     first, second = res.json()
     assert first["seconds"] == 130 and first["length"] == "2 min 10 s"
     assert second["seconds"] == 0 and second["length"] == "0 s"
-    assert set(first) == {"id", "licenceId", "voice", "length", "seconds", "createdAt", "tier"}
+    assert set(first) == {"id", "licenceId", "voice", "length", "seconds", "createdAt", "tier", "versions"}
+    assert [v["id"] for v in first["versions"] if v["allowed"]] == ["mp3"]  # no plan: MP3 only
 
 
 # ---- account --------------------------------------------------------------

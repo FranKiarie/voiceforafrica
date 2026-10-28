@@ -97,15 +97,32 @@
   font-size: 14px;
 }
 
+/* Grows so every card's button sits at the bottom. */
+.tier-text {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .tier-line {
   margin: 0;
   font-size: 15px;
-  flex-grow: 1;
+}
+
+.tier-extra {
+  margin: 0;
+  font-size: 14px;
+}
+
+.tier-extra a {
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .pricing-compare {
   padding-top: 56px;
-  padding-bottom: 96px;
 }
 
 .pricing-compare details {
@@ -160,8 +177,66 @@
   color: var(--muted);
 }
 
+/* Transcription and dubbing */
+.pricing-more {
+  padding-top: 72px;
+  padding-bottom: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pricing-more h2 {
+  font-size: 28px;
+}
+
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 20px;
+}
+
+.more-card {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.more-body {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  flex-grow: 1;
+}
+
+.more-body h3 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+/* Same height as the price line in the card beside it. */
+.more-for {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.35;
+}
+
+.more-line {
+  font-size: 15px;
+  max-width: 46ch;
+  flex-grow: 1;
+}
+
 .pricing-foot {
-  margin: 24px 0 0;
+  margin: 0;
   font-size: 13px;
 }
 
@@ -172,5 +247,19 @@
 
   .pricing-intro h1 {
     font-size: 36px;
+  }
+
+  /* 16 px gutters on phones, like the header. */
+  .pricing-intro,
+  .pricing-grid,
+  .pricing-compare,
+  .pricing-more {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .tier-body,
+  .more-body {
+    padding: 22px;
   }
 }

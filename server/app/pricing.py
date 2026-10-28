@@ -9,6 +9,11 @@ MAX_PAYG_CHARS = 4500
 PLAN_USD = {"starter": 15, "creator": 50, "pro": 100, "business": 350}
 PREMIUM_ONLY_LANGS = {"sw", "ig", "so", "ti", "st"}
 
+# Transcription: charged per started minute, measured by the server.
+TRANSCRIBE_USD_PER_MIN = 0.10
+MAX_TRANSCRIBE_SECONDS = 3 * 3600
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+
 
 
 # String.prototype.trim() strips WhiteSpace + LineTerminator, which is not the
@@ -49,6 +54,14 @@ def quote(script: str) -> dict:
     billed = max(60, math.ceil(padded / 30) * 30)
     usd = js_round((billed / 60) * PAYG_USD_PER_MIN * 100) / 100
     return {"chars": chars, "projected_seconds": projected, "billed_seconds": billed, "usd": usd, "kes": kes_from_usd(usd)}
+
+
+def transcribe_quote(seconds: float) -> dict:
+    """Mirrors transcribeQuote in src/data.ts: every started minute, 1-minute minimum."""
+    whole = int(math.ceil(max(0.0, seconds)))
+    minutes = max(1, math.ceil(whole / 60))
+    usd = js_round(minutes * TRANSCRIBE_USD_PER_MIN * 100) / 100
+    return {"seconds": whole, "minutes": minutes, "usd": usd, "kes": kes_from_usd(usd)}
 
 
 def plan_amount(plan: str, billing: str) -> tuple[float, int]:

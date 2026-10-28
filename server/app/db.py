@@ -28,7 +28,7 @@ class DbError(Exception):
 # ---- filter helpers ---------------------------------------------------------
 
 EMAIL_RE = re.compile(r"^[^@\s\"'(),;<>\[\]\\]+@[^@\s\"'(),;<>\[\]\\]+\.[A-Za-z]{2,}$")
-REF_ID_RE = re.compile(r"^(vj|vs)_[0-9a-f]{24}$")
+REF_ID_RE = re.compile(r"^(vj|vs|vt)_[0-9a-f]{24}$")
 LICENCE_ID_RE = re.compile(r"^VS-\d{4}-[A-Z0-9]{6}$")
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 

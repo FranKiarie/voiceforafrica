@@ -1,13 +1,93 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
-import { API_MODE, ApiError, listClips, type Clip } from "../lib/api";
+import { API_MODE, ApiError, jobDownloadUrl, listClips, type AudioVersion, type Clip } from "../lib/api";
 import { supabase, useSession } from "../lib/supabase";
 import { Link } from "../router";
 import "./Clips.css";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const NO_AUDIO = "Audio arrives when the voice service is live";
+const PHONE_NOTE = "8 kHz versions are for phone menus and on-hold systems (IVR).";
+const VERSION_NOT_LIVE = "This version downloads here once the voice service is live.";
+
+/** The chevron on an "Other versions" toggle; it turns over when the list is open. */
+export function VersionsChevron() {
+  return (
+    <svg className="versions-chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 9 L12 15 L18 9" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * Every audio version of a ready clip. Allowed ones are download links; locked ones
+ * say which plan unlocks them and link to the pricing page, never to the file.
+ */
+export function VersionList({
+  jobId,
+  versions,
+  id,
+  hidden,
+  className,
+}: {
+  jobId: string;
+  versions: AudioVersion[];
+  id?: string;
+  hidden?: boolean;
+  className?: string;
+}) {
+  const [note, setNote] = useState("");
+  const hasPhone = versions.some((v) => v.id.startsWith("ivr"));
+
+  return (
+    <div id={id} hidden={hidden} className={className ? `versions ${className}` : "versions"}>
+      <ul className="versions-list">
+        {versions.map((v) => {
+          if (!v.allowed) {
+            return (
+              <li key={v.id} className="versions-item versions-locked">
+                <span className="versions-label">{v.label}</span>
+                <Link href="/pricing" className="versions-unlock">
+                  {v.needs ? `On ${v.needs} and up` : "On a paid plan"}
+                  <span className="sr-only">{`, see plans for ${v.label}`}</span>
+                </Link>
+              </li>
+            );
+          }
+          const url = jobDownloadUrl(jobId, v.id);
+          return (
+            <li key={v.id} className="versions-item">
+              {url ? (
+                <a className="versions-get" href={url} download>
+                  <span className="versions-label">{v.label}</span>
+                  <DownloadGlyph />
+                </a>
+              ) : (
+                <button type="button" className="versions-get" onClick={() => setNote(VERSION_NOT_LIVE)}>
+                  <span className="versions-label">{v.label}</span>
+                  <DownloadGlyph />
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {hasPhone && <p className="versions-note faint">{PHONE_NOTE}</p>}
+      <p className="versions-note muted" role="status">
+        {note}
+      </p>
+    </div>
+  );
+}
+
+function DownloadGlyph() {
+  return (
+    <svg className="versions-glyph" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 4 V15 M7 10.5 L12 15.5 L17 10.5 M5 20 H19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -24,6 +104,9 @@ type State =
 export function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; playing: boolean; onToggle: () => void; onEnded: () => void }) {
   const audio = useRef<HTMLAudioElement>(null);
   const hasAudio = Boolean(clip.audioUrl);
+  const versions = clip.versions?.length ? clip.versions : null;
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const versionsId = useId();
 
   useEffect(() => {
     const el = audio.current;
@@ -71,7 +154,22 @@ export function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; play
         ) : (
           <span className="faint">Download soon</span>
         )}
+        {versions && (
+          <button
+            type="button"
+            className="versions-toggle"
+            aria-expanded={versionsOpen}
+            aria-controls={versionsId}
+            onClick={() => setVersionsOpen((o) => !o)}
+          >
+            Other versions
+            <span className="sr-only">{` of ${clip.voice} clip ${clip.licenceId}`}</span>
+            <VersionsChevron />
+          </button>
+        )}
       </div>
+
+      {versions && <VersionList id={versionsId} hidden={!versionsOpen} className="clip-versions" jobId={clip.id} versions={versions} />}
     </li>
   );
 }

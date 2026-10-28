@@ -1,0 +1,252 @@
+/* Enterprise dubbing: one calm reading column. Colours come from the tokens in styles.css. */
+
+.dub {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 72px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+/* Inside the signed-in frame the main column already supplies the padding. */
+.app-main .dub {
+  margin: 0;
+  padding: 0;
+}
+
+.dub h2 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.dub p {
+  line-height: 1.6;
+}
+
+/* Hero */
+.dub-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dub-eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--eyebrow);
+}
+
+.dub-title {
+  font-size: clamp(36px, 9vw, 52px);
+  line-height: 1.05;
+}
+
+.dub-lede {
+  font-size: 19px;
+}
+
+.dub-for {
+  font-size: 15px;
+}
+
+/* Sections */
+.dub-block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* How it works */
+.dub-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.dub-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.dub-step:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.dub-num {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--chip);
+  color: var(--eyebrow);
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dub-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.dub-step-text h3 {
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.dub-step-text p {
+  font-size: 15px;
+}
+
+/* Good to know */
+.dub-note {
+  overflow: hidden;
+}
+
+.dub-note-body {
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dub-note-body h2 {
+  font-size: 18px;
+}
+
+/* Short lists with a small gold bead */
+.dub-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.dub-list li {
+  position: relative;
+  padding-left: 20px;
+}
+
+.dub-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+/* What you get + files stay private, side by side when there is room */
+.dub-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 40px;
+}
+
+/* Languages and voices */
+.dub-chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dub-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dub-chip .faint {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Pricing and the one call to action */
+.dub-talk {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.dub-talk > p {
+  font-size: 17px;
+}
+
+.dub-cta {
+  margin-top: 8px;
+  font-size: 17px;
+  padding: 16px 32px;
+}
+
+.dub-mail {
+  font-size: 14px;
+}
+
+.dub-mail a {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.dub-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dub-more a {
+  color: var(--muted);
+  text-underline-offset: 3px;
+}
+
+.dub-more a:hover {
+  color: var(--text);
+}
+
+@media (max-width: 480px) {
+  .dub {
+    padding: 40px 16px 72px;
+    gap: 44px;
+  }
+  .dub-lede {
+    font-size: 17px;
+  }
+  .dub-note-body {
+    padding: 18px 16px 20px;
+  }
+  .dub-cta {
+    width: 100%;
+  }
+}

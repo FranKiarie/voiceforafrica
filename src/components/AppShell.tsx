@@ -10,6 +10,8 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/clips", label: "My clips", icon: "wave" },
   { href: "/voices", label: "Voices", icon: "mic" },
+  { href: "/transcribe", label: "Transcribe", icon: "book" },
+  { href: "/dubbing", label: "Dubbing", icon: "film" },
   { href: "/pricing", label: "Plans", icon: "card" },
   { href: "/verify", label: "Verify a licence", icon: "shield" },
 ];
