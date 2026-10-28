@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     allowed_origins: str = "https://voice.mikaka.io"
 
     previews_per_day: int = 3
+    # 0 on Fly (its edge sets Fly-Client-IP). On Cloud Run, the caller's address
+    # is this many entries from the right of X-Forwarded-For.
+    forwarded_for_hops: int = 0
 
 
 @lru_cache

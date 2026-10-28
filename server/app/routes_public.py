@@ -71,7 +71,17 @@ def _ip_key(raw: str | None) -> str | None:
 
 
 def client_ip(request: Request) -> str | None:
-    """Fly's edge sets Fly-Client-IP; anything that is not a plain IP is ignored."""
+    """The caller's address as our host's edge saw it; anything that is not a plain IP is ignored.
+
+    Fly's edge sets Fly-Client-IP. Cloud Run passes a caller's own X-Forwarded-For
+    through and appends the address it saw, so there the address is counted from
+    the right and Fly-Client-IP is ignored, since any caller could send it.
+    """
+    hops = settings.forwarded_for_hops
+    if hops > 0:
+        raw = ",".join(request.headers.getlist("x-forwarded-for"))
+        hosts = [h.strip() for h in raw.split(",") if h.strip()]
+        return _ip_key(hosts[-hops]) if len(hosts) >= hops else None
     key = _ip_key(request.headers.get("fly-client-ip"))
     if key:
         return key

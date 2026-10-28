@@ -280,6 +280,19 @@ def test_preview_ignores_forged_ip_header(fake, client):
     assert fake["inserts"][0][1]["ip"] is None  # TestClient peer "testclient" is not an IP either
 
 
+def test_preview_ip_counted_from_right_of_forwarded_for(fake, client, monkeypatch):
+    monkeypatch.setattr(routes_public.settings, "forwarded_for_hops", 1)
+    client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"},
+                headers={"X-Forwarded-For": "9.9.9.9, 41.90.1.2", "Fly-Client-IP": "8.8.8.8"})
+    assert fake["inserts"][0][1]["ip"] == "41.90.1.2"
+
+
+def test_preview_without_forwarded_for_has_no_ip(fake, client, monkeypatch):
+    monkeypatch.setattr(routes_public.settings, "forwarded_for_hops", 1)
+    client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"}, headers={"Fly-Client-IP": "8.8.8.8"})
+    assert fake["inserts"][0][1]["ip"] is None
+
+
 def test_preview_ipv6_counted_per_64(fake, client):
     client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"},
                 headers={"Fly-Client-IP": "2001:db8:1:2:aaaa:bbbb:cccc:dddd"})

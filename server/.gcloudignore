@@ -1,0 +1,8 @@
+# Files Cloud Run's source upload leaves out.
+.gcloudignore
+.venv/
+.pytest_cache/
+__pycache__/
+tests/
+.env
+fly.toml
