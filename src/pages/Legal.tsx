@@ -1,4 +1,6 @@
+import { RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
+import { BeadSettle } from "./Signin";
 
 const TERMS = [
   "Your licence is non-exclusive and lasts forever. It covers one clip, at the tier you held when the clip was made.",
@@ -24,7 +26,10 @@ export default function Legal() {
   return (
     <Shell>
       <div className="narrow">
-        <h1 style={{ fontSize: 40, marginBottom: 24 }}>{isTerms ? "Terms" : "Privacy"}</h1>
+        <BeadSettle style={{ marginBottom: 14 }} />
+        <h1 style={{ fontSize: 40, marginBottom: 24 }}>
+          <RiseWords text={isTerms ? "Terms" : "Privacy"} />
+        </h1>
         {isTerms ? (
           <ol style={{ margin: 0, paddingLeft: 22, display: "flex", flexDirection: "column", gap: 14 }}>
             {TERMS.map((t) => (

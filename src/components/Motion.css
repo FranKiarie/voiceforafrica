@@ -1,0 +1,157 @@
+/* Shared hero and highlight motion (components/Motion.tsx). Transform and opacity
+   only; everything is still and fully visible under reduced motion. */
+
+/* Words rising in one by one (.sr-only lives in styles.css) */
+.rise-words .rw {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.45em);
+  animation: rw-rise 620ms var(--ease-out, ease-out) forwards;
+  animation-delay: var(--rw-delay, 0ms);
+}
+
+@keyframes rw-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* One item at a time, crossfading */
+.cycle {
+  display: inline-grid;
+}
+
+.cycle-item {
+  grid-area: 1 / 1;
+  animation: cycle-in 520ms var(--ease-out, ease-out) both;
+}
+
+@keyframes cycle-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Bead wave: a phrase of speech drawn in beads */
+.bead-wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(3px, 0.7vw, 6px);
+  height: 96px;
+}
+
+.bw-bead {
+  flex: none;
+  width: clamp(5px, 1vw, 8px);
+  height: calc(var(--h) * 100%);
+  border-radius: 999px;
+  opacity: 0.85;
+  transform-origin: center;
+  transform: scaleY(0.35);
+  animation: bw-breathe calc(var(--bw-dur, 1200ms) * 2.2) ease-in-out var(--bw-delay, 0ms) infinite alternate;
+}
+
+.bead-wave.is-speaking .bw-bead {
+  animation: bw-speak var(--bw-dur, 1100ms) ease-in-out var(--bw-delay, 0ms) infinite alternate;
+  opacity: 1;
+}
+
+@keyframes bw-breathe {
+  from {
+    transform: scaleY(0.3);
+  }
+  to {
+    transform: scaleY(0.62);
+  }
+}
+
+@keyframes bw-speak {
+  0% {
+    transform: scaleY(0.25);
+  }
+  45% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.45);
+  }
+}
+
+/* Hand-drawn underline */
+.ink-under {
+  position: relative;
+  display: inline-block;
+}
+
+.ink-under-line {
+  position: absolute;
+  left: -2%;
+  bottom: -0.12em;
+  width: 104%;
+  height: 0.32em;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ink-under-line path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ink-draw 900ms var(--ease-out, ease-out) var(--ink-delay, 500ms) forwards;
+}
+
+@keyframes ink-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* A slow, small float for decorative cards and chips */
+.float-soft {
+  animation: float-soft 6.5s ease-in-out infinite alternate;
+}
+
+.float-soft.float-late {
+  animation-delay: -3s;
+}
+
+@keyframes float-soft {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-words .rw,
+  .cycle-item,
+  .ink-under-line path {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    stroke-dashoffset: 0;
+  }
+  .bw-bead,
+  .bead-wave.is-speaking .bw-bead,
+  .float-soft {
+    animation: none;
+  }
+  .bw-bead {
+    transform: scaleY(0.6);
+  }
+}

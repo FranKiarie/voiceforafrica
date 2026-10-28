@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { useEased } from "../components/AppShell";
+import { BeadWave, RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
 import { LANGUAGES, LIVE_ACCENTS, MAX_PAYG_CHARS, PAYG_PRICE, PURPOSES, VOICES, accentLabel, formatDuration, quoteFor } from "../data";
@@ -94,6 +96,9 @@ export default function Studio() {
     if (first && voice.accent !== id) setVoiceId(first.id);
   };
   const q = quoteFor(script);
+  // The counter glides to new figures (a paste counts up); single keystrokes just tick over.
+  const charsShown = Math.round(useEased(q.chars, { duration: 360, snap: 2 }));
+  const secondsShown = Math.round(useEased(q.projectedSeconds, { duration: 360, snap: 1 }));
   const left = Math.max(0, PREVIEWS_PER_DAY - used);
   const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(useEmail.trim()) && adult;
 
@@ -137,7 +142,7 @@ export default function Studio() {
   return (
     <Shell step={1} footer={false}>
       <form className="narrow studio" onSubmit={(e) => void submit(e)} noValidate>
-        <h1 className="studio-title">Paste your script</h1>
+        <RiseWords as="h1" className="studio-title" text="Paste your script" delay={40} step={80} />
 
         <label className="field">
           What's it for?
@@ -173,43 +178,47 @@ export default function Studio() {
           </label>
         </div>
 
-        <label className="field">
-          Voice
-          <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
-            {(["Female", "Male"] as const).map((g) => {
-              const group = accentVoices.filter((v) => v.gender === g);
-              return group.length ? (
-                <optgroup key={g} label={g}>
-                  {group.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {`${v.name} · ${v.style}`}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null;
-            })}
-          </select>
-        </label>
-        {voice.sample ? (
-          <button
-            type="button"
-            className="studio-sample"
-            aria-pressed={sampling === voice.id}
-            onClick={() => toggleSample(voice.id)}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-              {sampling === voice.id ? (
-                <path d="M7 5 h3 v14 h-3 Z M14 5 h3 v14 h-3 Z" fill="currentColor" />
-              ) : (
-                <path d="M8 5 L19 12 L8 19 Z" fill="currentColor" />
-              )}
-            </svg>
-            {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
-            <span className="faint">{` · ${voice.gender} · ${accentLabel(voice.accent)} accent`}</span>
-          </button>
-        ) : (
-          <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · ${accentLabel(voice.accent)} accent · sample coming soon`}</p>
-        )}
+        <div className="studio-voice">
+          <label className="field">
+            Voice
+            <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
+              {(["Female", "Male"] as const).map((g) => {
+                const group = accentVoices.filter((v) => v.gender === g);
+                return group.length ? (
+                  <optgroup key={g} label={g}>
+                    {group.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {`${v.name} · ${v.style}`}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null;
+              })}
+            </select>
+          </label>
+          {voice.sample ? (
+            <button
+              type="button"
+              className="studio-sample"
+              aria-pressed={sampling === voice.id}
+              onClick={() => toggleSample(voice.id)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                {sampling === voice.id ? (
+                  <path d="M7 5 h3 v14 h-3 Z M14 5 h3 v14 h-3 Z" fill="currentColor" />
+                ) : (
+                  <path d="M8 5 L19 12 L8 19 Z" fill="currentColor" />
+                )}
+              </svg>
+              {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
+              <span className="faint">{` · ${voice.gender} · ${accentLabel(voice.accent)} accent`}</span>
+            </button>
+          ) : (
+            <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · ${accentLabel(voice.accent)} accent · sample coming soon`}</p>
+          )}
+          {/* While a sample plays, a small speaking wave sits beside the voice picker's label. */}
+          {sampling !== null && <BeadWave beads={11} speaking className="studio-wave" />}
+        </div>
         {lang?.premiumOnly && (
           <p className="faint studio-hint">
             {lang.own} uses our Premium voice engine; same price on pay as you go.
@@ -228,8 +237,13 @@ export default function Studio() {
               aria-describedby="script-count"
             />
           </label>
-          <p id="script-count" className="faint studio-count" aria-live="polite">
-            {q.chars.toLocaleString("en-KE")} characters · about {formatDuration(q.projectedSeconds)}
+          <p id="script-count" className="faint studio-count">
+            <span className="sr-only" aria-live="polite">
+              {`${q.chars.toLocaleString("en-KE")} characters · about ${formatDuration(q.projectedSeconds)}`}
+            </span>
+            <span aria-hidden="true">
+              {`${charsShown.toLocaleString("en-KE")} characters · about ${formatDuration(secondsShown)}`}
+            </span>
           </p>
         </div>
 

@@ -151,3 +151,62 @@
   color: inherit;
   font-weight: 600;
 }
+
+/* Five beads above the title (BeadSettle in Signin.tsx). They drop in one by one and
+   settle; the mail icon settles the same way. Still under reduced motion. */
+.bead-settle {
+  display: flex;
+  width: max-content;
+  align-self: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.bead-settle span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bead-settle span {
+    animation: si-bead 620ms var(--ease-out, ease-out) calc(var(--i, 0) * 70ms + 160ms) backwards;
+  }
+
+  .signin-icon {
+    animation: si-settle 620ms var(--ease-out, ease-out) backwards;
+  }
+}
+
+@keyframes si-bead {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+  78% {
+    transform: translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes si-settle {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

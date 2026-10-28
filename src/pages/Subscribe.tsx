@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import { useEased } from "../components/AppShell";
+import { RiseWords } from "../components/Motion";
 import { DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { formatKes, KES_PER_USD, type PatternId } from "../data";
 import { getFlow } from "../flow";
@@ -93,6 +95,20 @@ function loadInline(): Promise<void> {
     document.head.appendChild(s);
   });
   return inlineLoading;
+}
+
+/**
+ * The plan's dollar figure: counts up from $0 as the summary rises in, then glides
+ * between the monthly and yearly figures. Screen readers get the figure itself.
+ */
+function PlanAmount({ usd }: { usd: number }) {
+  const shown = useEased(usd, { from: 0, delay: 420, duration: 900 });
+  return (
+    <span className="sub-amount">
+      <span className="sr-only">{`$${usd.toLocaleString("en-US")}`}</span>
+      <span aria-hidden="true">{`$${Math.round(Math.max(0, shown)).toLocaleString("en-US")}`}</span>
+    </span>
+  );
 }
 
 export default function Subscribe() {
@@ -226,7 +242,7 @@ export default function Subscribe() {
   return (
     <Shell>
       <div className="narrow sub" aria-hidden={phase === "demo" ? true : undefined}>
-        <h1 className="sub-title">Start your plan</h1>
+        <RiseWords as="h1" className="sub-title" text="Start your plan" delay={40} step={80} />
 
         <section className="card sub-summary" aria-labelledby="sub-plan">
           <PatternStrip pattern={info.pattern} height={6} />
@@ -235,8 +251,10 @@ export default function Subscribe() {
               {info.name}
             </h2>
             <ul className="sub-perks">
-              {info.perks.map((p) => (
-                <li key={p}>{p}</li>
+              {info.perks.map((p, i) => (
+                <li key={p} style={{ ["--i" as string]: i } as CSSProperties}>
+                  {p}
+                </li>
               ))}
             </ul>
             <div className="sub-period" role="group" aria-label="Billing period">
@@ -248,7 +266,7 @@ export default function Subscribe() {
               </button>
             </div>
             <p className="sub-price" aria-live="polite">
-              <span className="sub-amount">{`$${usd.toLocaleString("en-US")}`}</span>
+              <PlanAmount usd={usd} />
               <span className="faint">
                 {billing === "yearly" ? " billed yearly — 2 months free" : " / month"}
               </span>

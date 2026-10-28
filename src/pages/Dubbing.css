@@ -52,6 +52,45 @@
   font-size: 15px;
 }
 
+/* "Welcome" in one language at a time, beside a small breathing bead wave. */
+.dub-hello {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.dub-hello .dub-hello-wave.bead-wave {
+  flex: none;
+  height: 22px;
+  gap: 3px;
+}
+
+.dub-hello .dub-hello-wave .bw-bead {
+  width: 4px;
+}
+
+.dub-hello-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.dub-hello-word {
+  font-family: var(--font-world);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--eyebrow);
+}
+
+.dub-hello-lang {
+  font-size: 15px;
+  color: var(--faint);
+}
+
 /* Sections */
 .dub-block {
   display: flex;
@@ -69,19 +108,44 @@
   flex-direction: column;
 }
 
+/* The rules between steps start after the numbers, so the line down the numbers
+   never crosses them. */
 .dub-step {
+  position: relative;
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  padding: 18px 0;
-  border-top: 1px solid var(--line);
 }
 
-.dub-step:last-child {
-  border-bottom: 1px solid var(--line);
+/* A faint track and, over it, a gold line that draws down to the next number as
+   you scroll (--seg, 0 to 1, set by useStepLine in Dubbing.tsx). Each segment runs
+   from this number's centre to the next one's. */
+.dub-step:not(:last-child)::before,
+.dub-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 34px;
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.dub-step:not(:last-child)::before {
+  background: var(--line);
+}
+
+.dub-step:not(:last-child)::after {
+  background: var(--gold);
+  transform-origin: top;
+  transform: scaleY(var(--seg, 0));
 }
 
 .dub-num {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
   flex: none;
   width: 32px;
   height: 32px;
@@ -96,11 +160,17 @@
 }
 
 .dub-step-text {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding-top: 4px;
+  padding: 22px 0 18px;
+  border-top: 1px solid var(--line);
+}
+
+.dub-step:last-child .dub-step-text {
+  border-bottom: 1px solid var(--line);
 }
 
 .dub-step-text h3 {
@@ -233,6 +303,60 @@
 
 .dub-more a:hover {
   color: var(--text);
+}
+
+/* ---------- Motion ----------
+   Numbers pop in as the line reaches them; the accent chips rise in, rippling.
+   Under reduced motion (or in print) everything shows at once, with the line drawn. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  .dub-step:not(:last-child)::after {
+    transition: transform 120ms linear;
+  }
+
+  .dub-step:not([data-on]) .dub-num {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  .dub-step[data-on] .dub-num {
+    animation: dub-pop 520ms var(--ease-out, ease-out) backwards;
+  }
+
+  .dub-chips .dub-chip:not([data-rise="in"]) {
+    opacity: 0;
+  }
+
+  .dub-chips .dub-chip[data-rise="in"] {
+    animation: dub-chip 420ms var(--ease-out, ease-out) var(--chip-delay, 0ms) backwards;
+  }
+}
+
+@keyframes dub-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dub-chip {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+@media not screen, (prefers-reduced-motion: reduce) {
+  .dub-step:not(:last-child)::after {
+    transform: none;
+  }
 }
 
 @media (max-width: 480px) {

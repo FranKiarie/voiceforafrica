@@ -14,11 +14,45 @@
   line-height: 1.15;
 }
 
+/* RiseWords sets each word as an inline block; keep the space after it. */
+.pay-title .rw {
+  white-space: pre;
+}
+
 .pay-order {
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+/* The order's lines rise in one after another (timing set in Pay.tsx: 80 ms, then
+   70 ms apart). reveal.ts would lift the card as one block; the lines do it instead. */
+.pay .pay-order[data-reveal] {
+  opacity: 1;
+  animation: none;
+}
+
+.pay-order:not(.is-in) .pay-lines > div,
+.pay-order:not(.is-in) > .pay-script,
+.pay-order:not(.is-in) > .pay-total,
+.pay-order:not(.is-in) > .pay-kes {
+  opacity: 0;
+}
+
+.pay-order.is-in .pay-lines > div,
+.pay-order.is-in > .pay-script,
+.pay-order.is-in > .pay-total,
+.pay-order.is-in > .pay-kes {
+  animation: pay-line-in 460ms var(--ease-out, ease-out) backwards;
+  animation-delay: calc(80ms + var(--i, 0) * 70ms);
+}
+
+@keyframes pay-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 .pay-lines {
@@ -301,7 +335,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .co-panel {
+  .co-panel,
+  .pay-order.is-in .pay-lines > div,
+  .pay-order.is-in > .pay-script,
+  .pay-order.is-in > .pay-total,
+  .pay-order.is-in > .pay-kes {
     animation: none;
+  }
+  .pay-order:not(.is-in) .pay-lines > div,
+  .pay-order:not(.is-in) > .pay-script,
+  .pay-order:not(.is-in) > .pay-total,
+  .pay-order:not(.is-in) > .pay-kes {
+    opacity: 1;
   }
 }

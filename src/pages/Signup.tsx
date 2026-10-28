@@ -1,9 +1,10 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { getFlow } from "../flow";
 import { Link, navigate } from "../router";
 import { SITE_URL, supabase } from "../lib/supabase";
-import { EMAIL_RE, MIN_PASSWORD, MailIcon, PasswordField, authErrorKind } from "./Signin";
+import { BeadSettle, EMAIL_RE, MIN_PASSWORD, MailIcon, PasswordField, authErrorKind } from "./Signin";
 import "./Signin.css";
 import "./Signup.css";
 
@@ -66,7 +67,9 @@ export default function Signup() {
         <div className="narrow center signin">
           <section className="signin-sent" aria-live="polite">
             <MailIcon />
-            <h1 className="signin-title-sm">Check your email</h1>
+            <h1 className="signin-title-sm">
+              <RiseWords text="Check your email" delay={120} />
+            </h1>
             <p className="muted">{`We sent a link to ${sentTo}. Open it to finish creating your account.`}</p>
             <button type="button" className="signin-text-btn" onClick={() => setSentTo("")}>
               Use a different email
@@ -83,7 +86,10 @@ export default function Signup() {
     <Shell>
       <div className="narrow center signin">
         <div className="signin-head">
-          <h1 className="signin-title">Create your account</h1>
+          <BeadSettle />
+          <h1 className="signin-title">
+            <RiseWords text="Create your account" />
+          </h1>
           <p className="muted">Keep your clips and licences in one place.</p>
         </div>
         <form className="signin-form" onSubmit={submit} noValidate>

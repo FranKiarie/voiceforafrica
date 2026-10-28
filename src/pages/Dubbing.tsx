@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { BeadWave, Cycle, InkUnderline, RiseWords } from "../components/Motion";
 import { PatternStrip, Shell } from "../components/Shell";
 import { Link } from "../router";
 import { LANGUAGES, LIVE_ACCENTS, VOICES } from "../data";
@@ -60,6 +62,110 @@ const SECURITY = [
   "We will sign an NDA before you send anything.",
 ];
 
+// "Welcome", in languages we voice today (codes from LANGUAGES in data.ts). The hero
+// cycles through them. Zulu and Yoruba are left out until we can voice them.
+const WELCOMES: { code: string; text: string; rtl?: boolean }[] = [
+  { code: "sw", text: "Karibu" },
+  { code: "ha", text: "Barka da zuwa" },
+  { code: "am", text: "እንኳን ደህና መጡ" },
+  { code: "ak", text: "Akwaaba" },
+  { code: "rw", text: "Murakaza neza" },
+  { code: "fr", text: "Bienvenue" },
+  { code: "ar", text: "أهلاً وسهلاً", rtl: true },
+];
+
+const HELLOS = WELCOMES.flatMap((w) => {
+  const lang = LANGUAGES.find((l) => l.code === w.code);
+  return lang ? [{ ...w, name: lang.en ?? lang.own }] : [];
+});
+
+const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+// Centre of a step's number circle, from the top of its row (see .dub-num in Dubbing.css).
+const NUM_CENTRE = 34;
+
+/**
+ * "How it works": a gold line draws down the numbers as the steps scroll up past
+ * the lower part of the screen, and each number pops in as the line reaches it.
+ * The line only ever grows, so scrolling back up leaves it drawn.
+ */
+function useStepLine() {
+  const ref = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const list = ref.current;
+    if (!list) return;
+    const steps = Array.from(list.querySelectorAll<HTMLElement>(".dub-step"));
+    if (reduced()) {
+      steps.forEach((s) => {
+        s.style.setProperty("--seg", "1");
+        s.dataset.on = "";
+      });
+      return;
+    }
+    const drawn = steps.map(() => 0);
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const reach = window.innerHeight * 0.72;
+      steps.forEach((s, i) => {
+        const r = s.getBoundingClientRect();
+        const centre = r.top + NUM_CENTRE;
+        if (reach >= centre && s.dataset.on === undefined) s.dataset.on = "";
+        if (i === steps.length - 1 || !r.height) return;
+        const p = Math.max(0, Math.min(1, (reach - centre) / r.height));
+        if (p > drawn[i]) {
+          drawn[i] = p;
+          s.style.setProperty("--seg", p.toFixed(3));
+        }
+      });
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    // Capture, so a scroll inside the signed-in frame counts as well as the window's.
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      document.removeEventListener("scroll", onScroll, { capture: true });
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+  return ref;
+}
+
+/** Chips rise in, rippling 45 ms apart, when the list comes into view. */
+function useChipsIn() {
+  const ref = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const list = ref.current;
+    if (!list) return;
+    const chips = Array.from(list.querySelectorAll<HTMLElement>(".dub-chip"));
+    const show = () =>
+      chips.forEach((c, i) => {
+        c.style.setProperty("--chip-delay", `${Math.min(i * 45, 600)}ms`);
+        c.dataset.rise = "in";
+      });
+    if (reduced() || typeof IntersectionObserver === "undefined") {
+      show();
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting || e.boundingClientRect.bottom < 0)) {
+          io.disconnect();
+          show();
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px" },
+    );
+    io.observe(list);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
 /** "a, b and c" */
 function listOf(items: string[]): string {
   if (items.length < 2) return items.join("");
@@ -69,6 +175,8 @@ function listOf(items: string[]): string {
 export default function Dubbing() {
   const accents = LIVE_ACCENTS.map((a) => ({ ...a, voices: VOICES.filter((v) => v.accent === a.id).length }));
   const languages = listOf(LANGUAGES.map((l) => l.en ?? l.own));
+  const stepsRef = useStepLine();
+  const chipsRef = useChipsIn();
 
   return (
     <Shell>
@@ -76,8 +184,24 @@ export default function Dubbing() {
         <section className="dub-hero" aria-labelledby="dub-title">
           <p className="dub-eyebrow">ENTERPRISE</p>
           <h1 id="dub-title" className="dub-title">
-            Dubbing for enterprises
+            <InkUnderline delay={520}>
+              <RiseWords text="Dubbing" />
+            </InkUnderline>{" "}
+            <RiseWords text="for enterprises" delay={70} />
           </h1>
+          <div className="dub-hello" aria-hidden="true">
+            <BeadWave beads={7} className="dub-hello-wave" />
+            <Cycle interval={2800}>
+              {HELLOS.map((h) => (
+                <span key={h.code} className="dub-hello-item">
+                  <span className="dub-hello-word" lang={h.code} dir={h.rtl ? "rtl" : undefined}>
+                    {h.text}
+                  </span>
+                  <span className="dub-hello-lang">{h.name}</span>
+                </span>
+              ))}
+            </Cycle>
+          </div>
           <p className="dub-lede muted">Your videos, ads, training and broadcast content, voiced in African languages and accents.</p>
           <p className="dub-for faint">
             For broadcasters, brands and agencies, NGOs and public-health campaigns, e-learning teams and government.
@@ -86,7 +210,7 @@ export default function Dubbing() {
 
         <section className="dub-block" aria-labelledby="dub-how">
           <h2 id="dub-how">How it works</h2>
-          <ol className="dub-steps" role="list">
+          <ol ref={stepsRef} className="dub-steps" role="list">
             {STEPS.map((s, i) => (
               <li className="dub-step" key={s.title}>
                 <span className="dub-num">{i + 1}</span>
@@ -138,7 +262,7 @@ export default function Dubbing() {
           <p className="muted">
             {`${VOICES.length} voices with accents from ${accents.length} African countries, for every narrator and character.`}
           </p>
-          <ul className="dub-chips" role="list" aria-label="Accents and how many voices each has">
+          <ul ref={chipsRef} className="dub-chips" role="list" aria-label="Accents and how many voices each has">
             {accents.map((a) => (
               <li className="dub-chip" key={a.id}>
                 {a.label}

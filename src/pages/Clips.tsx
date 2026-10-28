@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AppShell } from "../components/AppShell";
+import { BeadWave, RiseWords, useInView } from "../components/Motion";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { API_MODE, ApiError, jobDownloadUrl, listClips, type AudioVersion, type Clip } from "../lib/api";
 import { supabase, useSession } from "../lib/supabase";
@@ -43,10 +44,12 @@ export function VersionList({
   return (
     <div id={id} hidden={hidden} className={className ? `versions ${className}` : "versions"}>
       <ul className="versions-list">
-        {versions.map((v) => {
+        {versions.map((v, i) => {
+          // Each item eases in a moment after the one above when the list opens.
+          const at = { ["--i" as string]: i } as CSSProperties;
           if (!v.allowed) {
             return (
-              <li key={v.id} className="versions-item versions-locked">
+              <li key={v.id} className="versions-item versions-locked" style={at}>
                 <span className="versions-label">{v.label}</span>
                 <Link href="/pricing" className="versions-unlock">
                   {v.needs ? `On ${v.needs} and up` : "On a paid plan"}
@@ -57,7 +60,7 @@ export function VersionList({
           }
           const url = jobDownloadUrl(jobId, v.id);
           return (
-            <li key={v.id} className="versions-item">
+            <li key={v.id} className="versions-item" style={at}>
               {url ? (
                 <a className="versions-get" href={url} download>
                   <span className="versions-label">{v.label}</span>
@@ -101,7 +104,34 @@ type State =
   | { kind: "signin" }
   | { kind: "ready"; clips: Clip[] };
 
-export function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; playing: boolean; onToggle: () => void; onEnded: () => void }) {
+/** A list of clip rows that rise in one after another the first time the list comes into view. */
+export function ClipList({ label, delay = 0, children }: { label: string; delay?: number; children: ReactNode }) {
+  const [ref, seen] = useInView<HTMLUListElement>();
+  return (
+    <ul
+      ref={ref}
+      className={`clips-list${seen ? " is-in" : ""}`}
+      aria-label={label}
+      style={{ ["--rows-delay" as string]: `${delay}ms` } as CSSProperties}
+    >
+      {children}
+    </ul>
+  );
+}
+
+export function ClipRow({
+  clip,
+  playing,
+  onToggle,
+  onEnded,
+  index = 0,
+}: {
+  clip: Clip;
+  playing: boolean;
+  onToggle: () => void;
+  onEnded: () => void;
+  index?: number;
+}) {
   const audio = useRef<HTMLAudioElement>(null);
   const hasAudio = Boolean(clip.audioUrl);
   const versions = clip.versions?.length ? clip.versions : null;
@@ -119,7 +149,7 @@ export function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; play
   const meta = `${clip.length} · ${clip.tier} licence${date ? ` · ${date}` : ""}`;
 
   return (
-    <li className="clip-row">
+    <li className={`clip-row${playing ? " is-playing" : ""}`} style={{ ["--i" as string]: index } as CSSProperties}>
       {hasAudio ? (
         <span className="clip-drum">
           <Drum size={44} playing={playing} label={`${playing ? "Pause" : "Play"} ${clip.voice} clip`} onClick={onToggle} />
@@ -136,7 +166,10 @@ export function ClipRow({ clip, playing, onToggle, onEnded }: { clip: Clip; play
       )}
 
       <div className="clip-info">
-        <span className="clip-voice">{clip.voice}</span>
+        <div className="clip-voice-row">
+          <span className="clip-voice">{clip.voice}</span>
+          {playing && <BeadWave beads={9} speaking className="clip-wave" />}
+        </div>
         <span className="faint clip-meta">{meta}</span>
         <span className="clip-licence">
           <span className="mono faint">{clip.licenceId}</span>
@@ -224,7 +257,7 @@ export default function Clips() {
         {API_MODE === "demo" && <p className="faint clips-demo">Demo mode: showing clips made in this browser.</p>}
 
         <div className="clips-head">
-          <h1 className="clips-title">My clips</h1>
+          <RiseWords as="h1" className="clips-title" text="My clips" delay={40} step={90} />
           <p className="muted">Clips you've made, with their licences.</p>
         </div>
 
@@ -275,17 +308,18 @@ export default function Clips() {
         )}
 
         {view.kind === "ready" && view.clips.length > 0 && (
-          <ul className="clips-list" aria-label="Your clips">
-            {view.clips.map((c) => (
+          <ClipList label="Your clips">
+            {view.clips.map((c, i) => (
               <ClipRow
                 key={c.id}
+                index={i}
                 clip={c}
                 playing={playingId === c.id}
                 onToggle={() => setPlayingId((p) => (p === c.id ? null : c.id))}
                 onEnded={stop}
               />
             ))}
-          </ul>
+          </ClipList>
         )}
 
         <p className="faint clips-foot">

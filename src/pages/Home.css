@@ -1,36 +1,70 @@
-/* Home page: hero, language marquee, uses grid, voice library. */
+/* Home page: hero with a voice stage, language marquee, uses grid, voice library.
+   Motion here is transform and opacity only (plus the icon strokes drawing in).
+   Every entrance is defined under prefers-reduced-motion: no-preference, so with
+   reduced motion everything is simply there and still. */
 
+/* ---------- Hero ---------- */
 .home-hero {
-  max-width: 720px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 88px 24px 56px;
+  padding: 64px 24px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: 56px;
+}
+
+.home-copy {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 28px;
-  text-align: center;
+  align-items: flex-start;
+  gap: 24px;
 }
 
 .home-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 3px;
   color: var(--eyebrow);
 }
 
+.home-eyebrow-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.home-eyebrow-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
 .home-title {
-  font-size: clamp(40px, 11vw, 60px);
-  line-height: 1.02;
+  font-size: clamp(40px, 5.3vw, 60px);
+  line-height: 1.04;
 }
 
 .home-title .hand {
-  font-size: clamp(46px, 12.5vw, 68px);
+  font-size: clamp(46px, 6.1vw, 70px);
   line-height: 1.1;
 }
 
 .home-lede {
   font-size: 19px;
   line-height: 1.55;
+  max-width: 30em;
+}
+
+.home-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
 }
 
 .home-cta {
@@ -42,19 +76,364 @@
   font-size: 15px;
 }
 
-.home-sample {
+/* Real counts from data.ts, with a thin rule above that draws in. */
+.home-stats {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
+  gap: 36px;
+  padding-top: 22px;
 }
 
-.home-sample-caption {
+.home-stats::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+  transform-origin: left;
+}
+
+.home-stat-show {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-stat-n {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.home-stat-l {
   font-size: 15px;
 }
 
-/* Language marquee */
+/* ---------- Voice stage ---------- */
+.hs {
+  position: relative;
+  width: 100%;
+  max-width: 470px;
+  justify-self: end;
+  padding: 22px 0;
+}
+
+/* A second card peeking out underneath, for depth. Static. */
+.hs-deck {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  top: 40px;
+  bottom: 8px;
+  border-radius: 28px;
+  background: var(--chip);
+  border: 1px solid var(--line);
+}
+
+.hs-card {
+  position: relative;
+  z-index: 1;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow:
+    0 40px 70px -50px color-mix(in srgb, var(--accent-ink) 60%, transparent),
+    0 2px 8px -4px color-mix(in srgb, var(--accent-ink) 18%, transparent);
+}
+
+.hs-body {
+  padding: 30px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* The greeting bubble, with a little tail pointing down at the beads. */
+.hs-bubble {
+  position: relative;
+  align-self: center;
+  width: min(100%, 340px);
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  padding: 18px 22px 16px;
+  border-radius: 22px;
+  background: var(--chip);
+  text-align: center;
+}
+
+.hs-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  margin-left: -10px;
+  border: 10px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--chip);
+}
+
+.hs-cycle {
+  display: grid;
+  width: 100%;
+}
+
+.hs-greet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hs-word {
+  font-family: var(--font-world);
+  font-weight: 600;
+  font-size: clamp(34px, 3.6vw, 44px);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.hs-mean {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Which greeting is showing: one bead per greeting. */
+.hs-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  padding-top: 4px;
+}
+
+.hs-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c);
+  opacity: 0.28;
+  transition: opacity 320ms ease, transform 320ms var(--ease-out);
+}
+
+.hs-dots span.on {
+  opacity: 1;
+  transform: scale(1.5);
+}
+
+.hs-wave.bead-wave {
+  height: 84px;
+  gap: 5px;
+}
+
+.hs-wave .bw-bead {
+  width: 7px;
+}
+
+.hs-play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.hs-drum {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+/* An idle invitation: a faint ring leaves the drum now and then. */
+.hs-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hs-drum.is-playing .hs-halo {
+  display: none;
+}
+
+.hs-caption {
+  min-width: 0;
+  max-width: 270px;
+  text-align: left;
+}
+
+.hs-caption-in {
+  display: flex;
+  flex-direction: column;
+}
+
+.hs-name {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.hs-accent {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* Small fact chips hanging off the stage. */
+.hs-chip {
+  position: absolute;
+  z-index: 2;
+}
+
+.hs-chip-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 11px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 24px -16px color-mix(in srgb, var(--accent-ink) 55%, transparent);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.hs-chip-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.hs-chip-a {
+  top: 2px;
+  left: -26px;
+}
+
+.hs-chip-b {
+  bottom: 2px;
+  right: -14px;
+}
+
+.hs-chip-c {
+  bottom: 2px;
+  left: 26px;
+}
+
+/* Tablets and phones: one column, the stage under the words. */
+@media (max-width: 899px) {
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 52px 24px 64px;
+    gap: 40px;
+  }
+  .home-copy {
+    align-items: center;
+    text-align: center;
+  }
+  .home-title {
+    font-size: clamp(40px, 11vw, 60px);
+  }
+  .home-title .hand {
+    font-size: clamp(46px, 12.5vw, 68px);
+  }
+  .home-cta-row {
+    justify-content: center;
+  }
+  .home-stats {
+    justify-content: center;
+  }
+  .hs {
+    justify-self: center;
+    max-width: 440px;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-hero {
+    padding: 36px 16px 52px;
+    gap: 32px;
+  }
+  .home-cta-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .home-stats {
+    gap: 28px;
+  }
+  .home-stat-n {
+    font-size: 26px;
+  }
+  .hs {
+    padding: 18px 0;
+  }
+  .hs-deck {
+    left: 18px;
+    right: 18px;
+    top: 34px;
+    bottom: 6px;
+    border-radius: 24px;
+  }
+  .hs-card {
+    border-radius: 24px;
+  }
+  .hs-body {
+    padding: 22px 18px 22px;
+    gap: 12px;
+  }
+  .hs-bubble {
+    min-height: 94px;
+    padding: 14px 16px 12px;
+    border-radius: 18px;
+  }
+  .hs-word {
+    font-size: 34px;
+  }
+  .hs-dots span {
+    width: 5px;
+    height: 5px;
+  }
+  .hs-wave.bead-wave {
+    height: 52px;
+    gap: 4px;
+  }
+  .hs-wave .bw-bead {
+    width: 5px;
+  }
+  .hs-play {
+    gap: 14px;
+  }
+  .hs-chip-in {
+    padding: 6px 12px 6px 10px;
+  }
+  /* Two chips only, kept inside the stage. */
+  .hs-chip-a {
+    top: 0;
+    left: 12px;
+  }
+  .hs-chip-b {
+    bottom: 0;
+    right: 12px;
+  }
+  .hs-chip-c {
+    display: none;
+  }
+}
+
+/* ---------- Language marquee ---------- */
 .home-langs {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -126,7 +505,7 @@
   font-size: 15px;
 }
 
-/* What you can make */
+/* ---------- What you can make ---------- */
 .home-make {
   max-width: 1000px;
   margin: 0 auto;
@@ -148,11 +527,23 @@
 }
 
 .make-item {
+  position: relative;
   display: flex;
   gap: 16px;
   align-items: flex-start;
   padding: 18px 0;
-  border-top: 1px solid var(--line);
+}
+
+/* The row's top rule, drawn as a scalable line so it can sweep in. */
+.make-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+  transform-origin: left;
 }
 
 .make-badge {
@@ -161,9 +552,15 @@
   height: 40px;
   border-radius: 50%;
   background: var(--chip);
+  color: var(--eyebrow);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.make-ink {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
 }
 
 .make-text {
@@ -184,7 +581,7 @@
   line-height: 1.5;
 }
 
-/* Voices */
+/* ---------- Voices ---------- */
 .home-voices {
   max-width: 720px;
   margin: 0 auto;
@@ -211,6 +608,7 @@
 }
 
 .voices-filter select {
+  min-height: 44px;
   background: transparent;
   color: var(--text);
   border: 1px solid var(--field);
@@ -270,17 +668,188 @@
   font-size: 15px;
 }
 
-.voices-soon {
+/* The row's bead swatch turns into a tiny speaking wave while its sample plays. */
+.home-row-end {
+  flex: none;
+  width: 40px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  padding-top: 8px;
+  justify-content: center;
 }
 
-.soon-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.home-row-wave.bead-wave {
+  height: 22px;
+  gap: 3px;
+}
+
+.home-row-wave .bw-bead {
+  width: 4px;
+}
+
+@media (max-width: 600px) {
+  .home-make,
+  .home-voices {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .home-lang-note {
+    padding: 0 16px;
+  }
+}
+
+/* ---------- Motion ---------- */
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes home-rise-sm {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes home-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes home-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+
+@keyframes home-rule {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes home-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes hs-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+}
+
+@keyframes hs-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.88);
+  }
+}
+
+@keyframes hs-halo {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  55%,
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Hero words: the title rises word by word (RiseWords, 120–640 ms), the orange
+     line draws under "given a platform." at 1080 ms, and the rest follows. */
+  .home-eyebrow {
+    animation: home-rise 600ms var(--ease-out) 260ms backwards;
+  }
+  .home-eyebrow-dots span {
+    animation: home-pop 420ms var(--ease-out) calc(380ms + var(--i) * 80ms) backwards;
+  }
+  .home-lede {
+    animation: home-rise 650ms var(--ease-out) 600ms backwards;
+  }
+  /* The wrapper moves, not the button, so its hover lift and press still work. */
+  .home-cta-row {
+    animation: home-rise 650ms var(--ease-out) 720ms backwards;
+  }
+  .home-stats {
+    animation: home-fade 600ms ease-out 860ms backwards;
+  }
+  .home-stats::before {
+    animation: home-rule 900ms var(--ease-out) 900ms backwards;
+  }
+
+  /* The stage waits (paused on its first frame) until it is on screen. */
+  .hs-card {
+    animation: hs-rise 800ms var(--ease-out) 180ms backwards paused;
+  }
+  .hs-deck {
+    animation: hs-rise 900ms var(--ease-out) 380ms backwards paused;
+  }
+  .hs-bubble {
+    transform-origin: 50% 100%;
+    animation: hs-pop 620ms var(--ease-out) 620ms backwards paused;
+  }
+  .hs-wave {
+    animation: home-fade 700ms ease-out 760ms backwards paused;
+  }
+  .hs-dots {
+    animation: home-fade 500ms ease-out 900ms backwards paused;
+  }
+  .hs-play {
+    animation: home-rise 600ms var(--ease-out) 880ms backwards paused;
+  }
+  .hs-chip {
+    animation: hs-pop 520ms var(--ease-out) var(--d, 1200ms) backwards paused;
+  }
+  .hs.is-in :is(.hs-card, .hs-deck, .hs-bubble, .hs-wave, .hs-dots, .hs-play, .hs-chip) {
+    animation-play-state: running;
+  }
+
+  .hs-caption-in {
+    animation: home-fade 420ms ease-out backwards;
+  }
+  .hs-halo {
+    animation: hs-halo 3.6s ease-out 2.2s infinite;
+  }
+
+  /* What you can make: rules sweep in, badges pop, icon strokes draw, text rises. */
+  .make-item::before {
+    animation: home-rule 700ms var(--ease-out) var(--d, 0ms) backwards paused;
+  }
+  .make-badge {
+    animation: home-pop 560ms cubic-bezier(0.34, 1.35, 0.64, 1) var(--d, 0ms) backwards paused;
+  }
+  .make-ink {
+    animation: home-draw 950ms ease-out calc(var(--d, 0ms) + 240ms) backwards paused;
+  }
+  .make-text {
+    animation: home-rise-sm 520ms var(--ease-out) calc(var(--d, 0ms) + 80ms) backwards paused;
+  }
+  .make-grid.is-in :is(.make-badge, .make-ink, .make-text),
+  .make-grid.is-in .make-item::before {
+    animation-play-state: running;
+  }
+
+  /* Voice rows ripple in the first time the list is seen. After an accent change
+     reveal.ts ripples the new rows, so this steps aside to avoid playing twice. */
+  .home-list:not(.is-filtered) .voice-row {
+    animation: home-rise-sm 480ms var(--ease-out) var(--d, 0ms) backwards paused;
+  }
+  .home-list.is-in .voice-row {
+    animation-play-state: running;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-halo {
+    display: none;
+  }
 }

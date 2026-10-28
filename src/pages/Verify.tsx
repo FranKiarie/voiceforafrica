@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { InkUnderline, RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { verifyLicence, type Licence } from "../lib/api";
 import { usePath } from "../router";
@@ -28,6 +29,18 @@ function formatIssued(value: string): string {
   const d = new Date(value);
   if (!value || Number.isNaN(d.getTime())) return value || "—";
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+/** A shield that draws its own outline, fills softly, then ticks itself. Decorative. */
+function ShieldCheck() {
+  const shield = "M24 3.5 L42 10 V25.5 C42 38 34.5 47 24 52 C13.5 47 6 38 6 25.5 V10 Z";
+  return (
+    <svg className="verify-shield" width="48" height="56" viewBox="0 0 48 56" aria-hidden="true">
+      <path className="vs-fill" d={shield} />
+      <path className="vs-edge" d={shield} pathLength={1} />
+      <path className="vs-check" d="M16 28.5 L21.5 34 L32.5 22" pathLength={1} />
+    </svg>
+  );
 }
 
 export default function Verify() {
@@ -78,7 +91,13 @@ export default function Verify() {
     <Shell>
       <div className="verify">
         <div className="verify-intro">
-          <h1>Check a licence</h1>
+          <ShieldCheck />
+          <h1>
+            <RiseWords text="Check a" delay={120} />{" "}
+            <InkUnderline delay={1000}>
+              <RiseWords text="licence" delay={260} />
+            </InkUnderline>
+          </h1>
           <p className="muted">Enter the ID from the licence certificate.</p>
         </div>
 
@@ -135,7 +154,7 @@ export default function Verify() {
               </div>
               <div className="verify-body">
                 <div className="verify-head">
-                  <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+                  <svg className="verify-seal" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
                     <circle cx="14" cy="14" r="13" fill="var(--green)" />
                     <path
                       className="tick"

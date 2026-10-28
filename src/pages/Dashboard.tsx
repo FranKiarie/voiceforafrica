@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { AppShell } from "../components/AppShell";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { AppShell, usdCounter } from "../components/AppShell";
 import { Icon, type IconName } from "../components/icons";
+import { BeadWave, CountUp, RiseWords, useInView } from "../components/Motion";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { UsageChart, lastDays } from "../components/UsageChart";
 import {
@@ -22,7 +23,7 @@ import { API_MODE, ApiError, getAccount, listClips, type Account, type Clip, typ
 import { useVoiceSample } from "../lib/sample";
 import { useSession } from "../lib/supabase";
 import { Link, navigate } from "../router";
-import { ClipRow, formatDate } from "./Clips";
+import { ClipList, ClipRow, formatDate } from "./Clips";
 import "./Clips.css";
 import "./Dashboard.css";
 
@@ -64,6 +65,30 @@ function minutesMade(seconds: number): string {
 }
 
 const totalSeconds = (clips: Clip[]) => clips.reduce((sum, c) => sum + (c.seconds ?? 0), 0);
+
+// Counting frames can start a hair below zero; never show "-0".
+/** Counts in the final figure's own unit (seconds or minutes) and lands on minutesMade(). */
+const minutesCounter = (final: number) => (raw: number) => {
+  const n = Math.max(0, raw);
+  if (n >= final) return minutesMade(final);
+  if (final < 60) return `${Math.round(n)} s`;
+  const m = n / 60;
+  return `${final / 60 < 10 ? m.toFixed(1) : Math.round(m)} min`;
+};
+
+const wholeCounter = (n: number) => Math.round(Math.max(0, n)).toLocaleString("en-US");
+
+/** A number that counts up when it comes into view. Screen readers get the final figure only. */
+function Counted({ value, format }: { value: number; format: (n: number) => string }) {
+  return (
+    <>
+      <span className="sr-only">{format(value)}</span>
+      <span aria-hidden="true">
+        <CountUp value={value} format={format} duration={1000} />
+      </span>
+    </>
+  );
+}
 
 /** Opens the studio with some settings already chosen. */
 function startWith(patch: { purpose?: string; voiceId?: string }) {
@@ -141,9 +166,9 @@ function QuickStart() {
   );
 }
 
-function Stat({ icon, label, value, note }: { icon: IconName; label: string; value: ReactNode; note: ReactNode }) {
+function Stat({ icon, label, value, note, index }: { icon: IconName; label: string; value: ReactNode; note: ReactNode; index: number }) {
   return (
-    <div className="card dash-stat">
+    <div className="card dash-stat" style={{ ["--i" as string]: index } as CSSProperties}>
       <span className="dash-stat-icon">
         <Icon name={icon} size={18} />
       </span>
@@ -259,6 +284,50 @@ function Types() {
   );
 }
 
+/** Recent clips: the heading and rows rise in one after another when they come into view. */
+function RecentClips({
+  clips,
+  playingId,
+  onToggle,
+  onEnded,
+}: {
+  clips: Clip[];
+  playingId: string | null;
+  onToggle: (id: string) => void;
+  onEnded: () => void;
+}) {
+  const [ref, seen] = useInView<HTMLElement>();
+  return (
+    <section ref={ref} className={`dash-recent${seen ? " is-in" : ""}`} aria-labelledby="recent-title">
+      <div className="dash-section-head">
+        <h2 id="recent-title">Recent clips</h2>
+        {clips.length > 0 && <Link href="/clips">{clips.length > RECENT ? `See all ${clips.length}` : "My clips"}</Link>}
+      </div>
+      {clips.length === 0 ? (
+        <div className="card clips-empty">
+          <PatternStrip pattern="beads" height={12} />
+          <div className="clips-empty-body">
+            <p>No clips yet. Paste a script above and hear 45 seconds free.</p>
+          </div>
+        </div>
+      ) : (
+        <ClipList label="Your recent clips" delay={80}>
+          {clips.slice(0, RECENT).map((c, i) => (
+            <ClipRow
+              key={c.id}
+              index={i}
+              clip={c}
+              playing={playingId === c.id}
+              onToggle={() => onToggle(c.id)}
+              onEnded={onEnded}
+            />
+          ))}
+        </ClipList>
+      )}
+    </section>
+  );
+}
+
 export default function Dashboard() {
   const session = useSession();
   const [state, setState] = useState<State>({ kind: "loading" });
@@ -293,6 +362,7 @@ export default function Dashboard() {
   // The sidebar is for signed-in accounts only: Shell shows it once a session exists. The demo has no session.
   const Frame = API_MODE === "demo" ? AppShell : Shell;
   const stop = useCallback(() => setPlayingId(null), []);
+  const togglePlay = useCallback((id: string) => setPlayingId((p) => (p === id ? null : id)), []);
   const clips = view.kind === "ready" ? view.clips : [];
   const days = useMemo(() => lastDays(clips), [clips]);
 
@@ -323,6 +393,7 @@ export default function Dashboard() {
   const thisWeek = clips.filter((c) => new Date(c.createdAt).getTime() >= weekAgo);
   const seconds = totalSeconds(clips);
   const monthSeconds = totalSeconds(clips.filter((c) => new Date(c.createdAt).getTime() >= days[0].date.getTime()));
+  const spentUsd = ready ? (ready.account.spentUsd ?? Math.round((ready.account.spentKes / KES_PER_USD) * 100) / 100) : 0;
 
   return (
     <Frame>
@@ -332,7 +403,7 @@ export default function Dashboard() {
         <header className="dash-hero">
           <div className="dash-hero-text">
             <p className="dash-eyebrow">{`Voice for Africa · ${greeting()}, ${todayLabel()}`}</p>
-            <h1 className="dash-title">{first ? `Karibu, ${first}` : "Karibu"}</h1>
+            <RiseWords as="h1" className="dash-title" text={first ? `Karibu, ${first}` : "Karibu"} delay={60} step={90} />
             <p className="dash-tagline hand">
               African voices, given a platform.
               <svg className="dash-brush" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
@@ -340,28 +411,32 @@ export default function Dashboard() {
               </svg>
             </p>
           </div>
+          <BeadWave beads={24} className="dash-hero-wave" />
         </header>
 
         {ready && (
           <section className="dash-stats" aria-label="Your numbers">
             <Stat
+              index={0}
               icon="wave"
               label="Audio made"
-              value={minutesMade(seconds)}
+              value={<Counted value={seconds} format={minutesCounter(seconds)} />}
               note={thisWeek.length ? `${minutesMade(totalSeconds(thisWeek))} this week` : "None this week"}
             />
             <Stat
+              index={1}
               icon="play"
               label="Clips"
-              value={clips.length.toLocaleString("en-US")}
+              value={<Counted value={clips.length} format={wholeCounter} />}
               note={thisWeek.length ? `${thisWeek.length} this week` : "None this week"}
             />
             <Stat
+              index={2}
               icon="mic"
               label="Free previews today"
               value={
                 <>
-                  {ready.account.previewsLeft}
+                  <Counted value={ready.account.previewsLeft} format={wholeCounter} />
                   <span className="dash-of">{` of ${ready.account.previewsPerDay}`}</span>
                 </>
               }
@@ -375,15 +450,20 @@ export default function Dashboard() {
                   aria-valuenow={ready.account.previewsLeft}
                 >
                   {Array.from({ length: ready.account.previewsPerDay }, (_, i) => (
-                    <span key={i} className={i < ready.account.previewsLeft ? "on" : undefined} />
+                    <span
+                      key={i}
+                      className={i < ready.account.previewsLeft ? "on" : undefined}
+                      style={{ ["--i" as string]: i } as CSSProperties}
+                    />
                   ))}
                 </span>
               }
             />
             <Stat
+              index={3}
               icon="card"
               label="Spent so far"
-              value={formatUsd(ready.account.spentUsd ?? Math.round((ready.account.spentKes / KES_PER_USD) * 100) / 100)}
+              value={<Counted value={spentUsd} format={usdCounter(spentUsd)} />}
               note={ready.account.spentKes ? `Paid as ${formatKes(ready.account.spentKes)}` : "Nothing yet"}
             />
           </section>
@@ -424,34 +504,7 @@ export default function Dashboard() {
               </section>
             )}
 
-            {ready && (
-              <section className="dash-recent" aria-labelledby="recent-title">
-                <div className="dash-section-head">
-                  <h2 id="recent-title">Recent clips</h2>
-                  {clips.length > 0 && <Link href="/clips">{clips.length > RECENT ? `See all ${clips.length}` : "My clips"}</Link>}
-                </div>
-                {clips.length === 0 ? (
-                  <div className="card clips-empty">
-                    <PatternStrip pattern="beads" height={12} />
-                    <div className="clips-empty-body">
-                      <p>No clips yet. Paste a script above and hear 45 seconds free.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <ul className="clips-list" aria-label="Your recent clips">
-                    {clips.slice(0, RECENT).map((c) => (
-                      <ClipRow
-                        key={c.id}
-                        clip={c}
-                        playing={playingId === c.id}
-                        onToggle={() => setPlayingId((p) => (p === c.id ? null : c.id))}
-                        onEnded={stop}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )}
+            {ready && <RecentClips clips={clips} playingId={playingId} onToggle={togglePlay} onEnded={stop} />}
           </div>
 
           <aside className="dash-side" aria-label="Voices and plan">

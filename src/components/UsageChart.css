@@ -61,6 +61,7 @@
 }
 
 .uchart-bar {
+  transform-origin: 50% 100%;
   width: min(16px, calc(100% - 2px));
   border-radius: 4px 4px 0 0;
   background: var(--bar);
@@ -150,8 +151,52 @@
   }
 }
 
+/* First view: the bars grow up from the baseline, left to right (delays set in
+   UsageChart.tsx, about half a second end to end), then the busiest day's label
+   fades in above its bar. Transform and opacity only. */
+.uchart.is-waiting .uchart-bar {
+  transform: scaleY(0);
+}
+
+.uchart.is-waiting .uchart-peak {
+  opacity: 0;
+}
+
+.uchart.is-growing .uchart-bar {
+  animation: uchart-grow 640ms var(--ease-out, ease-out) backwards;
+  animation-delay: var(--grow, 0ms);
+}
+
+.uchart.is-growing .uchart-peak {
+  animation: uchart-peak-in 360ms ease-out backwards;
+  animation-delay: calc(var(--grow, 0ms) + 460ms);
+}
+
+@keyframes uchart-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes uchart-peak-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .uchart-bar {
     transition: none;
+  }
+  .uchart.is-waiting .uchart-bar,
+  .uchart.is-growing .uchart-bar {
+    transform: none;
+    animation: none;
+  }
+  .uchart.is-waiting .uchart-peak,
+  .uchart.is-growing .uchart-peak {
+    opacity: 1;
+    animation: none;
   }
 }

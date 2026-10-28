@@ -28,6 +28,30 @@
   line-height: 1.15;
 }
 
+/* RiseWords sets each word as an inline block; keep the space after it. */
+.listen-title .rw {
+  white-space: pre;
+}
+
+/* The drum and, under it, a wave of beads: speaking while the preview plays. */
+.listen-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.listen-wave.bead-wave {
+  height: 56px;
+  animation: listen-fade 600ms ease-out 120ms backwards;
+}
+
+@keyframes listen-fade {
+  from {
+    opacity: 0;
+  }
+}
+
 .listen-progress {
   width: 100%;
   display: flex;
@@ -86,4 +110,46 @@
 
 .listen-again {
   font-size: 15px;
+}
+
+/* The quote rises in line by line: the length, the price, the button, the note. */
+.listen-buy:not(.is-in) > * {
+  opacity: 0;
+}
+
+.listen-buy.is-in > * {
+  animation: listen-rise 520ms var(--ease-out, ease-out) backwards;
+}
+
+.listen-buy.is-in > :nth-child(1) {
+  animation-delay: 200ms;
+}
+
+.listen-buy.is-in > :nth-child(2) {
+  animation-delay: 290ms;
+}
+
+.listen-buy.is-in > :nth-child(3) {
+  animation-delay: 380ms;
+}
+
+.listen-buy.is-in > :nth-child(4) {
+  animation-delay: 460ms;
+}
+
+@keyframes listen-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listen-wave.bead-wave,
+  .listen-buy.is-in > * {
+    animation: none;
+  }
+  .listen-buy:not(.is-in) > * {
+    opacity: 1;
+  }
 }

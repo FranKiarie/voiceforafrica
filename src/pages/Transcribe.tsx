@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
+import { BeadWave, InkUnderline, RiseWords } from "../components/Motion";
 import { BeadProgress, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import {
   MAX_TRANSCRIBE_HOURS,
@@ -114,6 +115,43 @@ export default function Transcribe() {
     // A malformed escape: look it up as typed and let the server say it doesn't exist.
   }
   return <Shell>{id ? <StatusView id={id} /> : <UploadView />}</Shell>;
+}
+
+// ---- header illustration -----------------------------------------------------------
+
+// Speaker bead colour and how far each line runs, as a share of the column.
+const ART_LINES = [
+  { who: "var(--red)", run: 0.94 },
+  { who: "var(--indigo)", run: 0.72 },
+  { who: "var(--red)", run: 0.86 },
+  { who: "var(--indigo)", run: 0.58 },
+];
+
+/**
+ * Decorative: a bead wave of speech beside lines of transcript that fill in one
+ * after another, each with a speaker bead and a timestamp pill. Loops slowly;
+ * still and complete under reduced motion.
+ */
+function AudioToText() {
+  return (
+    <div className="tr-art" aria-hidden="true">
+      <BeadWave beads={11} className="tr-art-wave" />
+      <svg className="tr-art-arrow" width="18" height="18" viewBox="0 0 18 18">
+        <path d="M3 9 H14 M10 5 L14 9 L10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div className="tr-art-lines">
+        {ART_LINES.map((l, i) => (
+          <div className="tr-art-line" key={i} style={{ ["--i" as string]: i }}>
+            <span className="tr-art-who" style={{ background: l.who }} />
+            <span className="tr-art-time" />
+            <span className="tr-art-text">
+              <span className="tr-art-fill" style={{ ["--run" as string]: l.run }} />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ---- upload page -----------------------------------------------------------------
@@ -392,7 +430,13 @@ function UploadView() {
       </p>
 
       <header className="tr-head">
-        <h1 className="tr-title">Transcribe a recording</h1>
+        <AudioToText />
+        <h1 className="tr-title">
+          <RiseWords text="Transcribe a" />{" "}
+          <InkUnderline delay={560}>
+            <RiseWords text="recording" delay={140} />
+          </InkUnderline>
+        </h1>
         <p className="tr-lede muted">Upload a recording, get a transcript with timestamps and speaker labels.</p>
         <p className="tr-price">
           <strong>{TRANSCRIBE_PRICE}</strong>
@@ -852,7 +896,9 @@ function StatusView({ id }: { id: string }) {
   } else if (status === "missing") {
     body = (
       <div className="tr-wait">
-        <h1 className="tr-title">We can't find that transcript.</h1>
+        <h1 className="tr-title">
+          <RiseWords text="We can't find that transcript." />
+        </h1>
         <p className="muted">Check the link, or upload the recording again.</p>
         <Link href="/transcribe" className="btn">
           Upload a recording
@@ -862,7 +908,9 @@ function StatusView({ id }: { id: string }) {
   } else if (status === "uploading") {
     body = (
       <div className="tr-wait">
-        <h1 className="tr-title">This upload wasn't finished</h1>
+        <h1 className="tr-title">
+          <RiseWords text="This upload wasn't finished" />
+        </h1>
         {meta && <p className="faint tr-break">{meta}</p>}
         <p className="muted">Nothing was charged. Upload the recording again to get a price.</p>
         <Link href="/transcribe" className="btn">
@@ -871,15 +919,17 @@ function StatusView({ id }: { id: string }) {
       </div>
     );
   } else if (status === "paying") {
+    const payTitle =
+      t?.checkoutStarted === false
+        ? "This recording isn't paid for yet"
+        : stopped
+          ? "We haven't seen a payment yet"
+          : "Confirming your payment…";
     body = (
       <div className="tr-wait">
         {!stopped && <DrumRoll size={80} />}
         <h1 className="tr-title">
-          {t?.checkoutStarted === false
-            ? "This recording isn't paid for yet"
-            : stopped
-              ? "We haven't seen a payment yet"
-              : "Confirming your payment…"}
+          <RiseWords key={payTitle} text={payTitle} />
         </h1>
         {meta && <p className="faint tr-break">{meta}</p>}
         {stopped ? (
@@ -911,7 +961,9 @@ function StatusView({ id }: { id: string }) {
     body = (
       <div className="tr-wait">
         <DrumRoll size={80} />
-        <h1 className="tr-title">Transcribing…</h1>
+        <h1 className="tr-title">
+          <RiseWords text="Transcribing…" />
+        </h1>
         {meta && <p className="faint tr-break">{meta}</p>}
         <p className="muted">
           This usually takes a few minutes; long recordings up to about 20 minutes. You can leave and come back to this link, so bookmark it.
@@ -923,7 +975,9 @@ function StatusView({ id }: { id: string }) {
   } else if (status === "failed") {
     body = (
       <div className="tr-wait">
-        <h1 className="tr-title">We couldn't finish this transcript</h1>
+        <h1 className="tr-title">
+          <RiseWords text="We couldn't finish this transcript" />
+        </h1>
         {meta && <p className="faint tr-break">{meta}</p>}
         <p className="muted">{t?.error || "Something went wrong. We will refund you; reply to your receipt email."}</p>
         <div className="tr-links">
@@ -940,7 +994,9 @@ function StatusView({ id }: { id: string }) {
     body = (
       <div className="tr-ready">
         <div className="tr-ready-head">
-          <h1 className="tr-title">Your transcript is ready</h1>
+          <h1 className="tr-title">
+          <RiseWords text="Your transcript is ready" />
+        </h1>
           {meta && <p className="faint tr-break">{meta}</p>}
         </div>
 

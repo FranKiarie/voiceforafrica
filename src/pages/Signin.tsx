@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useState, type CSSProperties, type FormEvent } from "react";
+import { RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { getFlow } from "../flow";
 import { Link, navigate } from "../router";
@@ -79,6 +80,22 @@ export function PasswordField({
         </button>
       </div>
     </div>
+  );
+}
+
+const SETTLE_BEADS = ["var(--red)", "var(--gold)", "var(--indigo)", "var(--green)", "var(--accent)"];
+
+/**
+ * Five beads that drop in one by one and settle, above a page title. Decorative;
+ * still under reduced motion. Shared by the sign-in, sign-up, reset and legal pages.
+ */
+export function BeadSettle({ style }: { style?: CSSProperties }) {
+  return (
+    <span className="bead-settle" aria-hidden="true" style={style}>
+      {SETTLE_BEADS.map((c, i) => (
+        <span key={c} style={{ background: c, ["--i" as string]: i }} />
+      ))}
+    </span>
   );
 }
 
@@ -208,7 +225,10 @@ export default function Signin() {
       <Shell>
         <div className="narrow center signin">
           <div className="signin-head">
-            <h1 className="signin-title">Signed in</h1>
+            <BeadSettle />
+            <h1 className="signin-title">
+              <RiseWords text="Signed in" />
+            </h1>
             <p className="muted signin-who">{who ? `You're signed in as ${who}.` : "You're signed in."}</p>
           </div>
           <Link href="/dashboard" className="btn btn-block">
@@ -234,7 +254,9 @@ export default function Signin() {
         <div className="narrow center signin">
           <section className="signin-sent" aria-live="polite">
             <MailIcon />
-            <h1 className="signin-title-sm">Check your email</h1>
+            <h1 className="signin-title-sm">
+              <RiseWords text="Check your email" delay={120} />
+            </h1>
             <p className="muted">
               {sent.kind === "link"
                 ? `We sent a sign-in link to ${sent.email}. Open it on this device to sign in.`
@@ -262,7 +284,10 @@ export default function Signin() {
     <Shell>
       <div className="narrow center signin">
         <div className="signin-head">
-          <h1 className="signin-title">Sign in</h1>
+          <BeadSettle />
+          <h1 className="signin-title">
+            <RiseWords text="Sign in" />
+          </h1>
           <p className="muted">{mode === "password" ? "Welcome back." : "We'll email you a link. No password needed."}</p>
         </div>
         <form className="signin-form" onSubmit={submit} noValidate>

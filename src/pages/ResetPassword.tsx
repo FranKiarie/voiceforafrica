@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
+import { RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { Link } from "../router";
 import { supabase, useSession } from "../lib/supabase";
-import { MIN_PASSWORD, PasswordField, authErrorKind } from "./Signin";
+import { BeadSettle, MIN_PASSWORD, PasswordField, authErrorKind } from "./Signin";
 import "./Signin.css";
 
 export default function ResetPassword() {
@@ -48,7 +49,10 @@ export default function ResetPassword() {
       <Shell>
         <div className="narrow center signin">
           <div className="signin-head" aria-live="polite">
-            <h1 className="signin-title">Password changed</h1>
+            <BeadSettle />
+            <h1 className="signin-title">
+              <RiseWords text="Password changed" />
+            </h1>
             <p className="muted">Your new password is saved. You're signed in.</p>
           </div>
           <Link href="/dashboard" className="btn btn-block">
@@ -64,7 +68,10 @@ export default function ResetPassword() {
       <Shell>
         <div className="narrow center signin">
           <div className="signin-head">
-            <h1 className="signin-title">This reset link has expired.</h1>
+            <BeadSettle />
+            <h1 className="signin-title">
+              <RiseWords text="This reset link has expired." />
+            </h1>
             <p className="muted">Reset links work once and only for a short time. Ask for a new one from the sign-in page.</p>
           </div>
           <Link href="/signin" className="btn btn-block">
@@ -81,7 +88,10 @@ export default function ResetPassword() {
     <Shell>
       <div className="narrow center signin">
         <div className="signin-head">
-          <h1 className="signin-title">Choose a new password</h1>
+          <BeadSettle />
+          <h1 className="signin-title">
+            <RiseWords text="Choose a new password" />
+          </h1>
           {session.user.email && <p className="muted signin-who">{`For ${session.user.email}.`}</p>}
         </div>
         <form className="signin-form" onSubmit={submit} noValidate>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { BeadWave, RiseWords, useInView } from "../components/Motion";
 import { BeadProgress, Drum, Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
 import { PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
@@ -43,6 +44,8 @@ export default function Listen() {
   const [elapsed, setElapsed] = useState(0);
   const leftForPay = useRef(false);
   const audio = useRef<HTMLAudioElement>(null);
+  // The price rises in once the order block comes into view.
+  const [buyRef, buyIn] = useInView<HTMLDivElement>();
 
   const audioUrl = preview?.audioUrl;
   const previewLen = preview?.seconds ?? 0;
@@ -112,7 +115,7 @@ export default function Listen() {
           <p className="listen-pill faint">Preview mode: sound arrives when the voice service goes live.</p>
         )}
 
-        <h1 className="listen-title">Listen to your script</h1>
+        <RiseWords as="h1" className="listen-title" text="Listen to your script" delay={40} step={80} />
 
         {audioUrl && (
           <audio
@@ -139,7 +142,11 @@ export default function Listen() {
           </p>
         ) : (
           <>
-            <Drum size={140} playing={playing} label={playing ? "Pause the preview" : "Play the preview"} onClick={toggle} />
+            <div className="listen-player">
+              <Drum size={140} playing={playing} label={playing ? "Pause the preview" : "Play the preview"} onClick={toggle} />
+              {/* Speaks while the preview plays, breathes while it is paused. */}
+              <BeadWave beads={28} speaking={playing} className="listen-wave" />
+            </div>
 
             <div className="listen-progress">
               <BeadProgress
@@ -161,7 +168,7 @@ export default function Listen() {
           </>
         )}
 
-        <div className="listen-buy">
+        <div ref={buyRef} className={`listen-buy${buyIn ? " is-in" : ""}`}>
           <p className="muted listen-full">Full script · about {formatDuration(q.projectedSeconds)}</p>
           <p className="listen-price">{formatUsd(q.usd)}</p>
           <button type="button" className="btn btn-block" onClick={goPay}>
