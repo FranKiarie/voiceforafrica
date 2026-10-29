@@ -62,16 +62,6 @@ export function PatternDefs() {
   );
 }
 
-export function KangaBand() {
-  return (
-    <div className="kanga" aria-hidden="true">
-      <svg width="3030" height="14">
-        <rect width="3030" height="14" fill="url(#band)" />
-      </svg>
-    </div>
-  );
-}
-
 /** A small round pattern swatch, e.g. next to a voice or a country. */
 export function PatternDot({ pattern, size = 14 }: { pattern: PatternId; size?: number }) {
   const r = size / 2;
@@ -288,7 +278,7 @@ export function Footer() {
 }
 
 /**
- * Page frame: patterns, kanga band, header, content, footer.
+ * Page frame: patterns, header, content, footer.
  * Signed-in visitors get the studio frame with its sidebar on every page except the home page.
  */
 export function Shell({ step, children, footer = true }: { step?: 1 | 2 | 3 | 4; children: ReactNode; footer?: boolean }) {
@@ -299,7 +289,6 @@ export function Shell({ step, children, footer = true }: { step?: 1 | 2 | 3 | 4;
   return (
     <div className="page">
       <PatternDefs />
-      <KangaBand />
       <Header step={step} />
       <main>{children}</main>
       {footer && <Footer />}

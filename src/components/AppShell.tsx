@@ -3,7 +3,7 @@ import { API_MODE } from "../lib/api";
 import { supabase, useSession } from "../lib/supabase";
 import { Link, navigate, usePath } from "../router";
 import { Icon, type IconName } from "./icons";
-import { KangaBand, PatternDefs, ThemeToggle } from "./Shell";
+import { PatternDefs, ThemeToggle } from "./Shell";
 import "./AppShell.css";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
@@ -99,7 +99,6 @@ export function AppShell({ step, children }: { step?: 1 | 2 | 3 | 4; children: R
         Skip to content
       </a>
       <PatternDefs />
-      <KangaBand />
 
       <div ref={topBar} className="app-top">
         <Brand />

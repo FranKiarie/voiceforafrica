@@ -1,7 +1,7 @@
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
-import { BeadWave } from "../components/Motion";
+import { Flags } from "../components/Flags";
 import { Shell } from "../components/Shell";
-import { LANGUAGES, LIVE_ACCENTS, VOICES } from "../data";
+import { LANGUAGES, LIVE_ACCENTS, PREVIEW_SECONDS, VOICES } from "../data";
 import { getFlow } from "../flow";
 import { Link, navigate } from "../router";
 import { SITE_URL, supabase, useSession } from "../lib/supabase";
@@ -104,25 +104,38 @@ export type Greeting = { word: string; meaning: string };
 export const WELCOME: Greeting = { word: "Karibu", meaning: "Welcome, in Swahili" };
 export const WELCOME_BACK: Greeting = { word: "Karibu tena", meaning: "Welcome back, in Swahili" };
 
+const AUTH_POINTS = [
+  `${VOICES.length} African voices in ${LIVE_ACCENTS.length} accents`,
+  `${LANGUAGES.length} languages`,
+  `Hear ${PREVIEW_SECONDS} seconds free`,
+  "Pay with M-Pesa or card",
+];
+
 /**
- * The card the sign-in, sign-up and reset pages sit in: a warm greeting with a still
- * bead wave on one side, the form on the other. Phones get the greeting as a slim band.
+ * The card the sign-in, sign-up and reset pages sit in: the form on one side, a banner
+ * on the other with a greeting, what Mikaka Voice offers, and the flags of our accents. The
+ * form comes first in the page so keyboards and screen readers reach it first. Phones
+ * get the greeting as a slim band above the form.
  */
 export function AuthFrame({ greet, children }: { greet: Greeting; children: ReactNode }) {
   return (
     <Shell>
       <div className="auth">
-        <div className="auth-side" aria-hidden="true">
+        <div className="auth-main">{children}</div>
+        <aside className="auth-side" aria-label="Mikaka Voice">
           <div className="auth-hello">
             <p className="auth-greet" lang="sw">
               {greet.word}
             </p>
             <p className="auth-mean">{greet.meaning}</p>
           </div>
-          <BeadWave beads={22} className="auth-wave" />
-          <p className="auth-facts">{`${VOICES.length} voices · ${LIVE_ACCENTS.length} accents · ${LANGUAGES.length} languages`}</p>
-        </div>
-        <div className="auth-main">{children}</div>
+          <ul className="auth-points" role="list">
+            {AUTH_POINTS.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+          <Flags className="auth-flags" />
+        </aside>
       </div>
     </Shell>
   );

@@ -214,17 +214,6 @@ p {
   white-space: nowrap;
 }
 
-/* Kanga band */
-.kanga {
-  height: 14px;
-  overflow: hidden;
-  flex: none;
-}
-
-.kanga svg {
-  display: block;
-}
-
 /* Header */
 .site-header {
   width: 100%;

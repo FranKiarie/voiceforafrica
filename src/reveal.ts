@@ -17,7 +17,7 @@ const TARGETS = [
   "main .beads",
 ].join(",");
 
-const SKIP = "[role='dialog'], .co-layer, header, .kanga, [class*='marquee'], [class*='lang-']";
+const SKIP = "[role='dialog'], .co-layer, header, [class*='marquee'], [class*='lang-']";
 
 // Siblings that arrive together ripple in 40 ms apart, never more than 160 ms late.
 const STAGGER_MS = 40;

@@ -1,0 +1,76 @@
+/* Flags of our accents' countries (Flags.tsx). Each one sways like cloth on a pole,
+   a fold of light passing over it; neighbours move a beat apart. */
+.flags {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  gap: 14px 16px;
+}
+
+.flag {
+  position: relative;
+  width: 40px;
+  height: 30px;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  transform-origin: left center;
+  animation: flag-sway 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.27s);
+}
+
+.flag img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.flag::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgb(255 255 255 / 0.3) 38%,
+    rgb(0 0 0 / 0.16) 52%,
+    rgb(255 255 255 / 0.22) 66%,
+    transparent 80%
+  );
+  background-size: 260% 100%;
+  animation: flag-fold 3.4s linear infinite;
+  animation-delay: calc(var(--i, 0) * -0.27s);
+  pointer-events: none;
+}
+
+@keyframes flag-sway {
+  0%,
+  100% {
+    transform: perspective(220px) rotateY(0deg) skewY(0deg);
+  }
+  30% {
+    transform: perspective(220px) rotateY(-16deg) skewY(2deg);
+  }
+  70% {
+    transform: perspective(220px) rotateY(10deg) skewY(-1.5deg);
+  }
+}
+
+@keyframes flag-fold {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flag,
+  .flag::after {
+    animation: none;
+  }
+}
