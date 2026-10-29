@@ -640,7 +640,8 @@ def test_preview_refuses_a_translation_over_the_limit(fake, client, monkeypatch)
     assert fake["inserts"] == []
 
 
-@pytest.mark.parametrize("language", ["", "xx", "english", "sw-ke"])
+# "ki" and the rest were dropped after the 2026-10-29 quality test.
+@pytest.mark.parametrize("language", ["", "xx", "english", "sw-ke", "ki", "kam", "rw", "so", "ln", "ak", "pt"])
 def test_preview_refuses_unlisted_languages(fake, client, language):
     res = client.post(f"{BASE}/previews", json={**PREVIEW, "language": language, "email": "ann@example.com"})
     assert res.status_code == 400

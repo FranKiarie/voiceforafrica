@@ -45,9 +45,9 @@ def test_a_script_already_in_the_language_is_kept_word_for_word(gemini):
 
 def test_the_same_script_is_translated_once(gemini):
     calls, replies = gemini
-    replies.append(httpx.Response(200, json=_reply(False, "Wĩ mwega.")))
-    first = asyncio.run(translate.for_language("Hello there.", "ki"))
-    assert asyncio.run(translate.for_language("Hello there.", "ki")) == first
+    replies.append(httpx.Response(200, json=_reply(False, "Sannu.")))
+    first = asyncio.run(translate.for_language("Hello there.", "ha"))
+    assert asyncio.run(translate.for_language("Hello there.", "ha")) == first
     assert len(calls) == 1
 
 

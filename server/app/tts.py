@@ -109,7 +109,7 @@ def pick_model(language: str) -> str:
     """Pay as you go always renders on the premium model.
 
     supported_cascade_model keeps Swahili off Flash-Lite; the extra check covers
-    the other languages Flash-Lite does not list (Igbo, Somali, Tigrinya, Sotho).
+    the other languages Flash-Lite does not list (Igbo, Tigrinya, Sotho).
     """
     model = supported_cascade_model(settings.tts_model_premium, language, None)
     if model == _FLASH_LITE_TTS and _base_lang(language) in PREMIUM_ONLY_LANGS:

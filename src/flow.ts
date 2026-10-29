@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_PURPOSE, DEFAULT_VOICE, PURPOSES, VOICES } from "./data";
+import { DEFAULT_PURPOSE, DEFAULT_VOICE, LANGUAGES, PURPOSES, VOICES } from "./data";
 
 // State for one try-before-you-pay job, shared across the Studio, Listen, Pay
 // and Ready pages. Kept in sessionStorage so a refresh doesn't lose the script.
@@ -32,6 +32,8 @@ function load(): Flow {
     // A tab from before the voice names were introduced may hold an old voice id.
     if (!VOICES.some((v) => v.id === saved.voiceId)) saved.voiceId = DEFAULT_VOICE;
     if (!PURPOSES.some((p) => p.id === saved.purpose)) saved.purpose = DEFAULT_PURPOSE;
+    // A language we have since stopped offering.
+    if (!LANGUAGES.some((l) => l.code === saved.language)) saved.language = EMPTY.language;
     return saved;
   } catch {
     return EMPTY;

@@ -7,7 +7,7 @@ PAYG_USD_PER_MIN = 2.0
 CHARS_PER_SECOND = 15
 MAX_PAYG_CHARS = 4500
 PLAN_USD = {"starter": 15, "creator": 50, "pro": 100, "business": 350}
-PREMIUM_ONLY_LANGS = {"sw", "ig", "so", "ti", "st"}
+PREMIUM_ONLY_LANGS = {"sw", "ig", "ti", "st"}
 
 # Transcription: charged per started minute, measured by the server.
 TRANSCRIBE_USD_PER_MIN = 0.10

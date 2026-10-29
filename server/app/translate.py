@@ -23,22 +23,15 @@ _REMEMBERED = 256
 LANGUAGE_NAMES: dict[str, str] = {
     "en": "English",
     "sw": "Kiswahili (Swahili)",
-    "ki": "Gĩkũyũ (Kikuyu)",
-    "kam": "Kĩkamba (Kamba)",
     "lg": "Oluganda (Luganda)",
     "ha": "Hausa",
     "am": "Amharic",
-    "rw": "Ikinyarwanda (Kinyarwanda)",
     "ig": "Igbo",
-    "so": "Soomaali (Somali)",
-    "ln": "Lingála (Lingala)",
-    "ak": "Akan (Twi)",
     "ny": "Chinyanja (Nyanja)",
     "ti": "Tigrinya",
     "st": "Sesotho (Sotho)",
     "af": "Afrikaans",
     "fr": "French",
-    "pt": "Portuguese",
     "ar": "Arabic",
 }
 

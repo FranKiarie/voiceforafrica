@@ -11,27 +11,22 @@ export const MAX_PAYG_CHARS = 4500;
 
 export type Language = { own: string; en?: string; code: string; premiumOnly?: boolean };
 
-// Languages Gemini TTS speaks today, in their own script. Yoruba, Zulu and
-// Luo are not supported yet.
+// Languages we translate into and speak, in their own script: only those that
+// passed our translation and speech test (2026-10-29). Kikuyu, Kamba,
+// Kinyarwanda, Somali, Lingala, Twi and Portuguese did not; Yoruba, Zulu and
+// Luo are not supported by Gemini yet.
 export const LANGUAGES: Language[] = [
   { own: "English", code: "en" },
   { own: "Kiswahili", en: "Swahili", code: "sw", premiumOnly: true },
-  { own: "Gĩkũyũ", en: "Kikuyu", code: "ki" },
-  { own: "Kĩkamba", en: "Kamba", code: "kam" },
   { own: "Oluganda", en: "Luganda", code: "lg" },
   { own: "Hausa", code: "ha" },
   { own: "አማርኛ", en: "Amharic", code: "am" },
-  { own: "Ikinyarwanda", en: "Kinyarwanda", code: "rw" },
   { own: "Igbo", code: "ig", premiumOnly: true },
-  { own: "Soomaali", en: "Somali", code: "so", premiumOnly: true },
-  { own: "Lingála", en: "Lingala", code: "ln" },
-  { own: "Akan", en: "Twi", code: "ak" },
   { own: "Chinyanja", en: "Nyanja", code: "ny" },
   { own: "ትግርኛ", en: "Tigrinya", code: "ti", premiumOnly: true },
   { own: "Sesotho", en: "Sotho", code: "st", premiumOnly: true },
   { own: "Afrikaans", code: "af" },
   { own: "Français", en: "French", code: "fr" },
-  { own: "Português", en: "Portuguese", code: "pt" },
   { own: "العربية", en: "Arabic", code: "ar" },
 ];
 

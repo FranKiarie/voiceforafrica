@@ -92,7 +92,7 @@ def test_pick_model(monkeypatch):
     assert tts.pick_model("sw") == "gemini-3.8-flash-tts"
     assert tts.pick_model("en") == tts.settings.tts_model_premium
     monkeypatch.setattr(tts.settings, "tts_model_premium", "gemini-3.8-flash-lite-tts")
-    for lang in ("sw", "sw-KE", "ig", "so", "ti", "st"):
+    for lang in ("sw", "sw-KE", "ig", "ti", "st"):
         assert tts.pick_model(lang) == "gemini-3.8-flash-tts"
     assert tts.pick_model("en") == "gemini-3.8-flash-lite-tts"
 
