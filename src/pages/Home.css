@@ -327,6 +327,25 @@
   padding: 24px 24px;
 }
 
+/* Flags of our accents' countries, one row on wide screens (Flags.tsx waves them). */
+.home-flags-cap {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.home-flags {
+  justify-content: center;
+  grid-template-columns: repeat(15, 40px);
+  margin: 0 auto 24px;
+}
+
+@media (max-width: 860px) {
+  .home-flags {
+    grid-template-columns: repeat(5, 40px);
+  }
+}
+
 .lang-list {
   max-width: 1000px;
   margin: 0 auto;

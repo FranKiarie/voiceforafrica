@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Drum, PatternDot, PatternStrip, Shell } from "../components/Shell";
 import { BeadWave, InkUnderline } from "../components/Motion";
+import { Flags } from "../components/Flags";
 import { Link } from "../router";
 import { LANGUAGES, LIVE_ACCENTS, PAYG_PRICE, PREVIEW_SECONDS, VOICES, accentLabel, type Voice } from "../data";
 import { useVoiceSample } from "../lib/sample";
@@ -201,7 +202,9 @@ export default function Home() {
         <VoiceStage playingId={playingId} toggle={toggleSample} />
       </section>
 
-      <section className="home-langs" aria-label="Languages we speak">
+      <section className="home-langs" aria-label="Where our voices come from">
+        <p className="home-flags-cap faint">{`Accents from ${LIVE_ACCENTS.length} countries`}</p>
+        <Flags className="home-flags" />
         <ul className="lang-list" role="list">
           {LANGUAGES.map((l, i) => (
             <li key={l.code} lang={l.code} title={l.en} style={vars({ "--c": DOTS[i % DOTS.length] })}>
