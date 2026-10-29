@@ -83,10 +83,16 @@ export function PatternDot({ pattern, size = 14 }: { pattern: PatternId; size?: 
 }
 
 /** A thin pattern strip across the top of a card. */
-export function PatternStrip({ pattern, height = 6 }: { pattern: PatternId; height?: number }) {
+// Height of one tile of each cloth above, so a strip can shrink it to fit.
+const TILE: Record<PatternId, number> = { band: 14, beads: 12, adire: 24, kente: 32, ndebele: 36, kitenge: 28, bark: 20, mud: 20 };
+
+/** A thin band of cloth. The tile is scaled down to the band's height so every motif shows
+ *  whole; a bare 8px slice of a 28px tile would show only the clipped tops of its shapes. */
+export function PatternStrip({ pattern, height = 8 }: { pattern: PatternId; height?: number }) {
+  const s = height / TILE[pattern];
   return (
     <svg width="100%" height={height} aria-hidden="true" style={{ display: "block" }}>
-      <rect width="100%" height={height} fill={`url(#${pattern})`} />
+      <rect width={3200 / s} height={TILE[pattern]} fill={`url(#${pattern})`} transform={`scale(${s})`} />
     </svg>
   );
 }
