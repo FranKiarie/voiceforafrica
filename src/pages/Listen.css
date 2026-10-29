@@ -64,6 +64,28 @@
   font-size: 15px;
 }
 
+.listen-words {
+  width: 100%;
+  font-size: 15px;
+}
+
+.listen-words summary {
+  cursor: pointer;
+  text-align: center;
+}
+
+.listen-words p {
+  margin: 12px 0 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--chip);
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .listen-buy {
   width: 100%;
   border-top: 1px solid var(--line);

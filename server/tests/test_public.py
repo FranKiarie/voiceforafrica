@@ -92,8 +92,13 @@ def fake(monkeypatch):
         "update": update, "delete": delete,
     }.items():
         monkeypatch.setattr(db, name, fn)
+    async def for_language(script, language):
+        state["translated"] = (script, language)
+        return script, False
+
     monkeypatch.setattr(routes_public, "render_mp3", render_mp3)
     monkeypatch.setattr(routes_public, "preview_text", lambda s: s[:50])
+    monkeypatch.setattr(routes_public.translate, "for_language", for_language)
     return state
 
 
@@ -592,3 +597,51 @@ def test_cache_key_changes_with_voice_style_and_words():
     assert base != renders.cache_key("Habari yako.", "wanjiru", "sw", "documentary")
     # An old id for the same voice is the same audio.
     assert base == renders.cache_key("Habari yako.", "amara", "sw", "general")
+
+
+def test_preview_speaks_the_translation_and_returns_it(fake, client, monkeypatch):
+    async def to_swahili(script, language):
+        return "Karibu sana. Hii ni hati fupi ya majaribio ya sauti.", True
+
+    monkeypatch.setattr(routes_public.translate, "for_language", to_swahili)
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["translated"] is True
+    assert body["script"] == "Karibu sana. Hii ni hati fupi ya majaribio ya sauti."
+    assert fake["rendered"][0] == body["script"][:50]
+
+
+def test_preview_in_its_own_language_is_read_as_written(fake, client):
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"})
+    assert res.status_code == 200, res.text
+    assert res.json()["script"] == SCRIPT and res.json()["translated"] is False
+    assert fake["translated"] == (SCRIPT, "sw")
+
+
+def test_preview_translation_failure_uses_no_preview(fake, client, monkeypatch):
+    async def broken(script, language):
+        raise routes_public.translate.TranslateError("gemini-3.8-flash returned 429")
+
+    monkeypatch.setattr(routes_public.translate, "for_language", broken)
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"})
+    assert res.status_code == 503
+    assert "translate" in res.json()["detail"]
+    assert fake["inserts"] == [] and "rendered" not in fake
+
+
+def test_preview_refuses_a_translation_over_the_limit(fake, client, monkeypatch):
+    async def long_one(script, language):
+        return "a" * (routes_public.MAX_PAYG_CHARS + 1), True
+
+    monkeypatch.setattr(routes_public.translate, "for_language", long_one)
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "email": "ann@example.com"})
+    assert res.status_code == 400
+    assert fake["inserts"] == []
+
+
+@pytest.mark.parametrize("language", ["", "xx", "english", "sw-ke"])
+def test_preview_refuses_unlisted_languages(fake, client, language):
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "language": language, "email": "ann@example.com"})
+    assert res.status_code == 400
+    assert "translated" not in fake

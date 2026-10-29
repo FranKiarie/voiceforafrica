@@ -8,6 +8,8 @@ export type Flow = {
   voiceId: string;
   purpose: string;
   script: string;
+  // What the voice reads: the script, or its translation into the chosen language.
+  spoken?: string;
   email: string;
   adult: boolean;
   jobId?: string;

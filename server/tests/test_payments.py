@@ -387,7 +387,7 @@ def test_plan_checkout_rate_limited_per_email(env):
     assert blocked.json()["detail"] == "Too many checkout attempts. Please wait a little and try again."
 
 
-@pytest.mark.parametrize("language", ["", "english", "e", "EN1", "sw-KE", "s w"])
+@pytest.mark.parametrize("language", ["", "english", "e", "EN1", "sw-KE", "s w", "xx"])
 def test_payg_checkout_validates_language(env, language):
     res = env.client.post("/payg/checkout", json={**_payg_body(), "language": language})
     assert res.status_code == 400

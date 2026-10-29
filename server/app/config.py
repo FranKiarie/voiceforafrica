@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     tts_model_premium: str = "gemini-3.8-flash-tts"
     tts_model_standard: str = "gemini-3.8-flash-lite-tts"
     tts_timeout_seconds: float = 30.0
+    # Translates a script into the chosen language before it is spoken.
+    translate_model: str = "gemini-3.8-flash"
     # Transcription: the affordable speech-to-text model and the advanced general
     # model; each language has a first model, and the other takes over what it cannot do.
     transcribe_model: str = "gemini-3.5-transcribe"

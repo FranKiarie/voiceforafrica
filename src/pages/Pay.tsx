@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Shell } from "../components/Shell";
-import { ACCENTS, PURPOSES, VOICES, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
+import { ACCENTS, LANGUAGES, PURPOSES, VOICES, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { API_MODE, ApiError, confirmDemoPayment, createPaygCheckout, type PaygCheckout } from "../lib/api";
 import { resumeWithPaystack } from "../lib/paystack";
@@ -26,6 +26,8 @@ function previewId(): string | undefined {
 /** Step 3: the order and a Pay button. Paystack opens only when Pay is pressed. */
 export default function Pay() {
   const flow = useFlow();
+  // The words the preview spoke: the script, or its translation.
+  const spoken = flow.spoken?.trim() ? flow.spoken : flow.script;
   const [mode, setMode] = useState<Mode>("order");
   const [message, setMessage] = useState("");
   const [checkout, setCheckout] = useState<PaygCheckout | null>(null);
@@ -53,7 +55,7 @@ export default function Pay() {
       if (!co) {
         co = await createPaygCheckout({
           previewId: previewId(),
-          script: flow.script,
+          script: spoken,
           voiceId: flow.voiceId,
           purpose: flow.purpose,
           language: flow.language,
@@ -77,7 +79,7 @@ export default function Pay() {
       else if (err instanceof ApiError) backToOrder("Nothing was charged. Something went wrong on our side. Try again.");
       else backToOrder(NETWORK_TEXT);
     }
-  }, [flow.script, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel, backToOrder]);
+  }, [spoken, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel, backToOrder]);
 
   const onDemoPaid = useCallback(
     (ref: string) => {
@@ -96,14 +98,16 @@ export default function Pay() {
 
   if (empty) return null;
 
-  const q = quoteFor(flow.script);
+  const q = quoteFor(spoken);
   // The server prices the script with the same formula; once it answers, its figures win.
   const usd = checkout?.amountUsd ?? q.usd;
   const kes = checkout?.amountKes ?? q.kes;
   const voice = VOICES.find((v) => v.id === flow.voiceId) ?? VOICES[0];
   const accent = ACCENTS.find((a) => a.id === voice.accent)?.label;
   const purpose = PURPOSES.find((p) => p.id === flow.purpose)?.label ?? "Voice-over";
-  const script = flow.script.trim();
+  const lang = LANGUAGES.find((l) => l.code === flow.language);
+  const langLabel = lang ? (lang.en ?? lang.own) : flow.language;
+  const script = spoken.trim();
   const excerpt = script.length > EXCERPT_CHARS ? `${script.slice(0, EXCERPT_CHARS).trimEnd()}…` : script;
 
   return (
@@ -116,6 +120,10 @@ export default function Pay() {
             <div>
               <dt>Voice</dt>
               <dd>{accent ? `${voice.name} · ${accent}` : voice.name}</dd>
+            </div>
+            <div>
+              <dt>Language</dt>
+              <dd>{spoken !== flow.script ? `${langLabel} · translated` : langLabel}</dd>
             </div>
             <div>
               <dt>For</dt>

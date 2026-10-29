@@ -10,7 +10,8 @@ import { accessToken, supabase } from "./supabase";
 const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 export const API_MODE: "live" | "demo" = BASE ? "live" : "demo";
 
-export type Preview = { previewId: string; seconds: number; audioUrl?: string };
+// script: the words the voice reads, translated when the script was in another language.
+export type Preview = { previewId: string; seconds: number; audioUrl?: string; script?: string; translated?: boolean };
 export type PaygCheckout = { jobId: string; amountKes: number; amountUsd?: number; accessCode?: string };
 export type JobStatus = "paying" | "generating" | "ready" | "failed";
 /** One downloadable audio version of a paid clip. `needs` names the plan that unlocks a locked one. */

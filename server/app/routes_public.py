@@ -10,14 +10,13 @@ import asyncio
 import logging
 import hashlib
 import ipaddress
-import re
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from . import db, renders, variants
+from . import db, renders, translate, variants
 from .config import settings
 from .catalog import public_voice_id, purpose_or_default, voice_name
 from .pricing import MAX_PAYG_CHARS
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 EMAIL_RE = db.EMAIL_RE
-LANG_RE = re.compile(r"^[a-z]{2,3}$")
 MIN_SCRIPT_CHARS = 20
 # A preview is one short chunk; do not hold the request open through every retry.
 PREVIEW_RENDER_SECONDS = 120
@@ -132,19 +130,33 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         raise HTTPException(400, "Please choose one of the listed voices.")
     purpose = purpose_or_default(body.purpose)
     language = (body.language or "").strip().lower()
-    if not LANG_RE.match(language):
+    if language not in translate.LANGUAGE_NAMES:
         raise HTTPException(400, "Please choose a language.")
     email = normalise_email(body.email)
 
+    # The voice reads the language the text is written in, so a script in
+    # another language is translated first. The page shows the words it got,
+    # and pays for exactly those.
+    try:
+        spoken, translated = await translate.for_language(script, language)
+    except translate.TranslateError as e:
+        logger.warning("Translating a preview into %s failed: %s", language, e)
+        raise HTTPException(503, "We couldn't translate your script right now. Please try again in a minute.") from e
+    if len(spoken) > MAX_PAYG_CHARS:
+        raise HTTPException(
+            400, f"Translated, your script is longer than {MAX_PAYG_CHARS:,} characters. Please shorten it."
+        )
+    out = {"script": spoken, "translated": translated}
+
     # The same opening in the same voice and style was made before: reuse it.
     # A cached preview costs nothing, so it does not use a free preview.
-    text = preview_text(script)
+    text = preview_text(spoken)
     key = renders.cache_key(text, voice_id, language, purpose)
     cached = await renders.find(key)
     if cached:
         try:
             audio_url = await db.signed_url(cached["storage_path"], 3600)
-            return {"previewId": str(uuid.uuid4()), "seconds": int(cached["seconds"]), "audioUrl": audio_url}
+            return {"previewId": str(uuid.uuid4()), "seconds": int(cached["seconds"]), "audioUrl": audio_url, **out}
         except db.DbError:
             logger.warning("Cached preview %s could not be signed; rendering afresh", key[:12])
 
@@ -207,7 +219,7 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
         await _drop_reservation(preview_id)
         raise HTTPException(502, "We couldn't save your preview. Please try again.") from e
     await renders.remember(key, seconds, voice_id=voice_id, language=language, purpose=purpose, chars=len(text))
-    return {"previewId": preview_id, "seconds": seconds, "audioUrl": audio_url}
+    return {"previewId": preview_id, "seconds": seconds, "audioUrl": audio_url, **out}
 
 
 # ---- licence check --------------------------------------------------------

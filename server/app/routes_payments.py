@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -28,7 +27,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict
 
-from . import db, jobs, paystack, transcripts, variants
+from . import db, jobs, paystack, transcripts, translate, variants
 from .config import settings
 from .catalog import public_voice_id, purpose_or_default
 from .pricing import MAX_PAYG_CHARS, PLAN_USD, plan_amount, quote
@@ -37,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-LANG_RE = re.compile(r"^[a-z]{2,3}$")  # same rule as routes_public
 NOT_SWITCHED_ON = "Payments are not switched on yet."
 CHECKOUTS_PER_EMAIL_PER_HOUR = 10
 TOO_MANY_CHECKOUTS = "Too many checkout attempts. Please wait a little and try again."
@@ -94,7 +92,8 @@ async def payg_checkout(body: PaygCheckout):
     if not voice_id:
         raise HTTPException(400, "Choose one of the listed voices.")
     language = (body.language or "").strip().lower()
-    if not LANG_RE.match(language):
+    # The script is the text the preview spoke, already in this language.
+    if language not in translate.LANGUAGE_NAMES:
         raise HTTPException(400, "Choose a language.")
     email = _clean_email(body.email)
     if not paystack.is_configured():

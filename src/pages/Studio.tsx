@@ -115,7 +115,7 @@ export default function Studio() {
       recordPreview(count + 1);
       setUsed(count + 1);
       savePreview(preview);
-      setFlow({ language, voiceId, purpose, script, email: trimmed, adult: true });
+      setFlow({ language, voiceId, purpose, script, spoken: preview.script ?? script, email: trimmed, adult: true });
       navigate("/listen");
     } catch (err) {
       setBusy(false);
@@ -173,6 +173,7 @@ export default function Studio() {
             </select>
           </label>
         </div>
+        <p className="faint studio-hint">{`Script in another language? We translate it into ${lang?.en ?? lang?.own ?? "this language"} first.`}</p>
 
         <div className="studio-voice">
           <label className="field">

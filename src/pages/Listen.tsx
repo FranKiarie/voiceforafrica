@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BeadWave } from "../components/Motion";
 import { BeadProgress, Drum, Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
+import { LANGUAGES, PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
 import { useFlow } from "../flow";
 import { createPreview, type Preview } from "../lib/api";
 import "./Listen.css";
@@ -33,8 +33,12 @@ function savePreview(p: Preview) {
 export default function Listen() {
   const flow = useFlow();
   const empty = !flow.script.trim();
+  // The voice reads, and the price counts, the translation when there is one.
+  const spoken = flow.spoken?.trim() ? flow.spoken : flow.script;
+  const translated = spoken !== flow.script;
+  const lang = LANGUAGES.find((l) => l.code === flow.language);
 
-  const q = quoteFor(flow.script);
+  const q = quoteFor(spoken);
   const short = q.projectedSeconds <= PREVIEW_SECONDS;
   const voice = VOICES.find((v) => v.id === flow.voiceId) ?? VOICES[0];
 
@@ -56,7 +60,7 @@ export default function Listen() {
   useEffect(() => {
     if (empty || preview || loadError) return;
     let alive = true;
-    createPreview({ script: flow.script, voiceId: flow.voiceId, language: flow.language, email: flow.email, purpose: flow.purpose })
+    createPreview({ script: spoken, voiceId: flow.voiceId, language: flow.language, email: flow.email, purpose: flow.purpose })
       .then((p) => {
         if (!alive) return;
         savePreview(p);
@@ -68,7 +72,7 @@ export default function Listen() {
     return () => {
       alive = false;
     };
-  }, [empty, preview, loadError, flow.script, flow.voiceId, flow.language, flow.email, flow.purpose]);
+  }, [empty, preview, loadError, spoken, flow.voiceId, flow.language, flow.email, flow.purpose]);
 
   const goPay = () => {
     if (leftForPay.current) return;
@@ -164,6 +168,13 @@ export default function Listen() {
               )}
             </div>
           </>
+        )}
+
+        {translated && (
+          <details className="listen-words">
+            <summary className="muted">{`Read in ${lang?.en ?? lang?.own ?? "your language"}, translated from your script`}</summary>
+            <p>{spoken}</p>
+          </details>
         )}
 
         <div className="listen-buy">
