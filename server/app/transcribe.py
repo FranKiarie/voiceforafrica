@@ -1,12 +1,21 @@
 """Speech to text: ffmpeg cuts an upload into parts, Gemini reads each part.
 
-The affordable model, Gemini 3.5 Transcribe, goes first. It takes at most 30
-minutes per request once speaker labels or word timings are on, so parts are
-25 minutes (16 kHz mono MP3, about 6 MB). A part it cannot do (errors after its
-retries, no text, or a language it does not list) goes to the advanced model,
-Gemini 3.8 Flash, which is asked for timed JSON segments instead.
+Each language has a first model (see LANGUAGES). The affordable model, Gemini
+3.5 Transcribe, reads most; the advanced model, Gemini 3.8 Flash, asked for
+timed JSON segments, reads the languages it does better. Whichever goes first,
+the other takes over a part the first cannot do.
 
-Parts run one after another: Tier 1 allows about 10 requests a minute per model.
+Parts are 5 minutes (16 kHz mono MP3, about 1.2 MB) and run one after another,
+paced under each model's per-minute limits (Tier 1: 10 requests, and for the
+transcribe model 10,000 audio tokens, about 6.5 minutes of sound): one part
+a minute, so a 3-hour recording read by the transcribe model takes about 36
+minutes.
+
+The advanced model sometimes refuses a piece of audio outright. Sending the same
+audio again is refused again (and billed again), so a refused piece is halved and
+each half tried on its own; a piece still refused at a minute or so goes to the
+transcribe model, and is marked in the transcript if neither can read it.
+
 Speaker labels come per part, so "Speaker 1" in one part is not promised to be
 the same person in the next.
 """
@@ -20,6 +29,8 @@ import logging
 import os
 import re
 import tempfile
+import time
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -32,11 +43,16 @@ logger = logging.getLogger(__name__)
 
 INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-PART_SECONDS = 1500
+PART_SECONDS = 300
+# A refused piece is halved only while each half would still be this long.
+MIN_PIECE_SECONDS = 60
+# What Gemini counts per second of audio against the per-minute token limit.
+AUDIO_TOKENS_PER_SECOND = 25
 PRIMARY_ATTEMPTS = 4
 FALLBACK_ATTEMPTS = 3
 REQUEST_TIMEOUT = 600.0
 MAX_RETRY_WAIT = 40.0
+NOT_TRANSCRIBED = "[This part could not be transcribed]"
 
 # Accepted uploads: extension -> the Content-Type the browser must PUT with.
 FORMATS: dict[str, str] = {
@@ -56,32 +72,38 @@ FORMATS: dict[str, str] = {
     "mov": "video/quicktime",
 }
 
-# Language hints the page offers: our code -> (label, Gemini 3.5 Transcribe code).
-# None means the transcribe model does not list it, so the advanced model reads it.
-LANGUAGES: dict[str, tuple[str, str | None]] = {
-    "en": ("English", "en-GB"),
-    "sw": ("Swahili", "sw-KE"),
-    "am": ("Amharic", "am-ET"),
-    "ha": ("Hausa", "ha-NG"),
-    "af": ("Afrikaans", "af-ZA"),
-    "ar": ("Arabic", "ar-EG"),
-    "fr": ("French", "fr-FR"),
-    "pt": ("Portuguese", "pt-PT"),
-    "ln": ("Lingala", "ln-CD"),
-    "yo": ("Yoruba", None),
-    "ig": ("Igbo", None),
-    "zu": ("Zulu", None),
-    "xh": ("Xhosa", None),
-    "so": ("Somali", None),
-    "rw": ("Kinyarwanda", None),
-    "lg": ("Luganda", None),
-    "ki": ("Kikuyu", None),
-    "luo": ("Dholuo", None),
-    "sn": ("Shona", None),
-    "om": ("Oromo", None),
-    "ti": ("Tigrinya", None),
-    "wo": ("Wolof", None),
-    "tw": ("Twi", None),
+# Languages the page offers: our code -> (label, the model that reads it first).
+# From our test on African speech (October 2026): told the language, the transcribe
+# model did no better than detecting it itself, and told Amharic it dropped most
+# of the audio, so it is never told; the choice picks the first model and guides
+# the advanced model. The advanced model was clearly better on Amharic, Kikuyu and
+# Luganda, and keeps Yoruba's tone marks, which the transcribe model drops.
+MAIN = "main"
+ADVANCED = "advanced"
+LANGUAGES: dict[str, tuple[str, str]] = {
+    "en": ("English", MAIN),
+    "sw": ("Swahili", MAIN),
+    "ha": ("Hausa", MAIN),
+    "zu": ("Zulu", MAIN),
+    "af": ("Afrikaans", MAIN),
+    "ar": ("Arabic", MAIN),
+    "fr": ("French", MAIN),
+    "pt": ("Portuguese", MAIN),
+    "ln": ("Lingala", MAIN),
+    "am": ("Amharic", ADVANCED),
+    "yo": ("Yoruba", ADVANCED),
+    "ig": ("Igbo", ADVANCED),
+    "xh": ("Xhosa", ADVANCED),
+    "so": ("Somali", ADVANCED),
+    "rw": ("Kinyarwanda", ADVANCED),
+    "lg": ("Luganda", ADVANCED),
+    "ki": ("Kikuyu", ADVANCED),
+    "luo": ("Dholuo", ADVANCED),
+    "sn": ("Shona", ADVANCED),
+    "om": ("Oromo", ADVANCED),
+    "ti": ("Tigrinya", ADVANCED),
+    "wo": ("Wolof", ADVANCED),
+    "tw": ("Twi", ADVANCED),
 }
 
 
@@ -90,6 +112,68 @@ class TranscribeError(Exception):
         super().__init__(message)
         self.retryable = retryable
         self.wait = wait
+
+
+class Blocked(TranscribeError):
+    """The advanced model refused the audio or cut its answer short. The same audio
+    is refused again, so it is never re-sent as it is: it is halved instead."""
+
+
+# ---- staying under the per-minute limits -------------------------------------------
+
+
+class Pacer:
+    """Keeps one model under its per-minute request and audio-token limits.
+
+    Every send is remembered for a minute. A send that would take the last
+    minute past 90% of either limit waits until enough earlier sends are older
+    than that. A send alone in its minute always goes, so one piece over the
+    token budget is still sent rather than waiting forever.
+    """
+
+    WINDOW = 60.0
+
+    def __init__(self, requests: int, tokens: int | None = None, *, clock=time.monotonic, sleep=asyncio.sleep) -> None:
+        self.requests = max(1, int(requests * 0.9))
+        self.tokens = int(tokens * 0.9) if tokens else None
+        self.clock = clock
+        self.sleep = sleep
+        self.sent: deque[tuple[float, int]] = deque()
+        self.lock = asyncio.Lock()
+
+    def _delay(self, tokens: int) -> float:
+        now = self.clock()
+        while self.sent and now - self.sent[0][0] >= self.WINDOW:
+            self.sent.popleft()
+        if not self.sent:
+            return 0.0
+        used = sum(n for _, n in self.sent)
+        if len(self.sent) < self.requests and (self.tokens is None or used + tokens <= self.tokens):
+            return 0.0
+        return self.sent[0][0] + self.WINDOW - now + 0.05
+
+    async def wait(self, tokens: int = 0) -> None:
+        async with self.lock:
+            while (delay := self._delay(tokens)) > 0:
+                await self.sleep(delay)
+            self.sent.append((self.clock(), tokens))
+
+
+_PACERS: dict[str, Pacer] = {}
+
+
+def _pacer(model: str) -> Pacer:
+    """One pacer per model for this process (Cloud Run runs a single instance)."""
+    if model not in _PACERS:
+        if model == settings.transcribe_model:
+            _PACERS[model] = Pacer(settings.transcribe_requests_per_minute, settings.transcribe_tokens_per_minute)
+        else:
+            _PACERS[model] = Pacer(settings.transcribe_fallback_requests_per_minute)
+    return _PACERS[model]
+
+
+def audio_tokens(seconds: float) -> int:
+    return int(seconds * AUDIO_TOKENS_PER_SECOND) + 1
 
 
 @dataclass
@@ -173,6 +257,30 @@ async def split(url: str, out_dir: str, max_seconds: float) -> list[Path]:
     if code != 0 or not parts:
         raise TranscribeError("Could not read the audio: " + err.decode(errors="replace")[-300:])
     return parts
+
+
+async def halves(audio: bytes, seconds: float) -> list[tuple[bytes, float, float]]:
+    """One of our own MP3 pieces -> its two halves as (audio, start in the piece, length).
+
+    The frames are copied, not re-encoded, so the halves hold exactly the piece's sound.
+    """
+    out: list[tuple[bytes, float, float]] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        src = str(Path(tmp) / "piece.mp3")
+        Path(src).write_bytes(audio)
+        start = 0.0
+        for n, window in enumerate((["-t", f"{seconds / 2:.3f}"], ["-ss", f"{seconds / 2:.3f}"])):
+            dst = str(Path(tmp) / f"half{n}.mp3")
+            code, _, err = await _run(
+                ["ffmpeg", "-nostdin", "-v", "error", *_safe_input(src), "-i", src, *window, "-c", "copy", "-f", "mp3", dst],
+                120,
+            )
+            length = (await probe(dst)).seconds if code == 0 else None
+            if not length:
+                raise TranscribeError("Could not halve a piece: " + err.decode(errors="replace")[-300:])
+            out.append((Path(dst).read_bytes(), start, length))
+            start += length
+    return out
 
 
 # ---- reading model replies -----------------------------------------------------
@@ -264,11 +372,12 @@ def parse_fallback(body: dict, part_seconds: float) -> list[Segment]:
     raw = ""
     candidates = body.get("candidates") or []
     if not candidates:
-        raise TranscribeError("The advanced model returned no answer", retryable=True)
+        reason = (body.get("promptFeedback") or {}).get("blockReason") or "no answer"
+        raise Blocked(f"The advanced model refused the audio ({reason})")
     # A reply cut short (token limit, safety, recitation) must not pass as a full part.
     reason = str(candidates[0].get("finishReason") or "STOP")
     if reason not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
-        raise TranscribeError(f"The advanced model stopped early ({reason})", retryable=reason == "OTHER")
+        raise Blocked(f"The advanced model stopped early ({reason})")
     for part in (candidates[0].get("content") or {}).get("parts") or []:
         if part.get("text") and not part.get("thought"):
             raw += part["text"]
@@ -305,15 +414,17 @@ def _raise_for(res: httpx.Response, model: str) -> None:
     raise TranscribeError(f"{model} failed ({res.status_code}): {snippet}", retryable=retryable, wait=_retry_wait(snippet))
 
 
-async def _primary(client: httpx.AsyncClient, audio: bytes, code: str | None, speakers: bool, part_seconds: float) -> list[Segment]:
+async def _primary(client: httpx.AsyncClient, audio: bytes, speakers: bool, part_seconds: float) -> list[Segment]:
     mode: dict = {"type": "verbatim", "timestamp_granularities": ["word"]}
     if speakers:
         mode["diarization_mode"] = "speaker"
     body = {
         "model": settings.transcribe_model,
         "input": [{"type": "audio", "data": base64.b64encode(audio).decode(), "mime_type": "audio/mp3"}],
-        "generation_config": {"transcription_config": {"language_codes": [code] if code else [], "mode": mode}},
+        # No language: the model detects it (see LANGUAGES).
+        "generation_config": {"transcription_config": {"language_codes": [], "mode": mode}},
     }
+    await _pacer(settings.transcribe_model).wait(audio_tokens(part_seconds))
     res = await client.post(INTERACTIONS_URL, json=body, headers={"x-goog-api-key": settings.google_ai_api_key})
     _raise_for(res, settings.transcribe_model)
     return parse_interaction(res.json(), part_seconds)
@@ -365,6 +476,7 @@ async def _fallback(client: httpx.AsyncClient, audio: bytes, language: str | Non
             },
         },
     }
+    await _pacer(model).wait(audio_tokens(part_seconds))
     res = await client.post(GENERATE_URL.format(model=model), json=body, headers={"x-goog-api-key": settings.google_ai_api_key})
     _raise_for(res, model)
     return parse_fallback(res.json(), part_seconds)
@@ -387,25 +499,75 @@ async def _attempts(call, attempts: int) -> list[Segment]:
     raise last or TranscribeError("no attempt ran")
 
 
+def _shift(segments: list[Segment], by: float) -> list[Segment]:
+    return [Segment(s.start + by, s.end + by, s.speaker, s.text) for s in segments]
+
+
 async def transcribe_part(
     client: httpx.AsyncClient, audio: bytes, language: str | None, speakers: bool, part_seconds: float = PART_SECONDS
-) -> tuple[list[Segment], str]:
-    """One part -> (segments with times from the part's start, model that did it)."""
-    code = LANGUAGES[language][1] if language in LANGUAGES else None
-    if language not in LANGUAGES or code is not None:
+) -> tuple[list[Segment], list[str]]:
+    """One part -> (segments with times from the part's start, models that read it)."""
+    main_first = LANGUAGES.get(language or "", ("", MAIN))[1] == MAIN
+    models: list[str] = []
+
+    async def primary(piece: bytes, seconds: float) -> list[Segment]:
+        segments = await _attempts(lambda: _primary(client, piece, speakers, seconds), PRIMARY_ATTEMPTS)
+        if segments:
+            models.append(settings.transcribe_model)
+        return segments
+
+    async def backup(piece: bytes, seconds: float, *, refused: bool) -> list[Segment]:
+        """The transcribe model on a piece the advanced model refused or heard nothing in."""
         try:
-            segments = await _attempts(lambda: _primary(client, audio, code, speakers, part_seconds), PRIMARY_ATTEMPTS)
+            segments = await primary(piece, seconds)
+        except Exception as exc:  # noqa: BLE001 - one piece must not fail the whole transcript
+            logger.warning("Transcribe model could not read a %d s piece either: %s", seconds, str(exc)[:200])
+            segments = []
+        if not segments and refused:
+            logger.warning("A %d s piece could not be transcribed; it is marked in the transcript", seconds)
+            return [Segment(0.0, seconds, None, NOT_TRANSCRIBED)]
+        return segments
+
+    async def advanced(piece: bytes, seconds: float) -> list[Segment]:
+        try:
+            segments = await _attempts(lambda: _fallback(client, piece, language, speakers, seconds), FALLBACK_ATTEMPTS)
+        except Blocked as exc:
+            if seconds / 2 < MIN_PIECE_SECONDS:
+                return await backup(piece, seconds, refused=True)
+            logger.info("%s on a %d s piece; trying its halves", exc, seconds)
+            try:
+                pieces = await halves(piece, seconds)
+            except TranscribeError as split_error:
+                logger.warning("Could not halve a refused piece: %s", str(split_error)[:200])
+                return await backup(piece, seconds, refused=True)
+            out: list[Segment] = []
+            for half, start, length in pieces:
+                out.extend(_shift(await advanced(half, length), start))
+            return out
+        except Exception as exc:  # noqa: BLE001
+            if main_first:  # the transcribe model already had its turn
+                raise
+            logger.warning("Advanced model failed on a piece, using the transcribe model: %s", str(exc)[:200])
+            return await primary(piece, seconds)
+        if segments:
+            models.append(settings.transcribe_fallback_model)
+            return segments
+        return [] if main_first else await backup(piece, seconds, refused=False)
+
+    if main_first:
+        try:
+            segments = await primary(audio, part_seconds)
             if segments:
-                return _label_speakers(segments), settings.transcribe_model
+                return _label_speakers(segments), models
             logger.info("Transcribe model heard nothing in a part; asking the advanced model")
         except Exception as exc:  # noqa: BLE001 - whatever went wrong, the advanced model gets its turn
             logger.warning("Transcribe model failed on a part, using the advanced model: %s", str(exc)[:200])
-    segments = await _attempts(lambda: _fallback(client, audio, language, speakers, part_seconds), FALLBACK_ATTEMPTS)
-    return _label_speakers(segments), settings.transcribe_fallback_model
+    segments = await advanced(audio, part_seconds)
+    return _label_speakers(segments), list(dict.fromkeys(models))
 
 
 async def transcribe_file(url: str, language: str | None, speakers: bool, max_seconds: float) -> tuple[list[Segment], list[str]]:
-    """The paid-for length of a recording -> (segments with times from its start, model used per part)."""
+    """The paid-for length of a recording -> (segments with times from its start, models used per part)."""
     if not settings.google_ai_api_key:
         raise TranscribeError("Transcription is not configured")
     out: list[Segment] = []
@@ -421,10 +583,9 @@ async def transcribe_file(url: str, language: str | None, speakers: bool, max_se
                 path.unlink()
                 if not length or length < 0.5:
                     continue
-                segments, model = await transcribe_part(client, audio, language, speakers, length)
-                offset = index * PART_SECONDS
-                out.extend(Segment(s.start + offset, s.end + offset, s.speaker, s.text) for s in segments)
-                models.append(model)
+                segments, used = await transcribe_part(client, audio, language, speakers, length)
+                out.extend(_shift(segments, index * PART_SECONDS))
+                models.extend(used)
     return out, models
 
 
@@ -483,4 +644,4 @@ def to_vtt(segments: list[Segment]) -> str:
 
 
 def word_count(segments: list[Segment]) -> int:
-    return sum(len(seg.text.split()) for seg in segments)
+    return sum(len(seg.text.split()) for seg in segments if seg.text != NOT_TRANSCRIBED)

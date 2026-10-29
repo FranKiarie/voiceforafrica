@@ -763,7 +763,7 @@ function Guide() {
           <li>Choose the main language. Detect automatically can miss a language when several are mixed.</li>
           <li>One speaker close to the microphone, and as little background noise as you can.</li>
           <li>
-            Speaker labels are worked out in 25-minute parts, so on long recordings "Speaker 1" may not be the same person in every part.
+            Speaker labels are worked out in 5-minute parts, so on long recordings "Speaker 1" may not be the same person in every part.
           </li>
         </ul>
       </div>
@@ -966,7 +966,7 @@ function StatusView({ id }: { id: string }) {
         </h1>
         {meta && <p className="faint tr-break">{meta}</p>}
         <p className="muted">
-          This usually takes a few minutes; long recordings up to about 20 minutes. You can leave and come back to this link, so bookmark it.
+          It takes about a minute for every 5 minutes of audio, so a 3-hour recording can take up to an hour. You can leave and come back to this link, so bookmark it.
         </p>
         <p className="mono faint tr-url">{link}</p>
         {trouble && <p className="faint tr-note">{trouble}</p>}

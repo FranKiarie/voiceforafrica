@@ -16,10 +16,14 @@ class Settings(BaseSettings):
     tts_model_premium: str = "gemini-3.8-flash-tts"
     tts_model_standard: str = "gemini-3.8-flash-lite-tts"
     tts_timeout_seconds: float = 30.0
-    # Transcription: the affordable speech-to-text model first; the advanced
-    # general model takes over a part the first one cannot do.
+    # Transcription: the affordable speech-to-text model and the advanced general
+    # model; each language has a first model, and the other takes over what it cannot do.
     transcribe_model: str = "gemini-3.5-transcribe"
     transcribe_fallback_model: str = "gemini-3.8-flash"
+    # The Gemini project's per-minute limits (Tier 1); transcription paces itself under them.
+    transcribe_requests_per_minute: int = 10
+    transcribe_tokens_per_minute: int = 10_000
+    transcribe_fallback_requests_per_minute: int = 10
     # Private Cloud Storage bucket for customers' audio (deleted after a day).
     upload_bucket: str = "mikakavoice-uploads"
     # This service's own public URL; long transcriptions ping it so Cloud Run keeps the instance.

@@ -2,11 +2,13 @@
 
 import asyncio
 import json
+import re
 import shutil
 import struct
 import subprocess
 import types
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -85,8 +87,7 @@ def _run(coro):
 
 
 def test_part_uses_transcribe_model_when_it_works(monkeypatch):
-    async def primary(client, audio, code, speakers, part):
-        assert code == "sw-KE"
+    async def primary(client, audio, speakers, part):
         return [Segment(0, 1, "spk:0", "Habari")]
 
     async def fallback(*a):
@@ -94,8 +95,8 @@ def test_part_uses_transcribe_model_when_it_works(monkeypatch):
 
     monkeypatch.setattr(transcribe, "_primary", primary)
     monkeypatch.setattr(transcribe, "_fallback", fallback)
-    segs, model = _run(transcribe.transcribe_part(None, b"mp3", "sw", True))
-    assert model == "gemini-3.5-transcribe" and segs[0].speaker == "Speaker 1"
+    segs, models = _run(transcribe.transcribe_part(None, b"mp3", "sw", True))
+    assert models == ["gemini-3.5-transcribe"] and segs[0].speaker == "Speaker 1"
 
 
 def test_part_falls_back_when_transcribe_model_fails(monkeypatch):
@@ -110,8 +111,8 @@ def test_part_falls_back_when_transcribe_model_fails(monkeypatch):
 
     monkeypatch.setattr(transcribe, "_primary", primary)
     monkeypatch.setattr(transcribe, "_fallback", fallback)
-    segs, model = _run(transcribe.transcribe_part(None, b"mp3", None, True))
-    assert seen == ["primary"] and model == "gemini-3.8-flash" and segs[0].text == "Habari"
+    segs, models = _run(transcribe.transcribe_part(None, b"mp3", None, True))
+    assert seen == ["primary"] and models == ["gemini-3.8-flash"] and segs[0].text == "Habari"
 
 
 def test_part_falls_back_when_transcribe_model_hears_nothing(monkeypatch):
@@ -123,20 +124,7 @@ def test_part_falls_back_when_transcribe_model_hears_nothing(monkeypatch):
 
     monkeypatch.setattr(transcribe, "_primary", primary)
     monkeypatch.setattr(transcribe, "_fallback", fallback)
-    assert _run(transcribe.transcribe_part(None, b"mp3", "en", False)) == ([], "gemini-3.8-flash")
-
-
-def test_unlisted_language_goes_straight_to_advanced_model(monkeypatch):
-    async def primary(*a):
-        raise AssertionError("Yoruba is not a transcribe-model language")
-
-    async def fallback(client, audio, language, speakers, part):
-        assert language == "yo"
-        return [Segment(0, 1, None, "Ẹ káàbọ̀")]
-
-    monkeypatch.setattr(transcribe, "_primary", primary)
-    monkeypatch.setattr(transcribe, "_fallback", fallback)
-    assert _run(transcribe.transcribe_part(None, b"mp3", "yo", False))[1] == "gemini-3.8-flash"
+    assert _run(transcribe.transcribe_part(None, b"mp3", "en", False)) == ([], [])
 
 
 def test_retryable_errors_are_retried_then_fall_back(monkeypatch):
@@ -151,8 +139,303 @@ def test_retryable_errors_are_retried_then_fall_back(monkeypatch):
 
     monkeypatch.setattr(transcribe, "_primary", primary)
     monkeypatch.setattr(transcribe, "_fallback", fallback)
-    assert _run(transcribe.transcribe_part(None, b"mp3", None, False))[1] == "gemini-3.8-flash"
+    assert _run(transcribe.transcribe_part(None, b"mp3", None, False))[1] == ["gemini-3.8-flash"]
     assert len(tries) == transcribe.PRIMARY_ATTEMPTS
+
+
+# ---- routing: which model reads a language first ----------------------------------------
+
+
+def _models(monkeypatch, primary_says=None, fallback_says=None):
+    """Fake models that record who was asked, in order."""
+    asked = []
+
+    async def primary(client, audio, speakers, part):
+        asked.append("primary")
+        if isinstance(primary_says, Exception):
+            raise primary_says
+        return list(primary_says or [Segment(0, 1, "spk:0", "main")])
+
+    async def fallback(client, audio, language, speakers, part):
+        asked.append("fallback")
+        if isinstance(fallback_says, Exception):
+            raise fallback_says
+        return list(fallback_says if fallback_says is not None else [Segment(0, 1, "Speaker 1", "advanced")])
+
+    monkeypatch.setattr(transcribe, "_primary", primary)
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    return asked
+
+
+@pytest.mark.parametrize("language", ["en", "sw", "ha", "zu", None])
+def test_main_languages_go_to_the_transcribe_model_first(monkeypatch, language):
+    asked = _models(monkeypatch)
+    assert _run(transcribe.transcribe_part(None, b"mp3", language, False))[1] == ["gemini-3.5-transcribe"]
+    assert asked == ["primary"]
+
+
+@pytest.mark.parametrize("language", ["am", "yo", "ki", "lg", "luo"])
+def test_advanced_languages_go_to_the_advanced_model_first(monkeypatch, language):
+    asked = _models(monkeypatch)
+    assert _run(transcribe.transcribe_part(None, b"mp3", language, False))[1] == ["gemini-3.8-flash"]
+    assert asked == ["fallback"]
+
+
+def test_the_transcribe_model_is_never_told_the_language(monkeypatch):
+    monkeypatch.setattr(transcribe, "_PACERS", {})
+    sent = []
+
+    class Client:
+        async def post(self, url, json, headers):
+            sent.append(json)
+            return httpx.Response(200, json={"steps": [{"content": [{"type": "text", "text": "Selam"}]}]})
+
+    for language in ("am", "sw", None):
+        _run(transcribe._primary(Client(), b"mp3", False, 30))
+    assert all(body["generation_config"]["transcription_config"]["language_codes"] == [] for body in sent)
+
+
+def test_advanced_language_with_nothing_heard_asks_the_transcribe_model(monkeypatch):
+    asked = _models(monkeypatch, fallback_says=[])
+    segs, models = _run(transcribe.transcribe_part(None, b"mp3", "am", False))
+    assert asked == ["fallback", "primary"] and models == ["gemini-3.5-transcribe"] and segs[0].text == "main"
+
+
+def test_advanced_language_uses_the_transcribe_model_when_the_advanced_one_fails(monkeypatch):
+    asked = _models(monkeypatch, fallback_says=transcribe.TranscribeError("400 bad"))
+    assert _run(transcribe.transcribe_part(None, b"mp3", "ki", False))[1] == ["gemini-3.5-transcribe"]
+    assert asked == ["fallback", "primary"]
+
+
+def test_site_languages_match_the_server(monkeypatch):
+    # src/data.ts marks the advanced-first languages; keep the two lists the same.
+    import pathlib
+    ts = (pathlib.Path(__file__).resolve().parents[2] / "src" / "data.ts").read_text()
+    block = ts[ts.index("TRANSCRIBE_LANGUAGES"):]
+    block = block[: block.index("];")]
+    site = dict(re.findall(r'code: "(\w+)", label: "[^"]+"(, advanced: true)?', block))
+    assert {code: (transcribe.ADVANCED if adv else transcribe.MAIN) for code, adv in site.items() if code} == {
+        code: route for code, (_, route) in transcribe.LANGUAGES.items()
+    }
+
+
+# ---- pacing under the per-minute limits ---------------------------------------------------
+
+
+class FakeTime:
+    def __init__(self):
+        self.now = 0.0
+
+    def clock(self):
+        return self.now
+
+    async def sleep(self, seconds):
+        self.now += seconds
+
+
+def _windows_ok(sends, requests, tokens):
+    """No 60 s span holds more than the limits."""
+    for i, (start, _) in enumerate(sends):
+        inside = [n for t, n in sends[i:] if t - start < 60]
+        if len(inside) > requests or (tokens and sum(inside) > tokens):
+            return False
+    return True
+
+
+def test_pacer_spaces_five_minute_parts_a_minute_apart():
+    t = FakeTime()
+    pace = transcribe.Pacer(10, 10_000, clock=t.clock, sleep=t.sleep)
+    sends = []
+    for _ in range(36):  # a 3-hour file
+        _run(pace.wait(transcribe.audio_tokens(transcribe.PART_SECONDS)))
+        sends.append((t.now, transcribe.audio_tokens(transcribe.PART_SECONDS)))
+    assert _windows_ok(sends, 10, 10_000)
+    # 7,500 audio tokens a part: one part a minute, so the last starts about 35 minutes in.
+    assert 35 * 60 <= sends[-1][0] < 36 * 60
+
+
+def test_pacer_holds_requests_under_the_request_limit():
+    t = FakeTime()
+    pace = transcribe.Pacer(10, clock=t.clock, sleep=t.sleep)
+    sends = []
+    for _ in range(30):
+        _run(pace.wait(1_000))
+        sends.append((t.now, 1))
+    assert _windows_ok(sends, 9, None)
+    assert sends[8][0] == 0 and sends[9][0] >= 60
+
+
+def test_pacer_lets_a_lone_oversized_piece_through():
+    t = FakeTime()
+    pace = transcribe.Pacer(10, 10_000, clock=t.clock, sleep=t.sleep)
+    _run(pace.wait(50_000))
+    assert t.now == 0
+    _run(pace.wait(100))
+    assert t.now >= 60
+
+
+def test_model_calls_wait_for_the_pacer(monkeypatch):
+    waits = []
+
+    class Pace:
+        async def wait(self, tokens):
+            waits.append(tokens)
+
+    monkeypatch.setattr(transcribe, "_pacer", lambda model: Pace())
+
+    class Client:
+        async def post(self, url, json, headers):
+            if "interactions" in url:
+                return httpx.Response(200, json={"steps": []})
+            return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "[]"}]}}]})
+
+    _run(transcribe._primary(Client(), b"mp3", False, 300))
+    _run(transcribe._fallback(Client(), b"mp3", "am", False, 120))
+    assert waits == [transcribe.audio_tokens(300), transcribe.audio_tokens(120)]
+
+
+def test_parts_are_five_minutes_and_fit_the_token_budget():
+    assert transcribe.PART_SECONDS == 300
+    assert transcribe.audio_tokens(transcribe.PART_SECONDS) <= 0.9 * 10_000
+
+
+# ---- a refused piece is halved, never re-sent as it is ---------------------------------------
+
+
+def test_parse_fallback_marks_refusals_as_blocked():
+    with pytest.raises(transcribe.Blocked) as refused:
+        transcribe.parse_fallback({"promptFeedback": {"blockReason": "OTHER"}}, 60)
+    assert "OTHER" in str(refused.value) and not refused.value.retryable
+    with pytest.raises(transcribe.Blocked):
+        transcribe.parse_fallback({"candidates": [{"finishReason": "SAFETY"}]}, 60)
+
+
+def _fake_halves(monkeypatch):
+    """Pieces are byte strings naming their place, e.g. b"p" -> b"p0", b"p1"."""
+    async def halves(audio, seconds):
+        return [(audio + b"0", 0.0, seconds / 2), (audio + b"1", seconds / 2, seconds / 2)]
+
+    monkeypatch.setattr(transcribe, "halves", halves)
+
+
+def test_a_refused_part_is_halved_and_each_half_tried(monkeypatch):
+    _fake_halves(monkeypatch)
+    sent = []
+
+    async def fallback(client, audio, language, speakers, seconds):
+        sent.append(audio)
+        if audio in (b"p", b"p0"):
+            raise transcribe.Blocked("refused (OTHER)")
+        return [Segment(1.0, 2.0, None, audio.decode())]
+
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    segs, models = _run(transcribe.transcribe_part(None, b"p", "am", False, 300))
+    # Each piece is sent once: the refused 300 s part, its refused first half, that half's halves, the second half.
+    assert sent == [b"p", b"p0", b"p00", b"p01", b"p1"]
+    assert [(s.start, s.text) for s in segs] == [(1.0, "p00"), (76.0, "p01"), (151.0, "p1")]
+    assert models == ["gemini-3.8-flash"]
+
+
+def test_a_piece_still_refused_at_the_floor_goes_to_the_transcribe_model(monkeypatch):
+    _fake_halves(monkeypatch)
+    asked = []
+
+    async def fallback(client, audio, language, speakers, seconds):
+        asked.append(("fallback", audio, seconds))
+        raise transcribe.Blocked("refused (OTHER)")
+
+    async def primary(client, audio, speakers, seconds):
+        asked.append(("primary", audio, seconds))
+        return [Segment(0.5, 1.0, "spk:0", audio.decode())]
+
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    monkeypatch.setattr(transcribe, "_primary", primary)
+    segs, models = _run(transcribe.transcribe_part(None, b"p", "yo", False, 300))
+    # 300 -> 150 -> 75 s; 75 s is not halved again (37.5 s < the 60 s floor).
+    assert [a[1] for a in asked if a[0] == "fallback"] == [b"p", b"p0", b"p00", b"p01", b"p1", b"p10", b"p11"]
+    assert [(a[1], a[2]) for a in asked if a[0] == "primary"] == [(b"p00", 75), (b"p01", 75), (b"p10", 75), (b"p11", 75)]
+    assert [s.start for s in segs] == [0.5, 75.5, 150.5, 225.5]
+    assert models == ["gemini-3.5-transcribe"]
+
+
+def test_a_piece_neither_model_can_read_is_marked_not_failed(monkeypatch):
+    _fake_halves(monkeypatch)
+
+    async def fallback(client, audio, language, speakers, seconds):
+        if audio == b"p1":
+            return [Segment(0, 2, None, "sawa")]
+        raise transcribe.Blocked("refused (OTHER)")
+
+    async def primary(*a):
+        return []
+
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    monkeypatch.setattr(transcribe, "_primary", primary)
+    segs, _ = _run(transcribe.transcribe_part(None, b"p", "luo", False, 300))
+    assert [(s.start, s.end, s.text) for s in segs] == [
+        (0.0, 75.0, transcribe.NOT_TRANSCRIBED), (75.0, 150.0, transcribe.NOT_TRANSCRIBED), (150.0, 152.0, "sawa"),
+    ]
+    assert transcribe.word_count(segs) == 1
+
+
+def test_a_short_refused_piece_is_not_halved(monkeypatch):
+    async def halves(*a):
+        raise AssertionError("a 90 s piece is under twice the floor")
+
+    async def fallback(*a):
+        raise transcribe.Blocked("refused (OTHER)")
+
+    async def primary(client, audio, speakers, seconds):
+        return [Segment(0, 1, None, "ok")]
+
+    monkeypatch.setattr(transcribe, "halves", halves)
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    monkeypatch.setattr(transcribe, "_primary", primary)
+    assert _run(transcribe.transcribe_part(None, b"p", "am", False, 90))[0][0].text == "ok"
+
+
+def test_a_refused_piece_that_cannot_be_halved_goes_to_the_transcribe_model(monkeypatch):
+    async def halves(*a):
+        raise transcribe.TranscribeError("Could not halve a piece")
+
+    async def fallback(*a):
+        raise transcribe.Blocked("refused (OTHER)")
+
+    async def primary(client, audio, speakers, seconds):
+        return [Segment(0, 1, None, "ok")]
+
+    monkeypatch.setattr(transcribe, "halves", halves)
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    monkeypatch.setattr(transcribe, "_primary", primary)
+    assert _run(transcribe.transcribe_part(None, b"p", "am", False, 300))[0][0].text == "ok"
+
+
+def test_a_main_language_part_the_transcribe_model_fails_is_also_split(monkeypatch):
+    _fake_halves(monkeypatch)
+    sent = []
+
+    async def primary(client, audio, speakers, seconds):
+        if audio == b"p":
+            raise transcribe.TranscribeError("500", retryable=False)
+        return [Segment(0, 1, None, "main " + audio.decode())]
+
+    async def fallback(client, audio, language, speakers, seconds):
+        sent.append(audio)
+        if audio == b"p":
+            raise transcribe.Blocked("refused (OTHER)")
+        return [Segment(0, 1, None, audio.decode())]
+
+    monkeypatch.setattr(transcribe, "_primary", primary)
+    monkeypatch.setattr(transcribe, "_fallback", fallback)
+    segs, models = _run(transcribe.transcribe_part(None, b"p", "sw", False, 300))
+    assert sent == [b"p", b"p0", b"p1"] and [s.text for s in segs] == ["p0", "p1"]
+    assert models == ["gemini-3.8-flash"]
+
+
+def test_other_advanced_model_errors_still_fail_a_main_language_part(monkeypatch):
+    _models(monkeypatch, primary_says=transcribe.TranscribeError("500"), fallback_says=transcribe.TranscribeError("403 key"))
+    with pytest.raises(transcribe.TranscribeError, match="403"):
+        _run(transcribe.transcribe_part(None, b"mp3", "sw", False))
 
 
 # ---- documents -----------------------------------------------------------------------
@@ -556,3 +839,47 @@ def test_split_stops_at_the_paid_length(tmp_path):
     parts = asyncio.run(transcribe.split(src, str(out), max_seconds=60))
     total = sum(asyncio.run(transcribe.probe(str(p))).seconds for p in parts)
     assert 59 < total < 61.5
+
+
+@needs_ffmpeg
+def test_split_cuts_five_minute_parts(tmp_path):
+    src = _make(tmp_path, "long.mp3", "-f", "lavfi", "-i", "sine=duration=650", "-ac", "1", "-c:a", "libmp3lame", "-b:a", "32k")
+    out = tmp_path / "parts"
+    out.mkdir()
+    parts = asyncio.run(transcribe.split(src, str(out), max_seconds=3600))
+    lengths = [asyncio.run(transcribe.probe(str(p))).seconds for p in parts]
+    assert len(parts) == 3 and all(299 < n < 301.5 for n in lengths[:2]) and 49 < lengths[2] < 51
+
+
+@needs_ffmpeg
+def test_halves_keep_all_the_sound_in_order(tmp_path):
+    src = _make(tmp_path, "piece.mp3", "-f", "lavfi", "-i", "sine=duration=300", "-ac", "1", "-ar", "16000",
+                "-c:a", "libmp3lame", "-b:a", "32k")
+    (first, start1, len1), (second, start2, len2) = asyncio.run(transcribe.halves(open(src, "rb").read(), 300))
+    assert start1 == 0 and 149 < len1 < 151 and start2 == len1 and 299 < len1 + len2 < 301
+    assert first and second
+
+
+def test_transcribe_file_times_parts_from_the_recording_start(monkeypatch, tmp_path):
+    monkeypatch.setattr(transcribe.settings, "google_ai_api_key", "test")
+    parts = []
+    for n in range(3):
+        path = tmp_path / f"part{n:03d}.mp3"
+        path.write_bytes(b"mp3")
+        parts.append(path)
+
+    async def split(url, out_dir, max_seconds):
+        return parts
+
+    async def probe(url):
+        return transcribe.Probe(300.0 if not url.endswith("part002.mp3") else 50.0)
+
+    async def part(client, audio, language, speakers, seconds):
+        return [Segment(1.0, 2.0, None, "x")], ["gemini-3.5-transcribe"]
+
+    monkeypatch.setattr(transcribe, "split", split)
+    monkeypatch.setattr(transcribe, "probe", probe)
+    monkeypatch.setattr(transcribe, "transcribe_part", part)
+    segs, models = asyncio.run(transcribe.transcribe_file("https://x", "sw", False, 650))
+    assert [s.start for s in segs] == [1.0, 301.0, 601.0] and models == ["gemini-3.5-transcribe"] * 3
+
