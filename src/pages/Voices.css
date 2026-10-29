@@ -27,21 +27,13 @@
   margin-bottom: 6px;
 }
 
-/* A short string of beads under the title that draws in from the left. */
+/* A short string of beads under the title. */
 .vpage-strip {
   width: 72px;
   height: 6px;
   margin: 2px 0 10px;
   border-radius: 3px;
   overflow: hidden;
-  transform-origin: left center;
-}
-
-/* The voice count rolls up in a box as wide as the final number, so the line keeps still. */
-.vpage-count {
-  display: inline-block;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .vpage-filter {
@@ -97,8 +89,7 @@
   font-weight: 600;
 }
 
-/* The voice playing: a gold edge, a small speaking bead wave by its name, and a
-   slow pulse on its drum. */
+/* The voice playing: a gold edge and a small speaking bead wave by its name. */
 .vcard.is-playing {
   border-color: var(--gold);
 }
@@ -137,58 +128,6 @@
 .vcard-use:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-/* ---------- Motion ----------
-   Accent headings slide in as their section arrives; still under reduced motion. */
-@media screen and (prefers-reduced-motion: no-preference) {
-  .vpage-strip {
-    animation: vp-draw 700ms var(--ease-out, ease-out) 320ms backwards;
-  }
-
-  .vgroup-title:not(.is-in) {
-    opacity: 0;
-  }
-
-  .vgroup-title.is-in {
-    animation: vg-slide 520ms var(--ease-out, ease-out) backwards;
-  }
-
-  .vcard-name .vcard-wave {
-    animation: vc-fade 240ms ease backwards;
-  }
-
-  .vcard.is-playing .drum {
-    animation: vc-pulse 1.8s ease-in-out infinite alternate;
-  }
-}
-
-@keyframes vp-draw {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes vg-slide {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-}
-
-@keyframes vc-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes vc-pulse {
-  from {
-    transform: none;
-  }
-  to {
-    transform: scale(1.06);
-  }
 }
 
 @media (max-width: 480px) {

@@ -1,6 +1,7 @@
-import { useState, type CSSProperties, type FormEvent } from "react";
-import { RiseWords } from "../components/Motion";
+import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { BeadWave } from "../components/Motion";
 import { Shell } from "../components/Shell";
+import { LANGUAGES, LIVE_ACCENTS, VOICES } from "../data";
 import { getFlow } from "../flow";
 import { Link, navigate } from "../router";
 import { SITE_URL, supabase, useSession } from "../lib/supabase";
@@ -86,16 +87,44 @@ export function PasswordField({
 const SETTLE_BEADS = ["var(--red)", "var(--gold)", "var(--indigo)", "var(--green)", "var(--accent)"];
 
 /**
- * Five beads that drop in one by one and settle, above a page title. Decorative;
- * still under reduced motion. Shared by the sign-in, sign-up, reset and legal pages.
+ * A still row of five beads above a page title. Decorative. Shared by the sign-in,
+ * sign-up, reset and legal pages.
  */
 export function BeadSettle({ style }: { style?: CSSProperties }) {
   return (
     <span className="bead-settle" aria-hidden="true" style={style}>
-      {SETTLE_BEADS.map((c, i) => (
-        <span key={c} style={{ background: c, ["--i" as string]: i }} />
+      {SETTLE_BEADS.map((c) => (
+        <span key={c} style={{ background: c }} />
       ))}
     </span>
+  );
+}
+
+export type Greeting = { word: string; meaning: string };
+export const WELCOME: Greeting = { word: "Karibu", meaning: "Welcome, in Swahili" };
+export const WELCOME_BACK: Greeting = { word: "Karibu tena", meaning: "Welcome back, in Swahili" };
+
+/**
+ * The card the sign-in, sign-up and reset pages sit in: a warm greeting with a still
+ * bead wave on one side, the form on the other. Phones get the greeting as a slim band.
+ */
+export function AuthFrame({ greet, children }: { greet: Greeting; children: ReactNode }) {
+  return (
+    <Shell>
+      <div className="auth">
+        <div className="auth-side" aria-hidden="true">
+          <div className="auth-hello">
+            <p className="auth-greet" lang="sw">
+              {greet.word}
+            </p>
+            <p className="auth-mean">{greet.meaning}</p>
+          </div>
+          <BeadWave beads={22} className="auth-wave" />
+          <p className="auth-facts">{`${VOICES.length} voices · ${LIVE_ACCENTS.length} accents · ${LANGUAGES.length} languages`}</p>
+        </div>
+        <div className="auth-main">{children}</div>
+      </div>
+    </Shell>
   );
 }
 
@@ -165,12 +194,12 @@ export default function Signin() {
       const kind = authErrorKind(err);
       if (kind === "credentials") setError("Wrong email or password.");
       else if (kind === "unconfirmed") {
-        setError("Please confirm your email first — check your inbox.");
+        setError("Confirm your email first. Check your inbox.");
         setUnconfirmed(true);
       }
       else if (kind === "rate") setError(RATE_TEXT);
       else if (kind === "network") setError(NETWORK_TEXT);
-      else setError(mode === "password" ? "We couldn't sign you in. Try again." : "We couldn't send the link. Check the address and try again.");
+      else setError(mode === "password" ? "We couldn't sign you in. Try again." : "We couldn't send the link. Check the address.");
     } finally {
       setBusy(false);
     }
@@ -205,7 +234,7 @@ export default function Signin() {
       setSent({ kind: "confirm", email: value });
     } catch (err) {
       const kind = authErrorKind(err);
-      setError(kind === "rate" ? RATE_TEXT : kind === "network" ? NETWORK_TEXT : "We couldn't resend the confirmation email. Try again.");
+      setError(kind === "rate" ? RATE_TEXT : kind === "network" ? NETWORK_TEXT : "We couldn't resend the email. Try again.");
     } finally {
       setBusy(false);
     }
@@ -213,144 +242,133 @@ export default function Signin() {
 
   if (session === undefined) {
     return (
-      <Shell>
-        <div className="narrow center signin" aria-busy="true" />
-      </Shell>
+      <AuthFrame greet={WELCOME_BACK}>
+        <div className="auth-loading" aria-busy="true" />
+      </AuthFrame>
     );
   }
 
   if (session) {
     const who = session.user.email;
     return (
-      <Shell>
-        <div className="narrow center signin">
-          <div className="signin-head">
-            <BeadSettle />
-            <h1 className="signin-title">
-              <RiseWords text="Signed in" />
-            </h1>
-            <p className="muted signin-who">{who ? `You're signed in as ${who}.` : "You're signed in."}</p>
-          </div>
-          <Link href="/dashboard" className="btn btn-block">
-            Go to your dashboard
-          </Link>
-          <button
-            type="button"
-            className="signin-text-btn"
-            onClick={() => {
-              void supabase.auth.signOut();
-            }}
-          >
-            Sign out
-          </button>
+      <AuthFrame greet={WELCOME_BACK}>
+        <div className="signin-head">
+          <h1 className="signin-title">Signed in</h1>
+          <p className="muted signin-who">{who ? `You're signed in as ${who}.` : "You're signed in."}</p>
         </div>
-      </Shell>
+        <Link href="/dashboard" className="btn btn-block">
+          Go to your dashboard
+        </Link>
+        <button
+          type="button"
+          className="signin-text-btn auth-center"
+          onClick={() => {
+            void supabase.auth.signOut();
+          }}
+        >
+          Sign out
+        </button>
+      </AuthFrame>
     );
   }
 
   if (sent) {
     return (
-      <Shell>
-        <div className="narrow center signin">
-          <section className="signin-sent" aria-live="polite">
-            <MailIcon />
-            <h1 className="signin-title-sm">
-              <RiseWords text="Check your email" delay={120} />
-            </h1>
-            <p className="muted">
-              {sent.kind === "link"
-                ? `We sent a sign-in link to ${sent.email}. Open it on this device to sign in.`
-                : sent.kind === "confirm"
-                  ? `We sent a new confirmation link to ${sent.email}. Open it to finish creating your account.`
-                  : `If ${sent.email} has an account, we sent a link to set a new password. Open it to continue.`}
-            </p>
-            <button
-              type="button"
-              className="signin-text-btn"
-              onClick={() => {
-                setSent(null);
-                setError("");
-              }}
-            >
-              {sent.kind === "link" ? "Use a different email" : "Back to sign in"}
-            </button>
-          </section>
-        </div>
-      </Shell>
+      <AuthFrame greet={WELCOME_BACK}>
+        <section className="signin-sent" aria-live="polite">
+          <MailIcon />
+          <h1 className="signin-title-sm">Check your email</h1>
+          <p className="muted">
+            {sent.kind === "link"
+              ? `We sent a sign-in link to ${sent.email}. Open it on this device.`
+              : sent.kind === "confirm"
+                ? `We sent a new confirmation link to ${sent.email}.`
+                : `If ${sent.email} has an account, we sent a password reset link.`}
+          </p>
+          <button
+            type="button"
+            className="signin-text-btn"
+            onClick={() => {
+              setSent(null);
+              setError("");
+            }}
+          >
+            {sent.kind === "link" ? "Use a different email" : "Back to sign in"}
+          </button>
+        </section>
+      </AuthFrame>
     );
   }
 
   return (
-    <Shell>
-      <div className="narrow center signin">
-        <div className="signin-head">
-          <BeadSettle />
-          <h1 className="signin-title">
-            <RiseWords text="Sign in" />
-          </h1>
-          <p className="muted">{mode === "password" ? "Welcome back." : "We'll email you a link. No password needed."}</p>
-        </div>
-        <form className="signin-form" onSubmit={submit} noValidate>
-          <label className="field">
-            Email
-            <input
-              type="email"
-              name="email"
-              autoComplete="email"
-              inputMode="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? "signin-error" : undefined}
-            />
-          </label>
-          {mode === "password" && (
-            <>
-              <PasswordField
-                id="password"
-                label="Password"
-                value={password}
-                onChange={setPassword}
-                autoComplete="current-password"
-                invalid={!!error}
-                describedBy={error ? "signin-error" : undefined}
-              />
-              <button type="button" className="signin-text-btn signin-forgot" onClick={forgot} disabled={busy}>
-                Forgot password?
-              </button>
-            </>
-          )}
-          {error && (
-            <p id="signin-error" className="signin-error" role="alert">
-              {error}
-            </p>
-          )}
-          {unconfirmed && (
-            <button type="button" className="signin-text-btn" onClick={resendConfirmation} disabled={busy}>
-              Resend confirmation email
-            </button>
-          )}
-          <button type="submit" className="btn btn-block" disabled={busy}>
-            {mode === "password" ? (busy ? "Signing in…" : "Sign in") : busy ? "Sending…" : "Email me a link"}
-          </button>
-        </form>
-
-        <button
-          type="button"
-          className="signin-text-btn"
-          onClick={() => {
-            setMode(mode === "password" ? "link" : "password");
-            setError("");
-          }}
-        >
-          {mode === "password" ? "Email me a sign-in link instead" : "Use my password instead"}
-        </button>
-
-        <p className="faint signin-new">
-          New here? <Link href="/signup">Create an account</Link>
-        </p>
+    <AuthFrame greet={WELCOME_BACK}>
+      <div className="signin-head">
+        <h1 className="signin-title">Sign in</h1>
+        <p className="muted">{mode === "password" ? "Your clips and licences are waiting." : "We'll email you a sign-in link."}</p>
       </div>
-    </Shell>
+      <form className="signin-form" onSubmit={submit} noValidate>
+        <label className="field">
+          Email
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            inputMode="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "signin-error" : undefined}
+          />
+        </label>
+        {mode === "password" && (
+          <>
+            <PasswordField
+              id="password"
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="current-password"
+              invalid={!!error}
+              describedBy={error ? "signin-error" : undefined}
+            />
+            <button type="button" className="signin-text-btn signin-forgot" onClick={forgot} disabled={busy}>
+              Forgot password?
+            </button>
+          </>
+        )}
+        {error && (
+          <p id="signin-error" className="signin-error" role="alert">
+            {error}
+          </p>
+        )}
+        {unconfirmed && (
+          <button type="button" className="signin-text-btn" onClick={resendConfirmation} disabled={busy}>
+            Resend confirmation email
+          </button>
+        )}
+        <button type="submit" className="btn btn-block" disabled={busy}>
+          {mode === "password" ? (busy ? "Signing in…" : "Sign in") : busy ? "Sending…" : "Email me a link"}
+        </button>
+      </form>
+
+      <div className="auth-or" aria-hidden="true">
+        or
+      </div>
+      <button
+        type="button"
+        className="btn btn-outline btn-block"
+        onClick={() => {
+          setMode(mode === "password" ? "link" : "password");
+          setError("");
+        }}
+      >
+        {mode === "password" ? "Email me a link instead" : "Use my password instead"}
+      </button>
+
+      <p className="faint signin-new auth-foot">
+        New here? <Link href="/signup">Create an account</Link>
+      </p>
+    </AuthFrame>
   );
 }

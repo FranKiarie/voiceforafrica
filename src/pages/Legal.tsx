@@ -1,4 +1,3 @@
-import { RiseWords } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { BeadSettle } from "./Signin";
 
@@ -27,9 +26,7 @@ export default function Legal() {
     <Shell>
       <div className="narrow">
         <BeadSettle style={{ marginBottom: 14 }} />
-        <h1 style={{ fontSize: 40, marginBottom: 24 }}>
-          <RiseWords text={isTerms ? "Terms" : "Privacy"} />
-        </h1>
+        <h1 style={{ fontSize: 40, marginBottom: 24 }}>{isTerms ? "Terms" : "Privacy"}</h1>
         {isTerms ? (
           <ol style={{ margin: 0, paddingLeft: 22, display: "flex", flexDirection: "column", gap: 14 }}>
             {TERMS.map((t) => (

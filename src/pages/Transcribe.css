@@ -45,141 +45,6 @@
   overflow-wrap: anywhere;
 }
 
-/* ---- header illustration: speech becoming text (AudioToText) ---- */
-
-.tr-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  width: 100%;
-  max-width: 340px;
-  height: 64px;
-  margin: 0 auto 6px;
-}
-
-.tr-art .tr-art-wave.bead-wave {
-  flex: none;
-  height: 52px;
-  gap: 3px;
-}
-
-.tr-art .tr-art-wave .bw-bead {
-  width: 5px;
-}
-
-.tr-art-arrow {
-  flex: none;
-  color: var(--faint);
-  opacity: 0.7;
-}
-
-.tr-art-lines {
-  flex: 1;
-  min-width: 0;
-  max-width: 190px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tr-art-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 8px;
-}
-
-/* Speaker bead, timestamp pill, then the line of words. */
-.tr-art-who {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.tr-art-time {
-  flex: none;
-  width: 16px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--track);
-}
-
-.tr-art-text {
-  flex: 1;
-  min-width: 0;
-  height: 6px;
-}
-
-.tr-art-fill {
-  display: block;
-  width: calc(var(--run, 1) * 100%);
-  height: 100%;
-  border-radius: 3px;
-  background: var(--field);
-  transform-origin: left center;
-}
-
-/* Each line types in a second after the one above, holds, then clears; 8.8 s a round. */
-@media (prefers-reduced-motion: no-preference) {
-  .tr-art-fill {
-    animation: tr-type 8.8s ease-in-out calc(var(--i, 0) * 1s) infinite backwards;
-  }
-
-  .tr-art-who,
-  .tr-art-time {
-    animation: tr-meta 8.8s ease calc(var(--i, 0) * 1s) infinite backwards;
-  }
-
-  .tr-drop:not(.has-file):not(.is-over)::before {
-    animation: tr-breathe 3.6s ease-in-out infinite alternate;
-  }
-}
-
-@keyframes tr-type {
-  0% {
-    transform: scaleX(0);
-    opacity: 1;
-  }
-  10%,
-  76% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-  86% {
-    transform: scaleX(1);
-    opacity: 0;
-  }
-  100% {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-}
-
-@keyframes tr-meta {
-  0% {
-    opacity: 0;
-  }
-  3%,
-  76% {
-    opacity: 1;
-  }
-  86%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes tr-breathe {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.4;
-  }
-}
-
 /* ---- form ---- */
 
 .tr-form {
@@ -200,35 +65,7 @@
   background: var(--card);
   text-align: center;
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms var(--ease-out, ease-out);
-}
-
-/* A second, warm dashed edge over the first. Idle it breathes very faintly; while
-   a file is dragged over it turns solid, and the zone grows a touch. */
-.tr-drop::before {
-  content: "";
-  position: absolute;
-  inset: -1.5px;
-  border: 1.5px dashed var(--accent);
-  border-radius: inherit;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 160ms ease;
-}
-
-.tr-drop.is-over::before {
-  inset: -2px;
-  border: 2px solid var(--accent);
-  opacity: 1;
-}
-
-.tr-drop.is-over {
-  transform: scale(1.01);
-}
-
-.tr-drop.is-over .tr-drop-btn {
-  transform: translateY(-2px);
-  border-color: var(--accent);
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
 .tr-drop:hover,
@@ -236,8 +73,14 @@
   border-color: var(--accent);
 }
 
+/* A file dragged over: the edge turns solid orange and the zone warms. */
 .tr-drop.is-over {
+  border-style: solid;
   background: var(--chip);
+}
+
+.tr-drop.is-over .tr-drop-btn {
+  border-color: var(--accent);
 }
 
 .tr-drop.has-file {
@@ -520,6 +363,18 @@
   text-align: right;
 }
 
+/* Formats sit in two columns where there is room, so the table stays short. */
+.tr-formats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  column-gap: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.tr-formats div:first-child {
+  border-top: 0;
+}
+
 .tr-list {
   margin: 0;
   padding-left: 20px;
@@ -652,17 +507,6 @@
   .tr-title {
     font-size: 28px;
   }
-  .tr-art {
-    height: 52px;
-    gap: 10px;
-    margin-bottom: 2px;
-  }
-  .tr-art .tr-art-wave.bead-wave {
-    height: 44px;
-  }
-  .tr-art-lines {
-    gap: 6px;
-  }
   .tr-panel {
     padding: 20px 16px;
   }
@@ -696,12 +540,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tr-drop,
-  .tr-drop::before {
+  .tr-drop {
     transition: none;
-  }
-  .tr-drop.is-over,
-  .tr-drop.is-over .tr-drop-btn {
-    transform: none;
   }
 }

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
-import { AppShell, usdCounter } from "../components/AppShell";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { AppShell } from "../components/AppShell";
 import { Icon, type IconName } from "../components/icons";
-import { BeadWave, CountUp, RiseWords, useInView } from "../components/Motion";
+import { BeadWave } from "../components/Motion";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { UsageChart, lastDays } from "../components/UsageChart";
 import {
@@ -30,33 +30,10 @@ import "./Dashboard.css";
 const PLAN_NAME: Record<Plan, string> = { starter: "Starter", creator: "Creator", pro: "Pro", business: "Business" };
 const RECENT = 5;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-// The voice-over types people reach for most, with their icons.
-const TYPES: [string, IconName][] = [
-  ["radio-ad", "radio"],
-  ["commercial", "tv"],
-  ["documentary", "film"],
-  ["explainer", "play"],
-  ["phone", "phone"],
-  ["story", "book"],
-];
 // Voices offered until the account has favourites of its own: one per region, all with samples.
 const SUGGESTED = ["wanjiru", "funmi", "kwame", "nakato", "awa", "selam"];
 
 type State = { kind: "loading" } | { kind: "error" } | { kind: "signin" } | { kind: "ready"; account: Account; clips: Clip[] };
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-function todayLabel(): string {
-  const d = new Date();
-  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
-}
 
 function minutesMade(seconds: number): string {
   if (seconds < 60) return `${seconds} s`;
@@ -65,30 +42,6 @@ function minutesMade(seconds: number): string {
 }
 
 const totalSeconds = (clips: Clip[]) => clips.reduce((sum, c) => sum + (c.seconds ?? 0), 0);
-
-// Counting frames can start a hair below zero; never show "-0".
-/** Counts in the final figure's own unit (seconds or minutes) and lands on minutesMade(). */
-const minutesCounter = (final: number) => (raw: number) => {
-  const n = Math.max(0, raw);
-  if (n >= final) return minutesMade(final);
-  if (final < 60) return `${Math.round(n)} s`;
-  const m = n / 60;
-  return `${final / 60 < 10 ? m.toFixed(1) : Math.round(m)} min`;
-};
-
-const wholeCounter = (n: number) => Math.round(Math.max(0, n)).toLocaleString("en-US");
-
-/** A number that counts up when it comes into view. Screen readers get the final figure only. */
-function Counted({ value, format }: { value: number; format: (n: number) => string }) {
-  return (
-    <>
-      <span className="sr-only">{format(value)}</span>
-      <span aria-hidden="true">
-        <CountUp value={value} format={format} duration={1000} />
-      </span>
-    </>
-  );
-}
 
 /** Opens the studio with some settings already chosen. */
 function startWith(patch: { purpose?: string; voiceId?: string }) {
@@ -113,7 +66,6 @@ function QuickStart() {
     <form className="card dash-quick" onSubmit={submit} aria-labelledby="quick-title">
       <div className="dash-card-head">
         <h2 id="quick-title">Start a voice-over</h2>
-        <span className="faint">Hear 45 seconds free first</span>
       </div>
       <label className="sr-only" htmlFor="dash-script">
         Script
@@ -124,7 +76,7 @@ function QuickStart() {
         rows={4}
         value={script}
         maxLength={MAX_PAYG_CHARS}
-        placeholder="Paste the words you want spoken…"
+        placeholder="Paste your script…"
         onChange={(e) => setScript(e.target.value)}
       />
       <div className="dash-quick-row">
@@ -159,16 +111,16 @@ function QuickStart() {
       </div>
       <p className="faint dash-quick-note" aria-live="polite">
         {q.chars > 0
-          ? `${q.chars.toLocaleString("en-US")} characters · about ${formatDuration(q.projectedSeconds)} · ${formatUsd(q.usd)} for the full clip`
-          : `${PAYG_PRICE} after your free preview.`}
+          ? `${q.chars.toLocaleString("en-US")} characters · about ${formatDuration(q.projectedSeconds)} · ${formatUsd(q.usd)} in full`
+          : `45 seconds free, then ${PAYG_PRICE}`}
       </p>
     </form>
   );
 }
 
-function Stat({ icon, label, value, note, index }: { icon: IconName; label: string; value: ReactNode; note: ReactNode; index: number }) {
+function Stat({ icon, label, value, note }: { icon: IconName; label: string; value: ReactNode; note: ReactNode }) {
   return (
-    <div className="card dash-stat" style={{ ["--i" as string]: index } as CSSProperties}>
+    <div className="card dash-stat">
       <span className="dash-stat-icon">
         <Icon name={icon} size={18} />
       </span>
@@ -247,7 +199,7 @@ function PlanCard({ account }: { account: Account }) {
         ) : (
           <>
             <p className="dash-plan">Pay as you go</p>
-            <p className="faint">{`${PAYG_PRICE}, one language per clip. Plans start at $15 a month.`}</p>
+            <p className="faint">{`${PAYG_PRICE}, one language per clip; plans from $15 a month.`}</p>
           </>
         )}
         <Link href="/pricing" className="btn btn-outline btn-block">
@@ -258,33 +210,7 @@ function PlanCard({ account }: { account: Account }) {
   );
 }
 
-function Types() {
-  return (
-    <section className="card dash-card" aria-labelledby="types-title">
-      <div className="dash-card-head">
-        <h2 id="types-title">Start from a type</h2>
-      </div>
-      <ul className="dash-types">
-        {TYPES.map(([id, icon]) => {
-          const p = PURPOSES.find((x) => x.id === id);
-          return p ? (
-            <li key={id}>
-              <button type="button" onClick={() => startWith({ purpose: id })}>
-                <span className="dash-type-icon">
-                  <Icon name={icon} size={18} />
-                </span>
-                <span className="dash-type-label">{p.label}</span>
-                <Icon name="arrow" size={16} className="dash-type-arrow" />
-              </button>
-            </li>
-          ) : null;
-        })}
-      </ul>
-    </section>
-  );
-}
-
-/** Recent clips: the heading and rows rise in one after another when they come into view. */
+/** The latest few clips. */
 function RecentClips({
   clips,
   playingId,
@@ -296,9 +222,8 @@ function RecentClips({
   onToggle: (id: string) => void;
   onEnded: () => void;
 }) {
-  const [ref, seen] = useInView<HTMLElement>();
   return (
-    <section ref={ref} className={`dash-recent${seen ? " is-in" : ""}`} aria-labelledby="recent-title">
+    <section className="dash-recent" aria-labelledby="recent-title">
       <div className="dash-section-head">
         <h2 id="recent-title">Recent clips</h2>
         {clips.length > 0 && <Link href="/clips">{clips.length > RECENT ? `See all ${clips.length}` : "My clips"}</Link>}
@@ -307,15 +232,14 @@ function RecentClips({
         <div className="card clips-empty">
           <PatternStrip pattern="beads" height={12} />
           <div className="clips-empty-body">
-            <p>No clips yet. Paste a script above and hear 45 seconds free.</p>
+            <p>No clips yet.</p>
           </div>
         </div>
       ) : (
-        <ClipList label="Your recent clips" delay={80}>
-          {clips.slice(0, RECENT).map((c, i) => (
+        <ClipList label="Your recent clips">
+          {clips.slice(0, RECENT).map((c) => (
             <ClipRow
               key={c.id}
-              index={i}
               clip={c}
               playing={playingId === c.id}
               onToggle={() => onToggle(c.id)}
@@ -398,18 +322,11 @@ export default function Dashboard() {
   return (
     <Frame>
       <div className="dash">
-        {API_MODE === "demo" && <p className="faint clips-demo">Demo mode: showing clips made in this browser.</p>}
+        {API_MODE === "demo" && <p className="faint clips-demo">Demo: clips made in this browser.</p>}
 
         <header className="dash-hero">
           <div className="dash-hero-text">
-            <p className="dash-eyebrow">{`Voice for Africa · ${greeting()}, ${todayLabel()}`}</p>
-            <RiseWords as="h1" className="dash-title" text={first ? `Karibu, ${first}` : "Karibu"} delay={60} step={90} />
-            <p className="dash-tagline hand">
-              African voices, given a platform.
-              <svg className="dash-brush" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M3 8 C 70 2, 150 11, 297 4" />
-              </svg>
-            </p>
+            <h1 className="dash-title">{first ? `Karibu, ${first}` : "Karibu"}</h1>
           </div>
           <BeadWave beads={24} className="dash-hero-wave" />
         </header>
@@ -417,26 +334,23 @@ export default function Dashboard() {
         {ready && (
           <section className="dash-stats" aria-label="Your numbers">
             <Stat
-              index={0}
               icon="wave"
               label="Audio made"
-              value={<Counted value={seconds} format={minutesCounter(seconds)} />}
+              value={minutesMade(seconds)}
               note={thisWeek.length ? `${minutesMade(totalSeconds(thisWeek))} this week` : "None this week"}
             />
             <Stat
-              index={1}
               icon="play"
               label="Clips"
-              value={<Counted value={clips.length} format={wholeCounter} />}
+              value={clips.length.toLocaleString("en-US")}
               note={thisWeek.length ? `${thisWeek.length} this week` : "None this week"}
             />
             <Stat
-              index={2}
               icon="mic"
               label="Free previews today"
               value={
                 <>
-                  <Counted value={ready.account.previewsLeft} format={wholeCounter} />
+                  {ready.account.previewsLeft.toLocaleString("en-US")}
                   <span className="dash-of">{` of ${ready.account.previewsPerDay}`}</span>
                 </>
               }
@@ -450,20 +364,15 @@ export default function Dashboard() {
                   aria-valuenow={ready.account.previewsLeft}
                 >
                   {Array.from({ length: ready.account.previewsPerDay }, (_, i) => (
-                    <span
-                      key={i}
-                      className={i < ready.account.previewsLeft ? "on" : undefined}
-                      style={{ ["--i" as string]: i } as CSSProperties}
-                    />
+                    <span key={i} className={i < ready.account.previewsLeft ? "on" : undefined} />
                   ))}
                 </span>
               }
             />
             <Stat
-              index={3}
               icon="card"
-              label="Spent so far"
-              value={<Counted value={spentUsd} format={usdCounter(spentUsd)} />}
+              label="Spent"
+              value={formatUsd(spentUsd)}
               note={ready.account.spentKes ? `Paid as ${formatKes(ready.account.spentKes)}` : "Nothing yet"}
             />
           </section>
@@ -476,7 +385,7 @@ export default function Dashboard() {
             {view.kind === "loading" && (
               <div className="clips-status" role="status">
                 <DrumRoll />
-                <span className="muted">Loading your dashboard…</span>
+                <span className="muted">Loading…</span>
               </div>
             )}
 
@@ -494,10 +403,7 @@ export default function Dashboard() {
             {ready && (
               <section className="card dash-chart" aria-labelledby="chart-title">
                 <div className="dash-card-head">
-                  <div>
-                    <h2 id="chart-title">Audio made</h2>
-                    <span className="faint">Last 30 days</span>
-                  </div>
+                  <h2 id="chart-title">Last 30 days</h2>
                   <span className="dash-chart-total">{monthSeconds ? formatDuration(monthSeconds) : "0 s"}</span>
                 </div>
                 <UsageChart days={days} />
@@ -510,7 +416,6 @@ export default function Dashboard() {
           <aside className="dash-side" aria-label="Voices and plan">
             {ready && <YourVoices clips={clips} />}
             {ready && <PlanCard account={ready.account} />}
-            <Types />
           </aside>
         </div>
       </div>

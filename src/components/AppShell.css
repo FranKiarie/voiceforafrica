@@ -48,18 +48,6 @@
   outline: none;
 }
 
-/* Nav icons lift and tilt like a hand on a drum when hovered. */
-.app-nav a svg {
-  transition: transform 220ms var(--ease-spring, ease);
-}
-
-/* Mouse only: on a phone a tapped icon would stay tilted. */
-@media (hover: hover) and (pointer: fine) {
-  .app-nav a:hover svg {
-    transform: translateY(-2px) rotate(-8deg);
-  }
-}
-
 .app-step {
   max-width: 600px;
   margin: 0 auto 4px;
@@ -72,7 +60,7 @@
   color: var(--faint);
 }
 
-/* Step beads: a gold bead fills each step reached. */
+/* Step beads: a gold bead for each step reached; the current one a touch larger. */
 .app-step-beads {
   display: inline-flex;
   align-items: center;
@@ -80,32 +68,14 @@
 }
 
 .app-step-bead {
-  position: relative;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--track);
-  transition: transform 300ms var(--ease-out, ease);
-  transition-delay: var(--d, 0ms);
 }
 
-.app-step-bead::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
+.app-step-bead.on {
   background: var(--gold);
-  opacity: 0;
-  transform: scale(0.2);
-  transition:
-    opacity 320ms ease,
-    transform 420ms var(--ease-out, ease);
-  transition-delay: var(--d, 0ms);
-}
-
-.app-step-bead.on::after {
-  opacity: 1;
-  transform: none;
 }
 
 .app-step-bead.now {
@@ -169,78 +139,9 @@
 }
 
 .app-nav {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-/* The lit item's pill. It sits under the links and glides to the page's item; a small
-   orange bead rides along on the sidebar's edge. Placed from AppShell.tsx. */
-.app-nav-mark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--chip);
-  pointer-events: none;
-}
-
-.app-nav-mark::before {
-  content: "";
-  position: absolute;
-  left: -11px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  margin-top: -3px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.app-nav-mark.is-gliding {
-  transition: transform 380ms var(--ease-out, ease);
-}
-
-.app-nav-mark.is-fresh {
-  animation: app-mark-in 320ms ease-out backwards;
-}
-
-@keyframes app-mark-in {
-  from {
-    opacity: 0;
-  }
-}
-
-/* Links paint above the pill. */
-.app-nav a {
-  position: relative;
-}
-
-.app-nav.has-mark a[aria-current="page"] {
-  background: transparent;
-}
-
-/* First signed-in page only: the items ease in from the left, one after another. */
-@keyframes app-nav-in {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-}
-
-@media (min-width: 901px) {
-  .app-nav.is-intro a {
-    animation: app-nav-in 420ms var(--ease-out, ease) backwards;
-    animation-delay: calc(80ms + var(--i, 0) * 45ms);
-  }
-
-  .app-nav.is-intro .app-nav-mark {
-    animation: app-mark-in 420ms ease-out backwards;
-    animation-delay: calc(80ms + var(--active, 0) * 45ms);
-  }
 }
 
 .app-nav a {
@@ -347,15 +248,10 @@
   padding: 5px 10px;
 }
 
+/* The page beside the sidebar fades in on a page change (motion.css). */
 .app-main {
   min-width: 0;
   padding: 36px 44px 88px;
-  animation: route-in 480ms var(--ease-out, ease) both;
-}
-
-/* The sidebar stays put between pages: only the page beside it rises in. */
-.route:has(> .app) {
-  animation: none;
 }
 
 /* Pages that also render outside the app frame drop their own centring here. */
@@ -450,17 +346,6 @@
   .app-main {
     padding: 28px 24px 72px;
   }
-
-  /* Phones: the items ease in each time the drawer opens. */
-  .app[data-open] .app-nav a {
-    animation: app-nav-in 360ms var(--ease-out, ease) backwards;
-    animation-delay: calc(90ms + var(--i, 0) * 35ms);
-  }
-
-  .app[data-open] .app-nav-mark {
-    animation: app-mark-in 360ms ease-out backwards;
-    animation-delay: calc(90ms + var(--active, 0) * 35ms);
-  }
 }
 
 @media (max-width: 480px) {
@@ -477,22 +362,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .app-side,
-  .app[data-open] .app-side,
-  .app-nav a svg,
-  .app-nav-mark.is-gliding,
-  .app-step-bead,
-  .app-step-bead::after {
+  .app[data-open] .app-side {
     transition: none;
-  }
-  .app-main,
-  .app-nav-mark.is-fresh,
-  .app-nav.is-intro a,
-  .app-nav.is-intro .app-nav-mark,
-  .app[data-open] .app-nav a,
-  .app[data-open] .app-nav-mark {
-    animation: none;
-  }
-  .app-nav a:hover svg {
-    transform: none;
   }
 }

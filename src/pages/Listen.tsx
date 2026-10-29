@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BeadWave, RiseWords, useInView } from "../components/Motion";
+import { BeadWave } from "../components/Motion";
 import { BeadProgress, Drum, Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
 import { PREVIEW_SECONDS, VOICES, formatClock, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
@@ -44,8 +44,6 @@ export default function Listen() {
   const [elapsed, setElapsed] = useState(0);
   const leftForPay = useRef(false);
   const audio = useRef<HTMLAudioElement>(null);
-  // The price rises in once the order block comes into view.
-  const [buyRef, buyIn] = useInView<HTMLDivElement>();
 
   const audioUrl = preview?.audioUrl;
   const previewLen = preview?.seconds ?? 0;
@@ -112,10 +110,10 @@ export default function Listen() {
     <Shell step={2} footer={false}>
       <div className="listen">
         {preview && !audioUrl && (
-          <p className="listen-pill faint">Preview mode: sound arrives when the voice service goes live.</p>
+          <p className="listen-pill faint">Preview mode: no sound until the voice service is live.</p>
         )}
 
-        <RiseWords as="h1" className="listen-title" text="Listen to your script" delay={40} step={80} />
+        <h1 className="listen-title">Your preview</h1>
 
         {audioUrl && (
           <audio
@@ -131,7 +129,7 @@ export default function Listen() {
 
         {loadError ? (
           <div className="listen-progress">
-            <p role="alert">We couldn't make your preview just now.</p>
+            <p role="alert">We couldn't make your preview.</p>
             <button type="button" className="btn" onClick={() => setLoadError(false)}>
               Try again
             </button>
@@ -161,20 +159,20 @@ export default function Listen() {
               </p>
               {short && (
                 <p className="faint listen-short">
-                  Short script: you hear it all, with a soft chime. Paying unlocks the clean file.
+                  You hear it all with a soft chime; pay for the clean file.
                 </p>
               )}
             </div>
           </>
         )}
 
-        <div ref={buyRef} className={`listen-buy${buyIn ? " is-in" : ""}`}>
+        <div className="listen-buy">
           <p className="muted listen-full">Full script · about {formatDuration(q.projectedSeconds)}</p>
           <p className="listen-price">{formatUsd(q.usd)}</p>
           <button type="button" className="btn btn-block" onClick={goPay}>
             Continue to payment
           </button>
-          <p className="faint listen-auto">{`Your order opens when the preview ends · M-Pesa or card, charged as ${formatKes(q.kes)}`}</p>
+          <p className="faint listen-auto">{`Opens when the preview ends · ${formatKes(q.kes)} by M-Pesa or card`}</p>
         </div>
 
         <Link href="/studio" className="muted listen-again">

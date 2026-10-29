@@ -10,47 +10,8 @@
   text-align: center;
 }
 
-/* The stamp lands (styles.css), and a few coloured beads are thrown out around it
-   once, coming to rest where they fall. Nothing loops. */
-.ready-stamp {
-  position: relative;
-  display: inline-flex;
-  width: 56px;
-  height: 56px;
-}
-
-.ready-stamp .stamp {
-  position: relative;
-  z-index: 1;
-}
-
-.ready-burst {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  border-radius: 50%;
-  translate: -50% -50%;
-  transform: translate(var(--x), var(--y));
-  animation: ready-burst 760ms cubic-bezier(0.15, 0.75, 0.25, 1) backwards;
-  animation-delay: calc(640ms + var(--d, 0ms));
-}
-
-@keyframes ready-burst {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.3);
-  }
-  25% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--x), var(--y));
-  }
-}
-
-/* While the clip is made: a wave of beads speaking under the drum. */
-.ready-wave.bead-wave {
-  height: 40px;
+.ready-star {
+  flex: none;
 }
 
 .ready-head {
@@ -104,53 +65,11 @@
   margin-bottom: 12px;
 }
 
-/* The versions ease in one by one (Clips.css); the open panel itself stays put. */
-.ready .ready-versions[open] > .versions {
-  animation: none;
-}
-
-@supports selector(::details-content) {
-  .ready .ready-versions::details-content {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
 .ready-licence {
   width: 100%;
   overflow: hidden;
   text-align: left;
   border-radius: 16px;
-}
-
-/* The licence card rises in once the stamp has landed. reveal.ts would lift it at
-   once with the rest of the page; the card keeps its own, later, timing. */
-.ready .ready-licence[data-reveal] {
-  opacity: 1;
-  animation: none;
-}
-
-.ready .ready-licence:not(.is-in),
-.ready .ready-licence:not(.is-in)[data-reveal] {
-  opacity: 0;
-}
-
-.ready .ready-licence.is-in,
-.ready .ready-licence.is-in[data-reveal] {
-  animation: ready-rise 560ms var(--ease-out, ease-out) 720ms backwards;
-}
-
-.ready .ready-licence.is-in.is-late,
-.ready .ready-licence.is-in.is-late[data-reveal] {
-  animation-delay: 0ms;
-}
-
-@keyframes ready-rise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
 }
 
 .ready-licence-body {
@@ -204,16 +123,4 @@
 .ready-foot a {
   color: var(--muted);
   font-weight: 700;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ready-burst,
-  .ready .ready-licence.is-in,
-  .ready .ready-licence.is-in[data-reveal] {
-    animation: none;
-  }
-  .ready .ready-licence:not(.is-in),
-  .ready .ready-licence:not(.is-in)[data-reveal] {
-    opacity: 1;
-  }
 }

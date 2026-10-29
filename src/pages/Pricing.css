@@ -46,52 +46,6 @@
   color: var(--bg);
 }
 
-/* A dark pill slides to the chosen period (PeriodSwitch in Pricing.tsx). It is two
-   round caps and a stretched middle, moved by transform only, so the ends stay round
-   while it changes width. Until it is measured, the pressed button keeps its own fill. */
-.period {
-  position: relative;
-  isolation: isolate;
-}
-
-.period.has-slider button[aria-pressed="true"] {
-  background: transparent;
-}
-
-/* The label turns light as the pill arrives under it, not before. */
-.period.has-slider button {
-  transition:
-    transform var(--t-quick, 160ms) var(--ease-out, ease-out),
-    background-color var(--t-quick, 160ms) ease,
-    color 240ms ease 90ms;
-}
-
-.period-slider {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-.period-slider span {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: var(--ph);
-  background: var(--text);
-  transition: transform 360ms var(--ease-out, ease-out);
-}
-
-.period-slider .ps-cap {
-  width: var(--ph);
-  border-radius: 50%;
-}
-
-.period-slider .ps-mid {
-  width: 100px;
-  transform-origin: 0 0;
-}
-
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
@@ -137,7 +91,6 @@
   font-weight: 600;
   letter-spacing: -0.035em;
   font-size: 36px;
-  /* Even digits, so the figure doesn't jitter while it counts. */
   font-variant-numeric: tabular-nums;
 }
 
@@ -146,27 +99,10 @@
 }
 
 /* Grows so every card's button sits at the bottom. */
-.tier-text {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .tier-line {
   margin: 0;
+  flex-grow: 1;
   font-size: 15px;
-}
-
-.tier-extra {
-  margin: 0;
-  font-size: 15px;
-}
-
-.tier-extra a {
-  color: var(--muted);
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .pricing-compare {
@@ -309,59 +245,5 @@
   .tier-body,
   .more-body {
     padding: 22px;
-  }
-}
-
-/* ---------- Motion ----------
-   Plan cards and the transcription/dubbing cards rise in as they come into view,
-   a few at a time (useRiseIn). This rise replaces the site-wide scroll reveal for
-   these cards, so each card moves once. Prices count up (PriceCount); the period
-   label fades when it changes; the comparison rows fade in, top to bottom, each
-   time the table opens. Nothing is hidden or moves under reduced motion or in print. */
-@media screen and (prefers-reduced-motion: no-preference) {
-  .pricing-grid .tier:not([data-rise="in"]),
-  .more-grid .more-card:not([data-rise="in"]) {
-    opacity: 0;
-  }
-
-  .pricing-grid .tier[data-rise="in"],
-  .more-grid .more-card[data-rise="in"] {
-    animation: pr-rise 560ms var(--ease-out, ease-out) var(--rise-delay, 0ms) backwards;
-  }
-
-  .tier-per {
-    animation: pr-fade 260ms ease backwards;
-  }
-
-  .pricing-compare details[open] tbody tr {
-    animation: pr-row 360ms ease calc(var(--r, 0) * 28ms + 80ms) backwards;
-  }
-}
-
-@keyframes pr-rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-}
-
-@keyframes pr-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-/* Opacity only: the rule lines belong to the table, so moving a row would slide
-   its words away from its line. */
-@keyframes pr-row {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .period-slider span,
-  .period.has-slider button {
-    transition: none;
   }
 }

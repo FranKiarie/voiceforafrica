@@ -1,7 +1,6 @@
-import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { formatDuration } from "../data";
 import type { Clip } from "../lib/api";
-import { useInView } from "./Motion";
 import "./UsageChart.css";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -17,8 +16,6 @@ const longDayLabel = (d: Date) => `${WEEKDAYS[d.getDay()]} ${dayLabel(d)}`;
 const tickLabel = (s: number) => (s < 60 ? `${s} s` : `${s / 60} min`);
 // Labels near either end of the chart hang inwards so they stay inside the card.
 const edgeOf = (i: number, n: number) => (i < 3 ? " is-start" : i > n - 4 ? " is-end" : "");
-// The bars grow once, the first time the chart scrolls into view; then the motion is dropped.
-const GROW_DONE_MS = 1700;
 
 /** Seconds of audio and clip count for each of the last `count` days, oldest first, in local time. */
 export function lastDays(clips: Clip[], count = 30): Day[] {
@@ -47,14 +44,6 @@ export function lastDays(clips: Clip[], count = 30): Day[] {
 /** Column chart of audio made per day. Hover or arrow keys show each day. */
 export function UsageChart({ days }: { days: Day[] }) {
   const [active, setActive] = useState<number | null>(null);
-  const [frame, seen] = useInView<HTMLDivElement>();
-  const [grown, setGrown] = useState(false);
-  useEffect(() => {
-    if (!seen) return;
-    const t = window.setTimeout(() => setGrown(true), GROW_DONE_MS);
-    return () => window.clearTimeout(t);
-  }, [seen]);
-  const motion = grown ? "" : seen ? " is-growing" : " is-waiting";
 
   const max = Math.max(0, ...days.map((d) => d.seconds));
   const step = STEPS.find((s) => max / s <= 3) ?? 3600 * Math.ceil(max / 3 / 3600);
@@ -77,18 +66,12 @@ export function UsageChart({ days }: { days: Day[] }) {
     setActive(next);
   };
 
-  // The bars grow one after another in order, over about half a second however many there are.
-  const bars = days.filter((d) => d.seconds > 0).length;
-  const growStep = bars > 1 ? Math.min(60, Math.round(540 / (bars - 1))) : 0;
-  let rank = 0;
-  const growDelay = (seconds: number) => (seconds > 0 ? `${120 + rank++ * growStep}ms` : "0ms");
-
   const shown = active !== null ? days[active] : null;
   const edge = active === null ? "" : edgeOf(active, days.length);
   const busy = days.filter((d) => d.clips > 0);
 
   return (
-    <div ref={frame} className={`uchart${motion}`}>
+    <div className="uchart">
       <div className="uchart-frame">
         {ticks.map((t) => (
           <div key={t} className="uchart-tick" style={{ bottom: `${(t / top) * 100}%` }} aria-hidden="true">
@@ -108,33 +91,22 @@ export function UsageChart({ days }: { days: Day[] }) {
             if (e.pointerType === "mouse") setActive(null);
           }}
         >
-          {days.map((d, i) => {
-            const delay = growDelay(d.seconds);
-            return (
-              <div
-                key={d.date.getTime()}
-                className={`uchart-col${active === i ? " is-active" : ""}`}
-                onPointerEnter={() => setActive(i)}
-                onPointerDown={() => setActive(i)}
-                aria-hidden="true"
-              >
-                {d.seconds > 0 && (
-                  <span
-                    className="uchart-bar"
-                    style={{ height: `max(3px, ${(d.seconds / top) * 100}%)`, ["--grow" as string]: delay } as CSSProperties}
-                  />
-                )}
-                {i === peak && active === null && (
-                  <span
-                    className={`uchart-peak${edgeOf(i, days.length)}`}
-                    style={{ bottom: `${(d.seconds / top) * 100}%`, ["--grow" as string]: delay } as CSSProperties}
-                  >
-                    {formatDuration(d.seconds)}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {days.map((d, i) => (
+            <div
+              key={d.date.getTime()}
+              className={`uchart-col${active === i ? " is-active" : ""}`}
+              onPointerEnter={() => setActive(i)}
+              onPointerDown={() => setActive(i)}
+              aria-hidden="true"
+            >
+              {d.seconds > 0 && <span className="uchart-bar" style={{ height: `max(3px, ${(d.seconds / top) * 100}%)` }} />}
+              {i === peak && active === null && (
+                <span className={`uchart-peak${edgeOf(i, days.length)}`} style={{ bottom: `${(d.seconds / top) * 100}%` }}>
+                  {formatDuration(d.seconds)}
+                </span>
+              )}
+            </div>
+          ))}
 
           {shown && (
             <div className={`uchart-tip${edge}`} style={{ left: `${((active! + 0.5) / days.length) * 100}%` }} aria-hidden="true">
@@ -143,7 +115,7 @@ export function UsageChart({ days }: { days: Day[] }) {
             </div>
           )}
 
-          {max === 0 && <p className="uchart-empty faint">Nothing made in the last 30 days yet.</p>}
+          {max === 0 && <p className="uchart-empty faint">Nothing made yet.</p>}
         </div>
         {/* Always present, so screen readers announce the first day the arrow keys pick. */}
         <p className="sr-only" role="status" aria-live="polite">

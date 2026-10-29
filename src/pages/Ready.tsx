@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { BeadWave, useInView } from "../components/Motion";
+import { useEffect, useRef, useState } from "react";
 import { DrumRoll, Drum, PatternStrip, Shell } from "../components/Shell";
 import { VOICES, formatClock, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
@@ -9,36 +8,7 @@ import { VersionList, VersionsChevron } from "./Clips";
 import "./Ready.css";
 
 const POLL_MS = 2000;
-const NOT_LIVE = "Your MP3 downloads here once the voice service is live.";
-
-// A few beads thrown out once as the stamp lands, then left resting around it (no loop).
-// x/y: where each bead comes to rest, in px from the stamp's centre; d: its delay in ms.
-const BURST: { x: number; y: number; size: number; color: string; d: number }[] = [
-  { x: -6, y: -46, size: 8, color: "var(--red)", d: 0 },
-  { x: 34, y: -32, size: 7, color: "var(--indigo)", d: 30 },
-  { x: 48, y: 4, size: 9, color: "var(--green)", d: 60 },
-  { x: 30, y: 38, size: 7, color: "var(--accent)", d: 20 },
-  { x: -10, y: 48, size: 8, color: "var(--gold)", d: 50 },
-  { x: -42, y: 26, size: 7, color: "var(--indigo)", d: 10 },
-  { x: -46, y: -16, size: 9, color: "var(--accent)", d: 40 },
-];
-
-/** The licence card rises in after the stamp lands, or as soon as it is scrolled to. */
-function LicenceCard({ children }: { children: ReactNode }) {
-  const born = useRef(performance.now());
-  const [ref, seen] = useInView<HTMLElement>();
-  // Scrolled to later (a short phone screen): rise at once rather than wait for the stamp.
-  const late = useMemo(() => seen && performance.now() - born.current > 600, [seen]);
-  return (
-    <section
-      ref={ref}
-      className={`card ready-licence${seen ? " is-in" : ""}${late ? " is-late" : ""}`}
-      aria-label="Licence"
-    >
-      {children}
-    </section>
-  );
-}
+const NOT_LIVE = "MP3 downloads once the voice service is live.";
 
 export default function Ready() {
   const flow = useFlow();
@@ -105,7 +75,6 @@ export default function Ready() {
           <div role="status">
             <h1 className="ready-title">Making your full clip…</h1>
           </div>
-          <BeadWave beads={22} speaking className="ready-wave" />
         </div>
       </Shell>
     );
@@ -117,9 +86,9 @@ export default function Ready() {
         <div className="ready">
           <h1 className="ready-title">Something went wrong</h1>
           <p className="muted" role="alert">
-            Something went wrong making your clip. We'll refund you automatically.
+            We couldn't make your clip and will refund you automatically.
           </p>
-          <Link href="/studio">Back to the studio</Link>
+          <Link href="/studio">Back to studio</Link>
         </div>
       </Shell>
     );
@@ -131,28 +100,11 @@ export default function Ready() {
   return (
     <Shell step={4} footer={false}>
       <div className="ready">
-        <span className="ready-stamp" aria-hidden="true">
-          {BURST.map((b, i) => (
-            <span
-              key={i}
-              className="ready-burst"
-              style={
-                {
-                  ["--x" as string]: `${b.x}px`,
-                  ["--y" as string]: `${b.y}px`,
-                  ["--d" as string]: `${b.d}ms`,
-                  width: b.size,
-                  height: b.size,
-                  background: b.color,
-                } as CSSProperties
-              }
-            />
-          ))}
-          <svg className="stamp" width="56" height="56" viewBox="0 0 40 40" aria-hidden="true">
-            <path d="M20 2 L24 14 L36 10 L28 20 L36 30 L24 26 L20 38 L16 26 L4 30 L12 20 L4 10 L16 14 Z" fill="#E8A33C" />
-            <circle cx="20" cy="20" r="6" fill="#2E9E6B" />
-          </svg>
-        </span>
+        {/* A still star. */}
+        <svg className="ready-star" width="56" height="56" viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M20 2 L24 14 L36 10 L28 20 L36 30 L24 26 L20 38 L16 26 L4 30 L12 20 L4 10 L16 14 Z" fill="#E8A33C" />
+          <circle cx="20" cy="20" r="6" fill="#2E9E6B" />
+        </svg>
 
         <div className="ready-head">
           <h1 className="ready-title">Your clip is ready</h1>
@@ -201,7 +153,7 @@ export default function Ready() {
           )}
         </div>
 
-        <LicenceCard>
+        <section className="card ready-licence" aria-label="Licence">
           <PatternStrip pattern="kente" height={6} />
           <div className="ready-licence-body">
             <div className="ready-licence-id">
@@ -213,7 +165,7 @@ export default function Ready() {
                 href="#certificate"
                 onClick={(e) => {
                   e.preventDefault();
-                  setPdfNote("Your certificate downloads here once the voice service is live.");
+                  setPdfNote("Certificate downloads once the voice service is live.");
                 }}
               >
                 Certificate (PDF)
@@ -224,12 +176,12 @@ export default function Ready() {
           <p className="ready-note ready-licence-note muted" role="status">
             {pdfNote}
           </p>
-        </LicenceCard>
+        </section>
 
         <div className="ready-foot faint">
-          <p>Sign in with this email to find this clip in My clips for 7 days.</p>
+          <p>Sign in with this email to see it in My clips for 7 days.</p>
           <p>
-            Making more than 8 minutes a month? <Link href="/pricing">Plans from $15</Link>
+            Over 8 minutes a month? <Link href="/pricing">Plans from $15</Link>
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
-import { BeadWave, InkUnderline, RiseWords } from "../components/Motion";
+import { InkUnderline } from "../components/Motion";
 import { BeadProgress, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import {
   MAX_TRANSCRIBE_HOURS,
@@ -44,7 +44,7 @@ const MAX_SECONDS = MAX_TRANSCRIBE_HOURS * 3600;
 const LENGTH_SLACK = 120;
 const EXTENSIONS = new Set(TRANSCRIBE_ACCEPT.split(",").map((e) => e.replace(/^\./, "").toLowerCase()));
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NETWORK_TEXT = "We couldn't reach the server. Check your connection and try again.";
+const NETWORK_TEXT = "Couldn't reach the server. Check your connection and try again.";
 const FORMAT_LIST = "MP3, M4A, AAC, WAV, OPUS, OGG, FLAC, WEBM, AMR, AIFF, MP4 or MOV";
 
 const POLL_MS = 4000;
@@ -76,7 +76,7 @@ function extensionOf(name: string): string {
 }
 
 function tooLongText(seconds: number): string {
-  return `This recording is ${formatLength(seconds)} long. The most we take is ${MAX_TRANSCRIBE_HOURS} hours, so trim or split it first.`;
+  return `This recording is ${formatLength(seconds)} long. The limit is ${MAX_TRANSCRIBE_HOURS} hours, so trim or split it.`;
 }
 
 /** A friendly reason the file can't be used, or "" when it looks fine. */
@@ -87,7 +87,7 @@ function checkFile(file: File): string {
   }
   if (file.size < MIN_BYTES) return "That file is empty. Choose the recording itself.";
   if (file.size > MAX_BYTES) {
-    return `This file is ${formatSize(file.size)}. The largest we take is ${MAX_UPLOAD_MB} MB, so save it as MP3 or M4A first (3 hours of MP3 at 128 kbps is about 170 MB).`;
+    return `This file is ${formatSize(file.size)}. The limit is ${MAX_UPLOAD_MB} MB, so save it as MP3 or M4A first.`;
   }
   return "";
 }
@@ -115,43 +115,6 @@ export default function Transcribe() {
     // A malformed escape: look it up as typed and let the server say it doesn't exist.
   }
   return <Shell>{id ? <StatusView id={id} /> : <UploadView />}</Shell>;
-}
-
-// ---- header illustration -----------------------------------------------------------
-
-// Speaker bead colour and how far each line runs, as a share of the column.
-const ART_LINES = [
-  { who: "var(--red)", run: 0.94 },
-  { who: "var(--indigo)", run: 0.72 },
-  { who: "var(--red)", run: 0.86 },
-  { who: "var(--indigo)", run: 0.58 },
-];
-
-/**
- * Decorative: a bead wave of speech beside lines of transcript that fill in one
- * after another, each with a speaker bead and a timestamp pill. Loops slowly;
- * still and complete under reduced motion.
- */
-function AudioToText() {
-  return (
-    <div className="tr-art" aria-hidden="true">
-      <BeadWave beads={11} className="tr-art-wave" />
-      <svg className="tr-art-arrow" width="18" height="18" viewBox="0 0 18 18">
-        <path d="M3 9 H14 M10 5 L14 9 L10 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <div className="tr-art-lines">
-        {ART_LINES.map((l, i) => (
-          <div className="tr-art-line" key={i} style={{ ["--i" as string]: i }}>
-            <span className="tr-art-who" style={{ background: l.who }} />
-            <span className="tr-art-time" />
-            <span className="tr-art-text">
-              <span className="tr-art-fill" style={{ ["--run" as string]: l.run }} />
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 // ---- upload page -----------------------------------------------------------------
@@ -307,7 +270,7 @@ function UploadView() {
         backToChoose(e.message);
       } else {
         setStage({ kind: "measure-failed", id });
-        setError(problemText(e, "We couldn't check your file just now. Please try again."));
+        setError(problemText(e, "We couldn't check your file. Try again."));
       }
     }
   };
@@ -333,7 +296,7 @@ function UploadView() {
       try {
         up = await createTranscriptUpload({ fileName: file.name, size: file.size, email: email.trim(), language, speakers });
       } catch (err) {
-        if (!controller.signal.aborted) backToChoose(problemText(err, "We couldn't start the upload. Please try again."));
+        if (!controller.signal.aborted) backToChoose(problemText(err, "We couldn't start the upload. Try again."));
         return;
       }
       if (controller.signal.aborted) return;
@@ -400,11 +363,11 @@ function UploadView() {
         confirmDemoTranscriptPayment(id);
         paid();
       } else {
-        unpaid("Nothing was charged. Payments aren't available right now; please try again shortly.");
+        unpaid("Nothing was charged. Payments are unavailable right now. Try again soon.");
       }
     } catch (err) {
-      if (err instanceof ApiError) unpaid(`Nothing was charged. ${problemText(err, "Something went wrong on our side; please try again.")}`);
-      else if (err instanceof Error && err.message === "Could not load Paystack") unpaid("Nothing was charged. We couldn't open Paystack. Check your connection and try again.");
+      if (err instanceof ApiError) unpaid(`Nothing was charged. ${problemText(err, "Something went wrong on our side. Try again.")}`);
+      else if (err instanceof Error && err.message === "Could not load Paystack") unpaid("Nothing was charged. Paystack didn't open. Check your connection and try again.");
       else unpaid(`Nothing was charged. ${NETWORK_TEXT}`);
     }
   };
@@ -421,7 +384,7 @@ function UploadView() {
   else if (stage.kind === "measuring") announce = "Checking the length";
   else if (stage.kind === "quote") announce = `Price ready: ${formatUsd(stage.quote.amountUsd)}`;
 
-  const missing = !file ? "Choose a recording to continue." : fileError || reading ? "" : !emailOk ? "Enter your email to continue." : "";
+  const missing = !file ? "Choose a recording first." : fileError || reading ? "" : !emailOk ? "Enter your email first." : "";
 
   return (
     <div className="narrow tr">
@@ -430,22 +393,17 @@ function UploadView() {
       </p>
 
       <header className="tr-head">
-        <AudioToText />
         <h1 className="tr-title">
-          <RiseWords text="Transcribe a" />{" "}
-          <InkUnderline delay={560}>
-            <RiseWords text="recording" delay={140} />
-          </InkUnderline>
+          Transcribe a <InkUnderline>recording</InkUnderline>
         </h1>
-        <p className="tr-lede muted">Upload a recording, get a transcript with timestamps and speaker labels.</p>
+        <p className="tr-lede muted">A transcript with timestamps and speaker labels.</p>
         <p className="tr-price">
           <strong>{TRANSCRIBE_PRICE}</strong>
           <span className="faint"> · every started minute · no account needed</span>
         </p>
         {hasPlan && (
           <p className="faint tr-small">
-            Plans include transcription minutes (see <Link href="/pricing">Pricing</Link>). They can't be used on this page yet, so
-            files here are paid one by one.
+            Plan minutes (see <Link href="/pricing">Pricing</Link>) can't be used here yet, so each file is paid separately.
           </p>
         )}
       </header>
@@ -486,7 +444,7 @@ function UploadView() {
               {file ? "Choose another file" : "Choose a file"}
             </span>
             <span id="tr-file-hint" className="faint tr-drop-hint">
-              Up to {MAX_TRANSCRIBE_HOURS} hours and {MAX_UPLOAD_MB} MB. MP3, M4A, WAV, WhatsApp voice notes, video and more.
+              Audio or video, up to {MAX_TRANSCRIBE_HOURS} hours and {MAX_UPLOAD_MB} MB.
             </span>
           </label>
           {fileError && (
@@ -502,7 +460,7 @@ function UploadView() {
               document.getElementById("tr-guide")?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
           >
-            Limits, formats and tips
+            Formats and limits
           </a>
 
           <label className="field tr-field">
@@ -526,7 +484,7 @@ function UploadView() {
           )}
 
           <label className="field tr-field">
-            Main language spoken
+            Main language
             <select value={language} onChange={(e) => setLanguage(e.target.value)} aria-describedby="tr-lang-hint">
               <option value="">Detect automatically</option>
               <optgroup label="Languages">
@@ -546,11 +504,7 @@ function UploadView() {
             </select>
           </label>
           <p id="tr-lang-hint" className="faint tr-hint">
-            {chosenLanguage?.advanced
-              ? `${languageLabel} is read by our advanced model.`
-              : language
-                ? "Pick the language most of the recording is in."
-                : "Choosing the main language helps when several are mixed."}
+            {chosenLanguage?.advanced ? `${languageLabel} is read by our advanced model.` : "Helps when languages are mixed."}
           </p>
 
           <label className="tr-check">
@@ -558,7 +512,7 @@ function UploadView() {
             <span>
               Label speakers
               <span id="tr-speakers-hint" className="faint tr-check-hint">
-                Marks who is talking: Speaker 1, Speaker 2…
+                Set per 5-minute part, so “Speaker 1” can change on long recordings.
               </span>
             </span>
           </label>
@@ -599,7 +553,7 @@ function UploadView() {
               {eta ? ` · ${eta}` : ""}
             </span>
           </p>
-          <p className="faint tr-note">Keep this page open until the upload finishes.</p>
+          <p className="faint tr-note">Keep this page open.</p>
           <button type="button" className="btn btn-outline tr-cancel" onClick={cancelUpload}>
             Cancel upload
           </button>
@@ -612,7 +566,7 @@ function UploadView() {
           <h2 id="tr-step" ref={headingRef} tabIndex={-1} className="tr-panel-title">
             Checking the length…
           </h2>
-          <p className="faint tr-note">We measure the recording ourselves to price it. This takes a few seconds.</p>
+          <p className="faint tr-note">This takes a few seconds.</p>
         </section>
       )}
 
@@ -624,12 +578,12 @@ function UploadView() {
           <p className="tr-error" role="alert">
             {error}
           </p>
-          <p className="faint tr-note">Your file is already uploaded; checking again doesn't upload it again.</p>
+          <p className="faint tr-note">Checking again won't upload your file again.</p>
           <button type="button" className="btn btn-block" onClick={() => void measure(stage.id)}>
             Check again
           </button>
           <button type="button" className="tr-text-btn" onClick={startOver}>
-            Start over with another file
+            Use a different file
           </button>
         </section>
       )}
@@ -689,7 +643,7 @@ function UploadView() {
           </button>
           <p className="faint center tr-note" role="status">
             {payMode === "open"
-              ? "On M-Pesa? Check your phone and enter your PIN. Keep this page open."
+              ? "On M-Pesa? Enter your PIN on your phone. Keep this page open."
               : API_MODE === "demo"
                 ? "Demo mode: no money moves and your file stays in this browser."
                 : "Paystack opens when you press Pay."}
@@ -709,41 +663,14 @@ function Guide() {
   return (
     <section id="tr-guide" className="tr-guide" aria-labelledby="tr-guide-title">
       <h2 id="tr-guide-title" className="tr-guide-title">
-        Before you upload
+        Formats and limits
       </h2>
 
       <div className="tr-block">
-        <h3>Limits</h3>
         <p>
-          Longest recording: <strong>{`${MAX_TRANSCRIBE_HOURS} hours`}</strong>. Largest file: <strong>{`${MAX_UPLOAD_MB} MB`}</strong>.
+          Up to <strong>{`${MAX_TRANSCRIBE_HOURS} hours`}</strong> and <strong>{`${MAX_UPLOAD_MB} MB`}</strong> per file.
         </p>
-        <p className="muted">Use a compressed format for long recordings. Roughly, 3 hours comes to:</p>
-        <dl className="tr-rows">
-          <div>
-            <dt>MP3 at 128 kbps</dt>
-            <dd>about 170 MB</dd>
-          </div>
-          <div>
-            <dt>MP3 at 64 kbps</dt>
-            <dd>about 85 MB</dd>
-          </div>
-          <div>
-            <dt>M4A / AAC</dt>
-            <dd>about the same as MP3</dd>
-          </div>
-          <div>
-            <dt>WAV</dt>
-            <dd>1 to 2 GB, too big</dd>
-          </div>
-        </dl>
-        <p className="muted">
-          Got a WAV? Convert it first: in Audacity, export it as MP3. On a phone, set the voice recorder to M4A or AAC.
-        </p>
-      </div>
-
-      <div className="tr-block">
-        <h3>Formats we take</h3>
-        <dl className="tr-rows">
+        <dl className="tr-rows tr-formats">
           {TRANSCRIBE_FORMATS.map((f) => (
             <div key={f.ext}>
               <dt>{f.label}</dt>
@@ -751,30 +678,16 @@ function Guide() {
             </div>
           ))}
         </dl>
-        <p className="muted">
-          WhatsApp voice notes are OPUS or OGG files. Video (MP4 or MOV) is fine: we only read the sound, and the {MAX_UPLOAD_MB} MB limit
-          still applies.
-        </p>
-      </div>
-
-      <div className="tr-block">
-        <h3>For the best result</h3>
-        <ul className="tr-list">
-          <li>Choose the main language. Detect automatically can miss a language when several are mixed.</li>
-          <li>One speaker close to the microphone, and as little background noise as you can.</li>
-          <li>
-            Speaker labels are worked out in 5-minute parts, so on long recordings "Speaker 1" may not be the same person in every part.
-          </li>
-        </ul>
+        <p className="muted">Long recording? Use MP3 or M4A: 3 hours at 128 kbps is about 170 MB.</p>
       </div>
 
       <div className="tr-block">
         <h3>What you get</h3>
         <ul className="tr-list">
-          <li>A TXT file with timestamps and speaker names.</li>
-          <li>SRT and VTT subtitle files for video.</li>
-          <li>Download links last 7 days.</li>
-          <li>Your audio is deleted once the transcript is made, and within 24 hours in any case.</li>
+          <li>TXT with timestamps and speaker names</li>
+          <li>SRT and VTT subtitle files</li>
+          <li>Download links that last 7 days</li>
+          <li>Your audio deleted within 24 hours</li>
         </ul>
       </div>
 
@@ -833,7 +746,7 @@ function StatusView({ id }: { id: string }) {
         }
         failures += 1;
         if (e instanceof ApiError && e.status === 503) setTrouble(`${e.message} Still trying…`);
-        else if (failures >= 2) setTrouble("We're having trouble reaching the server. Still trying…");
+        else if (failures >= 2) setTrouble("Trouble reaching the server. Still trying…");
       }
       timer = window.setTimeout(() => void poll(), POLL_MS);
     };
@@ -854,7 +767,7 @@ function StatusView({ id }: { id: string }) {
     const partial = t?.previewTruncated ?? text.length >= PREVIEW_CAP - 10;
     try {
       await navigator.clipboard.writeText(text);
-      setCopyNote(partial ? "Copied the part shown here. Download TXT for the whole transcript." : "Copied.");
+      setCopyNote(partial ? "Copied the part shown. Download TXT for all of it." : "Copied.");
     } catch {
       // No clipboard access: select the text so it can be copied by hand.
       const el = previewRef.current;
@@ -865,7 +778,7 @@ function StatusView({ id }: { id: string }) {
         sel.removeAllRanges();
         sel.addRange(range);
       }
-      setCopyNote("The text is selected. Press Ctrl+C (or Cmd+C) to copy it.");
+      setCopyNote("Text selected. Press Ctrl+C (or Cmd+C) to copy.");
     }
   };
 
@@ -896,10 +809,8 @@ function StatusView({ id }: { id: string }) {
   } else if (status === "missing") {
     body = (
       <div className="tr-wait">
-        <h1 className="tr-title">
-          <RiseWords text="We can't find that transcript." />
-        </h1>
-        <p className="muted">Check the link, or upload the recording again.</p>
+        <h1 className="tr-title">We can't find that transcript</h1>
+        <p className="muted">Check the link, or upload again.</p>
         <Link href="/transcribe" className="btn">
           Upload a recording
         </Link>
@@ -908,11 +819,9 @@ function StatusView({ id }: { id: string }) {
   } else if (status === "uploading") {
     body = (
       <div className="tr-wait">
-        <h1 className="tr-title">
-          <RiseWords text="This upload wasn't finished" />
-        </h1>
+        <h1 className="tr-title">This upload wasn't finished</h1>
         {meta && <p className="faint tr-break">{meta}</p>}
-        <p className="muted">Nothing was charged. Upload the recording again to get a price.</p>
+        <p className="muted">Nothing was charged. Upload it again to get a price.</p>
         <Link href="/transcribe" className="btn">
           Upload a recording
         </Link>
@@ -928,15 +837,11 @@ function StatusView({ id }: { id: string }) {
     body = (
       <div className="tr-wait">
         {!stopped && <DrumRoll size={80} />}
-        <h1 className="tr-title">
-          <RiseWords key={payTitle} text={payTitle} />
-        </h1>
+        <h1 className="tr-title">{payTitle}</h1>
         {meta && <p className="faint tr-break">{meta}</p>}
         {stopped ? (
           <>
-            <p className="muted">
-              If you paid by M-Pesa, it can take a minute to come through. If you didn't finish paying, nothing was charged.
-            </p>
+            <p className="muted">M-Pesa can take a minute. If you didn't finish paying, nothing was charged.</p>
             <button type="button" className="btn btn-outline" onClick={checkAgain}>
               Check again
             </button>
@@ -946,10 +851,10 @@ function StatusView({ id }: { id: string }) {
           </>
         ) : (
           <>
-            <p className="muted">This usually takes a few seconds after you pay.</p>
+            <p className="muted">This usually takes a few seconds.</p>
             {waitedLong && (
               <p className="faint tr-note">
-                Still waiting? If you didn't finish paying, nothing was charged. <Link href="/transcribe">Upload the recording again</Link>.
+                Still waiting? If you didn't finish paying, nothing was charged. <Link href="/transcribe">Upload again</Link>.
               </p>
             )}
           </>
@@ -961,13 +866,10 @@ function StatusView({ id }: { id: string }) {
     body = (
       <div className="tr-wait">
         <DrumRoll size={80} />
-        <h1 className="tr-title">
-          <RiseWords text="Transcribing…" />
-        </h1>
+        <h1 className="tr-title">Transcribing…</h1>
         {meta && <p className="faint tr-break">{meta}</p>}
-        <p className="muted">
-          It takes about a minute for every 5 minutes of audio, so a 3-hour recording can take up to an hour. You can leave and come back to this link, so bookmark it.
-        </p>
+        <p className="muted">About a minute for every 5 minutes of audio, so 3 hours can take up to an hour.</p>
+        <p className="muted">Bookmark this link and come back later.</p>
         <p className="mono faint tr-url">{link}</p>
         {trouble && <p className="faint tr-note">{trouble}</p>}
       </div>
@@ -975,11 +877,9 @@ function StatusView({ id }: { id: string }) {
   } else if (status === "failed") {
     body = (
       <div className="tr-wait">
-        <h1 className="tr-title">
-          <RiseWords text="We couldn't finish this transcript" />
-        </h1>
+        <h1 className="tr-title">We couldn't finish this transcript</h1>
         {meta && <p className="faint tr-break">{meta}</p>}
-        <p className="muted">{t?.error || "Something went wrong. We will refund you; reply to your receipt email."}</p>
+        <p className="muted">{t?.error || "Something went wrong. We'll refund you; reply to your receipt email."}</p>
         <div className="tr-links">
           <Link href="/transcribe">Upload another recording</Link>
           <a href="mailto:support@mikaka.io">Email support</a>
@@ -990,13 +890,11 @@ function StatusView({ id }: { id: string }) {
     const preview = t?.preview ?? "";
     const partial = t?.previewTruncated ?? preview.length >= PREVIEW_CAP - 10;
     const d = t?.downloads;
-    const notLive = () => setDownloadNote("Downloads appear here once the transcription service is live.");
+    const notLive = () => setDownloadNote("Downloads appear here once the service is live.");
     body = (
       <div className="tr-ready">
         <div className="tr-ready-head">
-          <h1 className="tr-title">
-          <RiseWords text="Your transcript is ready" />
-        </h1>
+          <h1 className="tr-title">Your transcript is ready</h1>
           {meta && <p className="faint tr-break">{meta}</p>}
         </div>
 
@@ -1047,10 +945,10 @@ function StatusView({ id }: { id: string }) {
             <pre ref={previewRef} className="tr-preview" tabIndex={0} role="region" aria-label="Transcript">
               {preview}
             </pre>
-            {partial && <p className="faint tr-partial">This is the start of your transcript. Download TXT for all of it.</p>}
+            {partial && <p className="faint tr-partial">This is the start. Download TXT for all of it.</p>}
           </div>
         ) : (
-          <p className="muted center">Download the TXT file to read your transcript.</p>
+          <p className="muted center">Download TXT to read your transcript.</p>
         )}
 
         <div className="tr-foot faint">

@@ -258,15 +258,15 @@ export function transcribeQuote(seconds: number): TranscribeQuote {
 
 /** Upload formats: extension → the label the guide shows. The server holds the same list. */
 export const TRANSCRIBE_FORMATS: { ext: string; label: string; note: string }[] = [
-  { ext: "mp3", label: "MP3", note: "Best all-round choice" },
-  { ext: "m4a", label: "M4A / AAC", note: "iPhone and Android voice recorders" },
+  { ext: "mp3", label: "MP3", note: "Best choice" },
+  { ext: "m4a", label: "M4A / AAC", note: "Phone recorders" },
   { ext: "opus", label: "OPUS / OGG", note: "WhatsApp voice notes" },
-  { ext: "wav", label: "WAV", note: "Big files; fine for short recordings" },
-  { ext: "flac", label: "FLAC", note: "Lossless, smaller than WAV" },
-  { ext: "webm", label: "WEBM", note: "Browser and Zoom recordings" },
-  { ext: "amr", label: "AMR", note: "Older phone call recorders" },
+  { ext: "wav", label: "WAV", note: "Large files" },
+  { ext: "flac", label: "FLAC", note: "Smaller than WAV" },
+  { ext: "webm", label: "WEBM", note: "Browser and Zoom" },
+  { ext: "amr", label: "AMR", note: "Older call recorders" },
   { ext: "aiff", label: "AIFF", note: "Mac recordings" },
-  { ext: "mp4", label: "MP4 / MOV", note: "Video: we only read the sound" },
+  { ext: "mp4", label: "MP4 / MOV", note: "Video, sound only" },
 ];
 export const TRANSCRIBE_ACCEPT = ".mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm,.amr,.aiff,.aif,.mp4,.mov";
 

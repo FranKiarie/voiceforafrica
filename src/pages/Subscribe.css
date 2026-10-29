@@ -10,46 +10,8 @@
   line-height: 1.15;
 }
 
-/* RiseWords sets each word as an inline block; keep the space after it. */
-.sub-title .rw {
-  white-space: pre;
-}
-
 .sub-summary {
   overflow: hidden;
-}
-
-/* The plan summary rises in, its perks follow one by one, then the price counts up
-   (Subscribe.tsx). reveal.ts marks do nothing here: the card keeps its own timing. */
-.sub .sub-summary,
-.sub .sub-summary[data-reveal] {
-  opacity: 1;
-  animation: sub-rise 560ms var(--ease-out, ease-out) 60ms backwards;
-}
-
-.sub .sub-perks > li,
-.sub .sub-perks > li[data-reveal] {
-  opacity: 1;
-  animation: sub-perk 420ms var(--ease-out, ease-out) backwards;
-  animation-delay: calc(240ms + var(--i, 0) * 70ms);
-}
-
-.sub .sub-price {
-  animation: sub-perk 420ms var(--ease-out, ease-out) 380ms backwards;
-}
-
-@keyframes sub-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-}
-
-@keyframes sub-perk {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
 }
 
 .sub-summary-body {
@@ -227,15 +189,5 @@
 
   .sub-summary-body {
     padding: 18px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sub .sub-summary,
-  .sub .sub-summary[data-reveal],
-  .sub .sub-perks > li,
-  .sub .sub-perks > li[data-reveal],
-  .sub .sub-price {
-    animation: none;
   }
 }

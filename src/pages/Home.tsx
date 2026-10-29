@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Drum, PatternDot, PatternStrip, Shell } from "../components/Shell";
-import { BeadWave, CountUp, InkUnderline, RiseWords, useInView } from "../components/Motion";
+import { BeadWave, InkUnderline } from "../components/Motion";
 import { Link } from "../router";
 import { LANGUAGES, LIVE_ACCENTS, PAYG_PRICE, PREVIEW_SECONDS, VOICES, accentLabel, type Voice } from "../data";
 import { useVoiceSample } from "../lib/sample";
@@ -15,12 +15,10 @@ const vars = (o: Record<string, string>) => o as CSSProperties;
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 const USES = [
-  { title: "Voice-overs", line: "For YouTube, TikTok, explainers and adverts online.", icon: ICONS.mic },
-  { title: "Radio and TV ads", line: "Broadcast-ready spots, licensed for air on Pro and up.", icon: ICONS.radio },
-  { title: "Phone menus", line: "“Press 1 for M-Pesa” prompts, in phone-ready 8 kHz audio.", icon: ICONS.phone },
-  { title: "Audiobooks and courses", line: "Long scripts, ready later at a lower cost.", icon: ICONS.book },
-  { title: "Podcasts and skits", line: "Two voices in one clip, for dialogue and drama.", icon: ICONS.chat },
-  { title: "Announcements", line: "For shops, schools, churches and events, in the local language.", icon: ICONS.bell },
+  { title: "Voice-overs", line: "YouTube, TikTok and online ads.", icon: ICONS.mic },
+  { title: "Radio and TV ads", line: "Broadcast licence on Pro and up.", icon: ICONS.radio },
+  { title: "Phone menus", line: "“Press 1” prompts in 8 kHz audio.", icon: ICONS.phone },
+  { title: "Audiobooks and courses", line: "Long scripts, ready later for less.", icon: ICONS.book },
 ];
 
 const STATS = [
@@ -31,6 +29,8 @@ const STATS = [
 
 // The stage says hello around the continent. Each greeting is in a language we
 // speak (LANGUAGES) and is paired with a voice from that country that has a sample.
+const NON_LATIN = /[^\u0000-\u024F]/;
+
 type GreetingSeed = { text: string; lang: string; meaning: string; say?: string; dir?: "rtl"; voice: string };
 type Greeting = Omit<GreetingSeed, "voice"> & { voice: Voice; language: string };
 
@@ -39,7 +39,7 @@ const GREETING_SEEDS: GreetingSeed[] = [
   { text: "Sannu!", lang: "ha", meaning: "Hello", voice: "musa" },
   { text: "Dumela!", lang: "st", meaning: "Hello", voice: "lerato" },
   { text: "ሰላም", lang: "am", meaning: "Hello", say: "selam", voice: "selam" },
-  { text: "Bonjour !", lang: "fr", meaning: "Hello", voice: "awa" },
+  { text: "Bonjour !", lang: "fr", meaning: "Hello", voice: "awa" },
   { text: "Akwaaba!", lang: "ak", meaning: "Welcome", voice: "kwame" },
   { text: "Oli otya?", lang: "lg", meaning: "How are you?", voice: "nakato" },
   { text: "أهلاً", lang: "ar", meaning: "Hello", say: "ahlan", dir: "rtl", voice: "nour" },
@@ -56,17 +56,16 @@ const GREETINGS: Greeting[] = GREETING_SEEDS.flatMap((g) => {
 const CYCLE_MS = 2800;
 
 /**
- * The hero's voice stage: a greeting bubble that moves around the continent, a bead
- * wave that breathes (and speaks while the sample plays) and a drum that plays the
- * voice shown. The bubble rests while that voice plays, while the drum is hovered or
+ * The hero's voice stage: a greeting bubble that crossfades around the continent, a
+ * bead wave that speaks while the sample plays, and a drum that plays the voice shown.
+ * The greetings rest while that voice plays, while the drum is hovered or
  * keyboard-focused, and while the stage is off screen. Reduced motion: Wanjiru only.
  */
 function VoiceStage({ playingId, toggle }: { playingId: string | null; toggle: (id: string) => void }) {
-  const [ref, seen] = useInView<HTMLDivElement>();
+  const ref = useRef<HTMLDivElement>(null);
   const [onScreen, setOnScreen] = useState(true);
   const [gi, setGi] = useState(0);
   const [hold, setHold] = useState(false);
-  const first = useRef(true);
   const [still] = useState(reducedMotion);
 
   const g: Greeting | undefined = GREETINGS[gi % Math.max(1, GREETINGS.length)];
@@ -74,30 +73,28 @@ function VoiceStage({ playingId, toggle }: { playingId: string | null; toggle: (
   const playing = playingId === voice.id;
   const paused = playing || hold || !onScreen;
 
-  // Live (not sticky) visibility, so the greetings rest while scrolled away.
+  // Live visibility, so the greetings rest while scrolled away.
   useEffect(() => {
     const el = ref.current;
     if (!el || !("IntersectionObserver" in window)) return;
     const io = new IntersectionObserver((entries) => setOnScreen(entries.some((e) => e.isIntersecting)));
     io.observe(el);
     return () => io.disconnect();
-  }, [ref]);
+  }, []);
 
   useEffect(() => {
-    if (!seen || paused || still || GREETINGS.length < 2) return;
+    if (paused || still || GREETINGS.length < 2) return;
     let id = 0;
     const tick = () => {
       if (document.visibilityState !== "visible") {
         id = window.setTimeout(tick, CYCLE_MS);
         return;
       }
-      first.current = false;
       setGi((n) => (n + 1) % GREETINGS.length);
     };
-    // The first greeting stays a little longer while the stage settles in.
-    id = window.setTimeout(tick, first.current ? CYCLE_MS + 1000 : CYCLE_MS);
+    id = window.setTimeout(tick, CYCLE_MS);
     return () => window.clearTimeout(id);
-  }, [gi, seen, paused, still]);
+  }, [gi, paused, still]);
 
   const holdOnFocus = (el: Element) => {
     try {
@@ -108,7 +105,7 @@ function VoiceStage({ playingId, toggle }: { playingId: string | null; toggle: (
   };
 
   return (
-    <div ref={ref} className={`hs${seen ? " is-in" : ""}`}>
+    <div ref={ref} className="hs">
       <div className="hs-deck" aria-hidden="true" />
       <div className="hs-card">
         <PatternStrip pattern="beads" height={12} />
@@ -126,12 +123,6 @@ function VoiceStage({ playingId, toggle }: { playingId: string | null; toggle: (
             </div>
           )}
 
-          <div className="hs-dots" aria-hidden="true">
-            {GREETINGS.map((x, k) => (
-              <span key={x.voice.id} className={k === gi ? "on" : undefined} style={vars({ "--c": DOTS[k % DOTS.length] })} />
-            ))}
-          </div>
-
           <BeadWave beads={28} speaking={playing} className="hs-wave" />
 
           <div
@@ -145,15 +136,12 @@ function VoiceStage({ playingId, toggle }: { playingId: string | null; toggle: (
             onFocus={(e) => holdOnFocus(e.target)}
             onBlur={() => setHold(false)}
           >
-            <span className={`hs-drum${playing ? " is-playing" : ""}`}>
-              <span className="hs-halo" aria-hidden="true" />
-              <Drum
-                size={72}
-                playing={playing}
-                label={playing ? `Pause ${voice.name}` : `Play ${voice.name}`}
-                onClick={() => toggle(voice.id)}
-              />
-            </span>
+            <Drum
+              size={72}
+              playing={playing}
+              label={playing ? `Pause ${voice.name}` : `Play ${voice.name}`}
+              onClick={() => toggle(voice.id)}
+            />
             <p className="hs-caption">
               <span key={gi} className="hs-caption-in">
                 <span className="hs-name">{`Hear ${voice.name}`}</span>
@@ -164,45 +152,6 @@ function VoiceStage({ playingId, toggle }: { playingId: string | null; toggle: (
           </div>
         </div>
       </div>
-
-      <span className="hs-chip hs-chip-a" style={vars({ "--d": "1150ms" })}>
-        <span className="hs-chip-in float-soft">
-          <span className="hs-chip-dot" style={vars({ "--c": "var(--gold)" })} aria-hidden="true" />
-          {`${PREVIEW_SECONDS} s free preview`}
-        </span>
-      </span>
-      <span className="hs-chip hs-chip-b" style={vars({ "--d": "1300ms" })}>
-        <span className="hs-chip-in float-soft float-late">
-          <span className="hs-chip-dot" style={vars({ "--c": "var(--green)" })} aria-hidden="true" />
-          M-Pesa or card
-        </span>
-      </span>
-      <span className="hs-chip hs-chip-c" style={vars({ "--d": "1450ms" })}>
-        <span className="hs-chip-in float-soft" style={{ animationDelay: "-1.6s" }}>
-          <span className="hs-chip-dot" style={vars({ "--c": "var(--indigo)" })} aria-hidden="true" />
-          Try it with no account
-        </span>
-      </span>
-    </div>
-  );
-}
-
-function LanguageRun({ hidden }: { hidden?: boolean }) {
-  return (
-    <div className="lang-run" aria-hidden={hidden || undefined}>
-      {LANGUAGES.map((l, i) => (
-        <span className="lang-item" key={l.code}>
-          <span className="lang-name">
-            <span className="lang-own" lang={l.code}>
-              {l.own}
-            </span>
-            {l.en && <span className="lang-en faint">{l.en}</span>}
-          </span>
-          <svg width="10" height="10" aria-hidden="true" className="lang-dot">
-            <circle cx="5" cy="5" r="5" fill={DOTS[i % DOTS.length]} />
-          </svg>
-        </span>
-      ))}
     </div>
   );
 }
@@ -210,18 +159,6 @@ function LanguageRun({ hidden }: { hidden?: boolean }) {
 export default function Home() {
   const [playingId, toggleSample] = useVoiceSample();
   const [accent, setAccent] = useState("ke");
-  // After the first accent change the global reveal (reveal.ts) ripples the new rows in.
-  const [filtered, setFiltered] = useState(false);
-  const [makeRef, makeSeen] = useInView<HTMLDivElement>("0px 0px -8% 0px");
-  const [listRef, listSeen] = useInView<HTMLDivElement>("0px 0px -6% 0px");
-  // The counters start once the stats row has faded in, so the count is seen.
-  const [statsGo, setStatsGo] = useState(reducedMotion);
-
-  useEffect(() => {
-    if (statsGo) return;
-    const id = window.setTimeout(() => setStatsGo(true), 950);
-    return () => window.clearTimeout(id);
-  }, [statsGo]);
 
   const voices = VOICES.filter((v) => v.accent === accent);
 
@@ -231,36 +168,31 @@ export default function Home() {
         <div className="home-copy">
           <p className="home-eyebrow">
             <span className="home-eyebrow-dots" aria-hidden="true">
-              {DOTS.map((c, i) => (
-                <span key={c} style={vars({ "--c": c, "--i": String(i) })} />
+              {DOTS.map((c) => (
+                <span key={c} style={vars({ "--c": c })} />
               ))}
             </span>
             VOICE FOR AFRICA
           </p>
           <h1 className="home-title">
-            <RiseWords text="African voices," delay={120} step={90} />{" "}
+            African voices,{" "}
             <br />
             <span className="hand">
-              <InkUnderline delay={1080}>
-                <RiseWords text="given a platform." delay={340} step={100} />
-              </InkUnderline>
+              <InkUnderline>given a platform.</InkUnderline>
             </span>
           </h1>
-          <p className="home-lede muted">Voice-overs in your accent. Paste a script, hear 45 seconds free, pay with M-Pesa or card.</p>
+          <p className="home-lede muted">{`Voice-overs in your accent. Hear ${PREVIEW_SECONDS} seconds free.`}</p>
           <div className="home-cta-row">
             <Link className="btn home-cta" href="/studio">
               Paste your script
             </Link>
-            <p className="home-price faint">{`${PAYG_PRICE}, or plans from $15`}</p>
+            <p className="home-price faint">{`${PAYG_PRICE} or plans from $15, by M-Pesa or card`}</p>
           </div>
           <div className="home-stats">
             {STATS.map((s) => (
               <p className="home-stat" key={s.label}>
-                <span className="sr-only">{`${s.value} ${s.label}`}</span>
-                <span className="home-stat-show" aria-hidden="true">
-                  {statsGo ? <CountUp value={s.value} className="home-stat-n" /> : <span className="home-stat-n">0</span>}
-                  <span className="home-stat-l faint">{s.label}</span>
-                </span>
+                <span className="home-stat-n">{s.value}</span>
+                <span className="home-stat-l faint">{s.label}</span>
               </p>
             ))}
           </div>
@@ -270,34 +202,31 @@ export default function Home() {
       </section>
 
       <section className="home-langs" aria-label="Languages we speak">
-        <div className="lang-track">
-          <LanguageRun />
-          <LanguageRun hidden />
-        </div>
+        <ul className="lang-list" role="list">
+          {LANGUAGES.map((l, i) => (
+            <li key={l.code} lang={l.code} title={l.en} style={vars({ "--c": DOTS[i % DOTS.length] })}>
+              {l.own}
+              {/* Names in another script also carry their English name, so everyone can read them. */}
+              {l.en && NON_LATIN.test(l.own) && (
+                <span className="lang-en" lang="en">
+                  {l.en}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
-      <p className="home-lang-note faint">
-        {`${LANGUAGES.length} languages. Pay as you go uses one per clip; plans add more.`}
-      </p>
 
       <section className="home-make" aria-labelledby="make">
         <h2 id="make" className="center">
           What you can make
         </h2>
-        <div ref={makeRef} className={`make-grid${makeSeen ? " is-in" : ""}`}>
-          {USES.map((u, i) => (
-            <div className="make-item" key={u.title} style={vars({ "--d": `${i * 90}ms` })}>
+        <div className="make-grid">
+          {USES.map((u) => (
+            <div className="make-item" key={u.title}>
               <span className="make-badge" aria-hidden="true">
                 <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    className="make-ink"
-                    d={u.icon}
-                    pathLength={1}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  <path d={u.icon} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
               <div className="make-text">
@@ -314,13 +243,7 @@ export default function Home() {
           <h2 id="voices-title">Voices</h2>
           <label className="voices-filter faint">
             Accent
-            <select
-              value={accent}
-              onChange={(e) => {
-                setAccent(e.target.value);
-                setFiltered(true);
-              }}
-            >
+            <select value={accent} onChange={(e) => setAccent(e.target.value)}>
               {LIVE_ACCENTS.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.label}
@@ -330,34 +253,33 @@ export default function Home() {
           </label>
         </div>
 
-        <div ref={listRef} className={`home-list${listSeen ? " is-in" : ""}${filtered ? " is-filtered" : ""}`}>
-          <ul className="voice-list" key={accent}>
-            {voices.map((v, i) => {
-              const playing = playingId === v.id;
-              return (
-                <li className="voice-row" key={v.id} style={vars({ "--d": `${Math.min(i, 10) * 45}ms` })}>
-                  {v.sample ? (
-                    <Drum
-                      size={44}
-                      playing={playing}
-                      label={playing ? `Pause ${v.name}` : `Play ${v.name}`}
-                      onClick={() => toggleSample(v.id)}
-                    />
-                  ) : (
-                    <span className="voice-nosample" aria-hidden="true" />
-                  )}
-                  <div className="voice-text">
-                    <span className="voice-name">{v.name}</span>
-                    <span className="voice-meta faint">{v.sample ? v.meta : `${v.meta} · sample soon`}</span>
-                  </div>
-                  <span className="home-row-end" aria-hidden="true">
-                    {playing ? <BeadWave beads={6} speaking className="home-row-wave" /> : <PatternDot pattern="beads" size={22} />}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <ul className="voice-list" key={accent}>
+          {voices.map((v) => {
+            const playing = playingId === v.id;
+            return (
+              <li className="voice-row" key={v.id}>
+                {v.sample ? (
+                  <Drum
+                    size={44}
+                    playing={playing}
+                    label={playing ? `Pause ${v.name}` : `Play ${v.name}`}
+                    onClick={() => toggleSample(v.id)}
+                  />
+                ) : (
+                  <span className="voice-nosample" aria-hidden="true" />
+                )}
+                <div className="voice-text">
+                  <span className="voice-name">{v.name}</span>
+                  {/* The accent is the one picked above, so the row leaves it out. */}
+                  <span className="voice-meta faint">{`${v.gender} · ${v.style}${v.sample ? "" : " · sample soon"}`}</span>
+                </div>
+                <span className="home-row-end" aria-hidden="true">
+                  {playing ? <BeadWave beads={6} speaking className="home-row-wave" /> : <PatternDot pattern="beads" size={22} />}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       </section>
     </Shell>
   );

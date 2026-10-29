@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppShell } from "../components/AppShell";
-import { BeadWave, CountUp, RiseWords, useInView } from "../components/Motion";
+import { BeadWave } from "../components/Motion";
 import { Drum, PatternStrip, Shell } from "../components/Shell";
 import { LIVE_ACCENTS, VOICES } from "../data";
 import { setFlow } from "../flow";
@@ -8,18 +8,6 @@ import { API_MODE } from "../lib/api";
 import { useVoiceSample } from "../lib/sample";
 import { navigate } from "../router";
 import "./Voices.css";
-
-/** An accent's heading, sliding in from the left as its section comes into view. */
-function GroupTitle({ id, label, count }: { id: string; label: string; count: number }) {
-  // No inset: it moves together with the section's own scroll reveal.
-  const [ref, seen] = useInView<HTMLHeadingElement>("0px");
-  return (
-    <h2 ref={ref} id={id} className={`vgroup-title${seen ? " is-in" : ""}`}>
-      {label}
-      <span className="faint">{` · ${count} ${count === 1 ? "voice" : "voices"}`}</span>
-    </h2>
-  );
-}
 
 /** Every voice, grouped by accent, with its sample and a button to use it. */
 export default function Voices() {
@@ -43,20 +31,11 @@ export default function Voices() {
       <div className="vpage">
         <header className="vpage-head">
           <div>
-            <h1 className="vpage-title">
-              <RiseWords text="Voices" />
-            </h1>
+            <h1 className="vpage-title">Voices</h1>
             <div className="vpage-strip" aria-hidden="true">
               <PatternStrip pattern="beads" />
             </div>
-            <p className="muted">
-              {/* The count rolls up on screen; screen readers get the number once. */}
-              <span className="vpage-count" aria-hidden="true" style={{ minWidth: `${String(VOICES.length).length}ch` }}>
-                <CountUp value={VOICES.length} />
-              </span>
-              <span className="sr-only">{VOICES.length}</span>
-              {` voices in ${LIVE_ACCENTS.length} African accents. Play one, then use it for your script.`}
-            </p>
+            <p className="muted">{`${VOICES.length} voices in ${LIVE_ACCENTS.length} African accents.`}</p>
           </div>
           <label className="field vpage-filter">
             Accent
@@ -73,7 +52,10 @@ export default function Voices() {
 
         {groups.map(({ accent: a, voices }) => (
           <section key={a.id} className="vgroup" aria-labelledby={`accent-${a.id}`}>
-            <GroupTitle id={`accent-${a.id}`} label={a.label} count={voices.length} />
+            <h2 id={`accent-${a.id}`}>
+              {a.label}
+              <span className="faint">{` · ${voices.length} ${voices.length === 1 ? "voice" : "voices"}`}</span>
+            </h2>
             <ul className="vgrid">
               {voices.map((v) => {
                 const on = playing === v.id;

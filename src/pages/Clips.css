@@ -13,20 +13,9 @@
   margin: 0;
 }
 
-.clips-head {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .clips-title {
   font-size: 32px;
   line-height: 1.15;
-}
-
-/* RiseWords sets each word as an inline block; keep the space after it. */
-.clips-title .rw {
-  white-space: pre;
 }
 
 .clips-status {
@@ -113,17 +102,10 @@
   flex: none;
   height: 16px;
   gap: 2px;
-  animation: clip-wave-in 240ms ease-out backwards;
 }
 
 .clip-wave .bw-bead {
   width: 3px;
-}
-
-@keyframes clip-wave-in {
-  from {
-    opacity: 0;
-  }
 }
 
 .clip-row.is-playing .clip-drum .drum {
@@ -169,32 +151,6 @@
 .clip-versions {
   grid-column: 2 / -1;
   max-width: 480px;
-}
-
-/* Rows rise in one after another the first time the list comes into view (a long
-   list stops adding delay after the ninth row). reveal.ts would also ripple these
-   rows; the list times its own entrance, so its marks do nothing here. */
-.clips-list > .clip-row[data-reveal] {
-  opacity: 1;
-  animation: none;
-}
-
-.clips-list:not(.is-in) > .clip-row,
-.clips-list:not(.is-in) > .clip-row[data-reveal] {
-  opacity: 0;
-}
-
-.clips-list.is-in > .clip-row,
-.clips-list.is-in > .clip-row[data-reveal] {
-  animation: clip-row-in 460ms var(--ease-out, ease-out) backwards;
-  animation-delay: calc(var(--rows-delay, 0ms) + min(var(--i, 0), 8) * 60ms);
-}
-
-@keyframes clip-row-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
 }
 
 .clips-foot {
@@ -339,29 +295,7 @@ details[open] > .versions-toggle .versions-chev {
   display: none;
 }
 
-/* Opening "Other versions": each version eases in just after the one above, then
-   the notes. The list as a whole stays put, so nothing moves twice. */
-.clip-row > .clip-versions:not([hidden]) {
-  animation: none;
-}
-
-.clip-versions:not([hidden]) .versions-item,
-.ready-versions[open] .versions-item {
-  animation: versions-in 300ms var(--ease-out, ease-out) backwards;
-  animation-delay: calc(min(var(--i, 0), 8) * 50ms);
-}
-
-.clip-versions:not([hidden]) .versions-note,
-.ready-versions[open] .versions-note {
-  animation: versions-in 300ms var(--ease-out, ease-out) 180ms backwards;
-}
-
-@keyframes versions-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-}
+/* Opening "Other versions" fades the list in as one block (motion.css). */
 
 .versions-toggle:focus-visible,
 .versions-get:focus-visible,
@@ -374,19 +308,8 @@ details[open] > .versions-toggle .versions-chev {
   .versions-chev {
     transition: none;
   }
-  .clip-wave.bead-wave,
-  .clip-row.is-playing .clip-drum .drum,
-  .clips-list.is-in > .clip-row,
-  .clips-list.is-in > .clip-row[data-reveal],
-  .clip-versions:not([hidden]) .versions-item,
-  .ready-versions[open] .versions-item,
-  .clip-versions:not([hidden]) .versions-note,
-  .ready-versions[open] .versions-note {
+  .clip-row.is-playing .clip-drum .drum {
     animation: none;
-  }
-  .clips-list:not(.is-in) > .clip-row,
-  .clips-list:not(.is-in) > .clip-row[data-reveal] {
-    opacity: 1;
   }
 }
 

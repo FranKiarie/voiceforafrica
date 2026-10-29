@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { InkUnderline, RiseWords, useInView } from "../components/Motion";
+import { useState } from "react";
+import { InkUnderline } from "../components/Motion";
 import { Shell, PatternStrip } from "../components/Shell";
 import { Link } from "../router";
 import {
@@ -7,6 +7,7 @@ import {
   MAX_UPLOAD_MB,
   PAYG_USD_PER_MIN,
   PLAN_TRANSCRIBE_MINUTES,
+  PREVIEW_SECONDS,
   TRANSCRIBE_PRICE,
   TRANSCRIBE_USD_PER_MIN,
   formatUsd,
@@ -20,10 +21,8 @@ type Tier = {
   pattern: PatternId;
   monthly?: number; // USD per month; undefined = not a monthly plan
   price?: string; // fixed price label (pay as you go, enterprise)
-  usd?: number; // a fixed price that counts up like the plans (pay as you go)
   per?: string;
   line: string;
-  extra?: ReactNode; // a second, smaller line under the summary
   cta: string;
   kind: "studio" | "plan" | "contact";
   plan?: Plan;
@@ -40,15 +39,8 @@ const TIERS: Tier[] = [
     name: "Pay as you go",
     pattern: "band",
     price: formatUsd(PAYG_USD_PER_MIN),
-    usd: PAYG_USD_PER_MIN,
     per: "/ min",
-    line: "Hear 45 seconds first, no account. One language. Pay by M-Pesa or card.",
-    extra: (
-      <>
-        {`Transcription: ${TRANSCRIBE_PRICE}, counted per started minute. Up to ${LONGEST_RECORDING} a recording, no account needed. `}
-        <Link href="/transcribe">Transcribe a recording</Link>
-      </>
-    ),
+    line: `Hear ${PREVIEW_SECONDS} seconds free, no account. One language.`,
     cta: "Paste your script",
     kind: "studio",
   },
@@ -56,7 +48,7 @@ const TIERS: Tier[] = [
     name: "Starter",
     pattern: "beads",
     monthly: 15,
-    line: `200 voice minutes + ${txMin("starter")} transcription minutes, 2 languages, WAV, M4A and OGG downloads. Commercial licence.`,
+    line: `200 voice + ${txMin("starter")} transcription minutes, 2 languages, Commercial licence.`,
     cta: "Choose Starter",
     kind: "plan",
     plan: "starter",
@@ -65,7 +57,7 @@ const TIERS: Tier[] = [
     name: "Creator",
     pattern: "kitenge",
     monthly: 50,
-    line: `750 voice minutes + ${txMin("creator")} transcription minutes, 5 languages, style control, two-voice dialogue.`,
+    line: `750 voice + ${txMin("creator")} transcription minutes, 5 languages, two-voice dialogue.`,
     cta: "Choose Creator",
     kind: "plan",
     plan: "creator",
@@ -75,7 +67,7 @@ const TIERS: Tier[] = [
     name: "Pro",
     pattern: "adire",
     monthly: 100,
-    line: `1,600 voice minutes + ${txMin("pro")} transcription minutes, every language, Broadcast licence for TV and radio.`,
+    line: `1,600 voice + ${txMin("pro")} transcription minutes, every language, Broadcast licence.`,
     cta: "Choose Pro",
     kind: "plan",
     plan: "pro",
@@ -84,7 +76,7 @@ const TIERS: Tier[] = [
     name: "Business",
     pattern: "kente",
     monthly: 350,
-    line: `6,000 voice minutes + ${txMin("business")} transcription minutes, Resale licence, 10 seats.`,
+    line: `6,000 voice + ${txMin("business")} transcription minutes, Resale licence, 10 seats.`,
     cta: "Choose Business",
     kind: "plan",
     plan: "business",
@@ -94,13 +86,7 @@ const TIERS: Tier[] = [
     pattern: "ndebele",
     price: "Custom",
     per: "yearly",
-    line: "Your own brand voice, own capacity, agreed transcription minutes, invoices and an SLA.",
-    extra: (
-      <>
-        {"Dubbing is available too, into African languages and accents. "}
-        <Link href="/dubbing">About dubbing</Link>
-      </>
-    ),
+    line: "Your own brand voice, invoices and an SLA.",
     cta: "Talk to us",
     kind: "contact",
   },
@@ -138,135 +124,10 @@ const ROWS: [string, ...string[]][] = [
   ["Support", "Help page", "Email", "Email", "WhatsApp", "WhatsApp + call", "Named manager"],
 ];
 
-const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-
-/**
- * Cards matching `selector` rise in as they scroll into view; cards that arrive
- * together ripple `step` ms apart. The rise itself lives in Pricing.css and takes
- * over from the site-wide scroll reveal for these cards, so each moves once.
- */
-function useRiseIn<T extends HTMLElement>(selector: string, step = 80) {
-  const ref = useRef<T>(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const items = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => el.dataset.rise !== "in");
-    const show = (els: HTMLElement[]) =>
-      els.forEach((el, i) => {
-        el.style.setProperty("--rise-delay", `${Math.min(i, 4) * step}ms`);
-        el.dataset.rise = "in";
-      });
-    if (reduced() || typeof IntersectionObserver === "undefined") {
-      show(items);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        const due = entries
-          .filter((e) => e.isIntersecting || e.boundingClientRect.bottom < 0)
-          .map((e) => e.target as HTMLElement)
-          .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-        due.forEach((el) => io.unobserve(el));
-        show(due);
-      },
-      { rootMargin: "0px 0px -6% 0px" },
-    );
-    items.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [selector, step]);
-  return ref;
-}
-
-/** "$15" for whole amounts, "$12.50" otherwise, for any figure on the way there. */
-function usdLike(target: number, n: number): string {
-  const whole = Math.abs(target - Math.round(target)) < 0.005;
-  return whole
-    ? `$${Math.round(n).toLocaleString("en-US")}`
-    : `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/**
- * A plan price that counts up from $0 the first time it is seen, then glides to the
- * new figure when the billing period changes. Screen readers get the final price only.
- */
-function PriceCount({ value }: { value: number }) {
-  // No inset: the count starts as the card rises in, so "$0" never sits on screen.
-  const [ref, seen] = useInView<HTMLSpanElement>("0px");
-  const [shown, setShown] = useState(() => (reduced() ? value : 0));
-  const now = useRef(shown);
-  const counted = useRef(false);
-  useEffect(() => {
-    if (!seen) return;
-    if (reduced()) {
-      now.current = value;
-      setShown(value);
-      return;
-    }
-    const from = now.current;
-    const duration = counted.current ? 420 : 900;
-    const start = performance.now();
-    let frame = 0;
-    const tick = (t: number) => {
-      const k = Math.min(1, (t - start) / duration);
-      const n = from + (value - from) * (1 - Math.pow(1 - k, 3));
-      now.current = n;
-      setShown(n);
-      if (k < 1) frame = requestAnimationFrame(tick);
-      else counted.current = true;
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [seen, value]);
-  return (
-    <span ref={ref} className="amount">
-      <span className="sr-only">{formatUsd(value)}</span>
-      <span aria-hidden="true">{usdLike(value, shown)}</span>
-    </span>
-  );
-}
-
-type Box = { l: string; m: string; r: string; h: string };
-
-/** Monthly / Yearly, with a dark pill that slides to the chosen one. */
+/** Monthly / Yearly. The chosen one is filled. */
 function PeriodSwitch({ yearly, onChange }: { yearly: boolean; onChange: (yearly: boolean) => void }) {
-  const group = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState<Box | null>(null);
-  useLayoutEffect(() => {
-    const el = group.current;
-    if (!el) return;
-    const measure = () => {
-      const b = el.querySelector<HTMLButtonElement>('button[aria-pressed="true"]');
-      if (!b) return;
-      const x = b.offsetLeft;
-      const y = b.offsetTop;
-      const w = b.offsetWidth;
-      const h = b.offsetHeight;
-      // Two round caps and a stretched middle, all moved by transform only, so the
-      // pill keeps its round ends while it slides and changes width.
-      const next: Box = {
-        l: `translate(${x}px, ${y}px)`,
-        m: `translate(${x + h / 2 - 0.5}px, ${y}px) scaleX(${Math.max(0, w - h + 1) / 100})`,
-        r: `translate(${x + w - h}px, ${y}px)`,
-        h: `${h}px`,
-      };
-      setBox((prev) => (prev && prev.l === next.l && prev.m === next.m && prev.r === next.r && prev.h === next.h ? prev : next));
-    };
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    el.querySelectorAll("button").forEach((b) => ro.observe(b));
-    return () => ro.disconnect();
-  }, [yearly]);
   return (
-    <div ref={group} className={`period${box ? " has-slider" : ""}`} role="group" aria-label="Billing period">
-      {box && (
-        <span className="period-slider" aria-hidden="true" style={{ ["--ph" as string]: box.h }}>
-          <span className="ps-cap" style={{ transform: box.l }} />
-          <span className="ps-mid" style={{ transform: box.m }} />
-          <span className="ps-cap" style={{ transform: box.r }} />
-        </span>
-      )}
+    <div className="period" role="group" aria-label="Billing period">
       <button type="button" aria-pressed={!yearly} onClick={() => onChange(false)}>
         Monthly
       </button>
@@ -279,32 +140,24 @@ function PeriodSwitch({ yearly, onChange }: { yearly: boolean; onChange: (yearly
 
 export default function Pricing() {
   const [yearly, setYearly] = useState(false);
-  const grid = useRiseIn<HTMLElement>(".tier");
-  const more = useRiseIn<HTMLDivElement>(".more-card");
 
-  const priceOf = (t: Tier): { price: ReactNode; per: string } => {
-    if (t.monthly === undefined) {
-      // Pay as you go counts up too; Enterprise stays "Custom".
-      const price = t.usd !== undefined ? <PriceCount value={t.usd} /> : <span className="amount">{t.price}</span>;
-      return { price, per: t.per ?? "" };
-    }
-    if (yearly) return { price: <PriceCount value={(t.monthly * 10) / 12} />, per: "/ month, billed yearly" };
-    return { price: <PriceCount value={t.monthly} />, per: "/ month" };
+  const priceOf = (t: Tier): { price: string; per: string } => {
+    if (t.monthly === undefined) return { price: t.price ?? "", per: t.per ?? "" };
+    if (yearly) return { price: formatUsd((t.monthly * 10) / 12), per: "/ month, billed yearly" };
+    return { price: formatUsd(t.monthly), per: "/ month" };
   };
 
   return (
     <Shell>
       <section className="pricing-intro">
         <h1>
-          <InkUnderline delay={420}>
-            <RiseWords text="Pricing" />
-          </InkUnderline>
+          <InkUnderline>Pricing</InkUnderline>
         </h1>
-        <p className="muted">Pay per clip, or save with a plan once you make more than 8 minutes a month.</p>
+        <p className="muted">Pay per clip, or save with a plan from 8 minutes a month.</p>
         <PeriodSwitch yearly={yearly} onChange={setYearly} />
       </section>
 
-      <section ref={grid} className="pricing-grid wide" aria-label="Plans">
+      <section className="pricing-grid wide" aria-label="Plans">
         {TIERS.map((t) => {
           const { price, per } = priceOf(t);
           const cls = t.primary ? "btn btn-block" : "btn btn-outline btn-block";
@@ -314,15 +167,10 @@ export default function Pricing() {
               <div className="tier-body">
                 <h2>{t.name}</h2>
                 <p className="tier-price">
-                  {price}
-                  <span key={per} className="faint tier-per">
-                    {per}
-                  </span>
+                  <span className="amount">{price}</span>
+                  <span className="faint">{per}</span>
                 </p>
-                <div className="tier-text">
-                  <p className="muted tier-line">{t.line}</p>
-                  {t.extra && <p className="faint tier-extra">{t.extra}</p>}
-                </div>
+                <p className="muted tier-line">{t.line}</p>
                 {t.kind === "studio" && (
                   <Link href="/studio" className={cls}>
                     {t.cta}
@@ -362,8 +210,8 @@ export default function Pricing() {
                 </tr>
               </thead>
               <tbody>
-                {ROWS.map(([label, ...cells], r) => (
-                  <tr key={label} style={{ ["--r" as string]: r }}>
+                {ROWS.map(([label, ...cells]) => (
+                  <tr key={label}>
                     <th scope="row">{label}</th>
                     {cells.map((c, i) => (
                       <td key={i}>
@@ -387,7 +235,7 @@ export default function Pricing() {
 
       <section className="wide pricing-more" aria-labelledby="more-title">
         <h2 id="more-title">Transcription and dubbing</h2>
-        <div ref={more} className="more-grid">
+        <div className="more-grid">
           <article className="card more-card">
             <PatternStrip pattern="bark" />
             <div className="more-body">
@@ -397,7 +245,7 @@ export default function Pricing() {
                 <span className="faint">/ min</span>
               </p>
               <p className="muted more-line">
-                {`Upload a recording of up to ${LONGEST_RECORDING} or ${MAX_UPLOAD_MB} MB and get the words back as TXT, SRT and VTT files. Every started minute counts. No account needed; plans include transcription minutes each month.`}
+                {`Up to ${LONGEST_RECORDING} or ${MAX_UPLOAD_MB} MB, billed per started minute. No account needed.`}
               </p>
               <Link href="/transcribe" className="btn btn-outline">
                 Transcribe a recording
@@ -409,16 +257,14 @@ export default function Pricing() {
             <div className="more-body">
               <h3>Dubbing</h3>
               <p className="more-for">For enterprises</p>
-              <p className="muted more-line">
-                We dub your videos and audio into African languages and accents. Pricing is agreed per project.
-              </p>
+              <p className="muted more-line">Into African languages and accents, quoted per project.</p>
               <Link href="/dubbing" className="btn btn-outline">
                 About dubbing
               </Link>
             </div>
           </article>
         </div>
-        <p className="faint pricing-foot">Prices are in US dollars. You pay the same amount in Kenyan shillings by M-Pesa or card; your bank converts card payments.</p>
+        <p className="faint pricing-foot">Prices are in US dollars. Pay the same in Kenyan shillings by M-Pesa or card.</p>
       </section>
     </Shell>
   );

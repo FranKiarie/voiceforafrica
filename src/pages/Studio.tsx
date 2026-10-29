@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { useEased } from "../components/AppShell";
-import { BeadWave, RiseWords } from "../components/Motion";
+import { BeadWave } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { Link, navigate } from "../router";
-import { LANGUAGES, LIVE_ACCENTS, MAX_PAYG_CHARS, PAYG_PRICE, PURPOSES, VOICES, accentLabel, formatDuration, quoteFor } from "../data";
+import { LANGUAGES, LIVE_ACCENTS, MAX_PAYG_CHARS, PAYG_PRICE, PURPOSES, VOICES, formatDuration, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
 import { ApiError, createPreview, type Preview } from "../lib/api";
 import { useVoiceSample } from "../lib/sample";
@@ -96,9 +95,6 @@ export default function Studio() {
     if (first && voice.accent !== id) setVoiceId(first.id);
   };
   const q = quoteFor(script);
-  // The counter glides to new figures (a paste counts up); single keystrokes just tick over.
-  const charsShown = Math.round(useEased(q.chars, { duration: 360, snap: 2 }));
-  const secondsShown = Math.round(useEased(q.projectedSeconds, { duration: 360, snap: 1 }));
   const left = Math.max(0, PREVIEWS_PER_DAY - used);
   const ready = q.chars >= MIN_SCRIPT_CHARS && EMAIL_RE.test(useEmail.trim()) && adult;
 
@@ -132,9 +128,9 @@ export default function Studio() {
         // The server's 4xx and 503 messages are written for customers.
         setError(err.message);
       } else if (err instanceof ApiError) {
-        setError("We couldn't make your preview just now. Please try again in a minute.");
+        setError("We couldn't make your preview. Try again in a minute.");
       } else {
-        setError("We couldn't reach the server. Check your connection and try again.");
+        setError("We couldn't reach the server. Check your connection.");
       }
     }
   };
@@ -142,7 +138,7 @@ export default function Studio() {
   return (
     <Shell step={1} footer={false}>
       <form className="narrow studio" onSubmit={(e) => void submit(e)} noValidate>
-        <RiseWords as="h1" className="studio-title" text="Paste your script" delay={40} step={80} />
+        <h1 className="studio-title">Paste your script</h1>
 
         <label className="field">
           What's it for?
@@ -211,17 +207,17 @@ export default function Studio() {
                 )}
               </svg>
               {sampling === voice.id ? `Stop ${voice.name}` : `Hear ${voice.name}`}
-              <span className="faint">{` · ${voice.gender} · ${accentLabel(voice.accent)} accent`}</span>
+              <span className="faint">{` · ${voice.gender}`}</span>
             </button>
           ) : (
-            <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · ${accentLabel(voice.accent)} accent · sample coming soon`}</p>
+            <p className="studio-sample faint">{`${voice.name} · ${voice.gender} · no sample yet`}</p>
           )}
           {/* While a sample plays, a small speaking wave sits beside the voice picker's label. */}
           {sampling !== null && <BeadWave beads={11} speaking className="studio-wave" />}
         </div>
         {lang?.premiumOnly && (
           <p className="faint studio-hint">
-            {lang.own} uses our Premium voice engine; same price on pay as you go.
+            {lang.own} uses our Premium engine, same pay-as-you-go price.
           </p>
         )}
 
@@ -232,23 +228,18 @@ export default function Studio() {
               rows={9}
               value={script}
               maxLength={MAX_PAYG_CHARS}
-              placeholder="Paste the words you want spoken…"
+              placeholder="Paste your script…"
               onChange={(e) => setScript(e.target.value)}
               aria-describedby="script-count"
             />
           </label>
-          <p id="script-count" className="faint studio-count">
-            <span className="sr-only" aria-live="polite">
-              {`${q.chars.toLocaleString("en-KE")} characters · about ${formatDuration(q.projectedSeconds)}`}
-            </span>
-            <span aria-hidden="true">
-              {`${charsShown.toLocaleString("en-KE")} characters · about ${formatDuration(secondsShown)}`}
-            </span>
+          <p id="script-count" className="faint studio-count" aria-live="polite">
+            {`${q.chars.toLocaleString("en-KE")} characters · about ${formatDuration(q.projectedSeconds)}`}
           </p>
         </div>
 
         <label className="field">
-          Email for your download link
+          Email for your download
           {accountEmail ? (
             <input type="email" value={accountEmail} readOnly aria-readonly="true" aria-describedby="studio-account" />
           ) : (
@@ -264,7 +255,7 @@ export default function Studio() {
         </label>
         {accountEmail && (
           <p id="studio-account" className="faint studio-hint">
-            Using {accountEmail} · Not you?{" "}
+            Not you?{" "}
             <button type="button" style={TEXT_BTN} onClick={() => void supabase.auth.signOut().catch(() => undefined)}>
               Sign out
             </button>
@@ -280,7 +271,7 @@ export default function Studio() {
 
         {limitHit || left === 0 ? (
           <p className="studio-limit" role="status">
-            You've used today's 3 free previews. Come back tomorrow for more, or write to us if you need help now.
+            You've used today's 3 free previews; more tomorrow.
           </p>
         ) : null}
 
@@ -300,7 +291,7 @@ export default function Studio() {
             {busy ? "Getting your preview…" : "Hear 45 seconds free"}
           </button>
           <p className="faint center studio-note">
-            Then {PAYG_PRICE} if you like it · {left} free {left === 1 ? "preview" : "previews"} left today
+            Then {PAYG_PRICE} · {left} free {left === 1 ? "preview" : "previews"} left today
           </p>
         </div>
       </form>

@@ -108,8 +108,8 @@
   flex-direction: column;
 }
 
-/* The rules between steps start after the numbers, so the line down the numbers
-   never crosses them. */
+/* The rules between steps start after the numbers, so the faint line down the
+   numbers never crosses them. */
 .dub-step {
   position: relative;
   display: flex;
@@ -117,11 +117,8 @@
   align-items: flex-start;
 }
 
-/* A faint track and, over it, a gold line that draws down to the next number as
-   you scroll (--seg, 0 to 1, set by useStepLine in Dubbing.tsx). Each segment runs
-   from this number's centre to the next one's. */
-.dub-step:not(:last-child)::before,
-.dub-step:not(:last-child)::after {
+/* A faint line from this number's centre to the next one's. */
+.dub-step:not(:last-child)::before {
   content: "";
   position: absolute;
   left: 15px;
@@ -129,17 +126,8 @@
   width: 2px;
   height: 100%;
   border-radius: 1px;
-  pointer-events: none;
-}
-
-.dub-step:not(:last-child)::before {
   background: var(--line);
-}
-
-.dub-step:not(:last-child)::after {
-  background: var(--gold);
-  transform-origin: top;
-  transform: scaleY(var(--seg, 0));
+  pointer-events: none;
 }
 
 .dub-num {
@@ -182,16 +170,23 @@
   font-size: 15px;
 }
 
-/* Good to know */
+/* What you get + good to know: one card, two columns when there is room */
 .dub-note {
   overflow: hidden;
 }
 
 .dub-note-body {
   padding: 22px 24px 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 24px 40px;
+}
+
+.dub-note-col {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .dub-note-body h2 {
@@ -226,13 +221,6 @@
   background: var(--gold);
 }
 
-/* What you get + files stay private, side by side when there is room */
-.dub-pair {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: 40px;
-}
-
 /* Languages and voices */
 .dub-chips {
   margin: 0;
@@ -254,12 +242,7 @@
   font-weight: 500;
 }
 
-.dub-chip .faint {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* Pricing and the one call to action */
+/* Get a quote: the one call to action */
 .dub-talk {
   display: flex;
   flex-direction: column;
@@ -303,60 +286,6 @@
 
 .dub-more a:hover {
   color: var(--text);
-}
-
-/* ---------- Motion ----------
-   Numbers pop in as the line reaches them; the accent chips rise in, rippling.
-   Under reduced motion (or in print) everything shows at once, with the line drawn. */
-@media screen and (prefers-reduced-motion: no-preference) {
-  .dub-step:not(:last-child)::after {
-    transition: transform 120ms linear;
-  }
-
-  .dub-step:not([data-on]) .dub-num {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-
-  .dub-step[data-on] .dub-num {
-    animation: dub-pop 520ms var(--ease-out, ease-out) backwards;
-  }
-
-  .dub-chips .dub-chip:not([data-rise="in"]) {
-    opacity: 0;
-  }
-
-  .dub-chips .dub-chip[data-rise="in"] {
-    animation: dub-chip 420ms var(--ease-out, ease-out) var(--chip-delay, 0ms) backwards;
-  }
-}
-
-@keyframes dub-pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes dub-chip {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.96);
-  }
-}
-
-@media not screen, (prefers-reduced-motion: reduce) {
-  .dub-step:not(:last-child)::after {
-    transform: none;
-  }
 }
 
 @media (max-width: 480px) {

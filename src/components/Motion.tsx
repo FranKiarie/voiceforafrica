@@ -1,6 +1,7 @@
-// Shared motion pieces for page heroes and highlights. Every one of them shows its
-// final state at once for visitors who ask for reduced motion.
-import { Children, Fragment, useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
+// Shared pieces for page heroes and highlights. Motion is kept to a few calm places:
+// the greeting crossfade and the bead wave while a voice plays. Headings and numbers
+// stay still. Everything is still for visitors who ask for reduced motion.
+import { Children, useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
 import "./Motion.css";
 
 const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -31,16 +32,11 @@ export function useInView<T extends Element>(rootMargin = "0px 0px -10% 0px") {
   return [ref, seen] as const;
 }
 
-/**
- * A line of text whose words rise in one after another. Screen readers get the
- * plain text once; the animated words are hidden from them.
- */
+/** A heading line. It used to rise in word by word; now it simply arrives with the page. */
 export function RiseWords({
   text,
   as: Tag = "span",
   className,
-  delay = 0,
-  step = 70,
 }: {
   text: string;
   as?: ElementType;
@@ -48,29 +44,12 @@ export function RiseWords({
   delay?: number;
   step?: number;
 }) {
-  const words = text.split(/\s+/).filter(Boolean);
-  return (
-    <Tag className={["rise-words", className].filter(Boolean).join(" ")}>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden="true">
-        {words.map((w, i) => (
-          // The space sits between the inline-block words, so it shows and the line can wrap there.
-          <Fragment key={i}>
-            <span className="rw" style={{ ["--rw-delay" as string]: `${delay + i * step}ms` }}>
-              {w}
-            </span>
-            {i < words.length - 1 ? " " : ""}
-          </Fragment>
-        ))}
-      </span>
-    </Tag>
-  );
+  return <Tag className={["rise-words", className].filter(Boolean).join(" ")}>{text}</Tag>;
 }
 
-/** Counts up to `value` the first time it scrolls into view. */
+/** A number shown as it is (it no longer counts up). */
 export function CountUp({
   value,
-  duration = 1100,
   format = (n: number) => Math.round(n).toLocaleString("en-US"),
   className,
 }: {
@@ -79,31 +58,7 @@ export function CountUp({
   format?: (n: number) => string;
   className?: string;
 }) {
-  const [ref, seen] = useInView<HTMLSpanElement>();
-  const [shown, setShown] = useState(() => (reduced() ? value : 0));
-  useEffect(() => {
-    if (!seen) return;
-    if (reduced()) {
-      setShown(value);
-      return;
-    }
-    let frame = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      // rAF can stamp a frame just before `start`; never show "-0".
-      const t = Math.min(1, Math.max(0, (now - start) / duration));
-      const eased = 1 - Math.pow(1 - t, 3);
-      setShown(value * eased);
-      if (t < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [seen, value, duration]);
-  return (
-    <span ref={ref} className={className} aria-label={format(value)}>
-      <span aria-hidden="true">{format(shown)}</span>
-    </span>
-  );
+  return <span className={className}>{format(value)}</span>;
 }
 
 /**

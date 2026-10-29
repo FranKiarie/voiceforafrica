@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { InkUnderline, RiseWords } from "../components/Motion";
+import { InkUnderline } from "../components/Motion";
 import { Shell } from "../components/Shell";
 import { verifyLicence, type Licence } from "../lib/api";
 import { usePath } from "../router";
@@ -31,14 +31,12 @@ function formatIssued(value: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 }
 
-/** A shield that draws its own outline, fills softly, then ticks itself. Decorative. */
+/** A ticked shield above the title. Decorative and still. */
 function ShieldCheck() {
-  const shield = "M24 3.5 L42 10 V25.5 C42 38 34.5 47 24 52 C13.5 47 6 38 6 25.5 V10 Z";
   return (
     <svg className="verify-shield" width="48" height="56" viewBox="0 0 48 56" aria-hidden="true">
-      <path className="vs-fill" d={shield} />
-      <path className="vs-edge" d={shield} pathLength={1} />
-      <path className="vs-check" d="M16 28.5 L21.5 34 L32.5 22" pathLength={1} />
+      <path className="vs-shield" d="M24 3.5 L42 10 V25.5 C42 38 34.5 47 24 52 C13.5 47 6 38 6 25.5 V10 Z" />
+      <path className="vs-check" d="M16 28.5 L21.5 34 L32.5 22" />
     </svg>
   );
 }
@@ -93,12 +91,9 @@ export default function Verify() {
         <div className="verify-intro">
           <ShieldCheck />
           <h1>
-            <RiseWords text="Check a" delay={120} />{" "}
-            <InkUnderline delay={1000}>
-              <RiseWords text="licence" delay={260} />
-            </InkUnderline>
+            Check a <InkUnderline>licence</InkUnderline>
           </h1>
-          <p className="muted">Enter the ID from the licence certificate.</p>
+          <p className="muted">Enter the ID from the certificate.</p>
         </div>
 
         <form className="verify-form" aria-label="Check a licence" onSubmit={onSubmit} noValidate>
@@ -123,24 +118,24 @@ export default function Verify() {
         </form>
 
         <div aria-live="polite">
-          {result?.kind === "loading" && <p className="muted">Checking the licence…</p>}
+          {result?.kind === "loading" && <p className="muted">Checking…</p>}
 
           {result?.kind === "error" && (
             <p className="verify-error" role="alert">
-              We couldn't reach the licence service. Check your connection and try again.
+              Couldn't reach the licence service. Check your connection and try again.
             </p>
           )}
 
           {result?.kind === "bad" && (
             <p id="verify-error" className="verify-error">
-              That does not look like a licence ID. It reads like VS-2026-8F3K2Q.
+              That isn't a licence ID. IDs look like VS-2026-8F3K2Q.
             </p>
           )}
 
           {result?.kind === "missing" && (
             <section className="card verify-result" aria-label="Result">
               <div className="verify-body">
-                <h2>Not found: this ID was never issued.</h2>
+                <h2>Not found: this ID was never issued</h2>
               </div>
             </section>
           )}
@@ -157,7 +152,6 @@ export default function Verify() {
                   <svg className="verify-seal" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
                     <circle cx="14" cy="14" r="13" fill="var(--green)" />
                     <path
-                      className="tick"
                       d="M8 14.5 L12.5 19 L20 10"
                       fill="none"
                       stroke="#FFFFFF"
@@ -191,7 +185,7 @@ export default function Verify() {
           )}
         </div>
 
-        <p className="faint verify-note">Every clip also carries Google's inaudible SynthID watermark.</p>
+        <p className="faint verify-note">Clips also carry Google's inaudible SynthID watermark.</p>
       </div>
     </Shell>
   );

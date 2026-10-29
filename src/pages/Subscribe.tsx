@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
-import { useEased } from "../components/AppShell";
-import { RiseWords } from "../components/Motion";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { formatKes, KES_PER_USD, type PatternId } from "../data";
 import { getFlow } from "../flow";
@@ -97,20 +95,6 @@ function loadInline(): Promise<void> {
   return inlineLoading;
 }
 
-/**
- * The plan's dollar figure: counts up from $0 as the summary rises in, then glides
- * between the monthly and yearly figures. Screen readers get the figure itself.
- */
-function PlanAmount({ usd }: { usd: number }) {
-  const shown = useEased(usd, { from: 0, delay: 420, duration: 900 });
-  return (
-    <span className="sub-amount">
-      <span className="sr-only">{`$${usd.toLocaleString("en-US")}`}</span>
-      <span aria-hidden="true">{`$${Math.round(Math.max(0, shown)).toLocaleString("en-US")}`}</span>
-    </span>
-  );
-}
-
 export default function Subscribe() {
   const initial = useRef(readQuery()).current;
   const [billing, setBilling] = useState<Billing>(initial.billing);
@@ -140,7 +124,7 @@ export default function Subscribe() {
       <Shell>
         <div className="narrow center sub-missing">
           <h1>We don't have that plan</h1>
-          <p className="muted">Pick Starter, Creator, Pro or Business on the pricing page.</p>
+          <p className="muted">Pick one on the pricing page.</p>
           <Link href="/pricing" className="btn btn-outline">
             See all plans
           </Link>
@@ -203,7 +187,7 @@ export default function Subscribe() {
     e.preventDefault();
     const clean = useEmail.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
-      setError("Enter the email address where we send your receipt.");
+      setError("Enter a valid email for your receipt.");
       return;
     }
     setError("");
@@ -237,12 +221,12 @@ export default function Subscribe() {
 
   const shownKes = chargeKes ?? kes;
   const mpesaHint =
-    billing === "yearly" ? "pay once for the year" : "we send a payment prompt 3 days before each renewal";
+    billing === "yearly" ? "pay once for the year" : "we prompt you 3 days before each renewal";
 
   return (
     <Shell>
       <div className="narrow sub" aria-hidden={phase === "demo" ? true : undefined}>
-        <RiseWords as="h1" className="sub-title" text="Start your plan" delay={40} step={80} />
+        <h1 className="sub-title">Start your plan</h1>
 
         <section className="card sub-summary" aria-labelledby="sub-plan">
           <PatternStrip pattern={info.pattern} height={6} />
@@ -251,10 +235,8 @@ export default function Subscribe() {
               {info.name}
             </h2>
             <ul className="sub-perks">
-              {info.perks.map((p, i) => (
-                <li key={p} style={{ ["--i" as string]: i } as CSSProperties}>
-                  {p}
-                </li>
+              {info.perks.map((p) => (
+                <li key={p}>{p}</li>
               ))}
             </ul>
             <div className="sub-period" role="group" aria-label="Billing period">
@@ -266,7 +248,7 @@ export default function Subscribe() {
               </button>
             </div>
             <p className="sub-price" aria-live="polite">
-              <PlanAmount usd={usd} />
+              <span className="sub-amount">{`$${usd.toLocaleString("en-US")}`}</span>
               <span className="faint">
                 {billing === "yearly" ? " billed yearly — 2 months free" : " / month"}
               </span>
@@ -286,7 +268,7 @@ export default function Subscribe() {
         {session === null && (
           <section className="card" aria-labelledby="sub-account-title" style={{ padding: "28px 24px", textAlign: "center" }}>
             <h2 id="sub-account-title" style={{ fontSize: 20, margin: "0 0 18px" }}>
-              Create an account to start a plan
+              Plans need an account
             </h2>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
               <Link href="/signup" className="btn">
@@ -322,7 +304,7 @@ export default function Subscribe() {
             </label>
             {accountEmail && (
               <p id="sub-account-note" className="faint" style={{ fontSize: 15, margin: 0 }}>
-                Using {accountEmail} · Not you?{" "}
+                Not you?{" "}
                 <button type="button" style={TEXT_BTN} onClick={() => void supabase.auth.signOut().catch(() => undefined)}>
                   Sign out
                 </button>
@@ -330,7 +312,7 @@ export default function Subscribe() {
             )}
 
             <fieldset className="sub-methods">
-              <legend>How you'll pay</legend>
+              <legend>Pay with</legend>
               <label className="sub-method">
                 <input
                   type="radio"
@@ -421,7 +403,7 @@ function Confirming({ pending, onCheckAgain }: { pending: boolean; onCheckAgain(
               Almost there
             </h1>
             <p className="muted" role="status">
-              We're still confirming your payment with Paystack. You'll get an email when your plan is on.
+              Paystack is still confirming; we'll email you when your plan is on.
             </p>
             <div className="sub-done-actions">
               <button type="button" className="btn btn-block" onClick={onCheckAgain}>
@@ -527,7 +509,7 @@ function TestCheckout({
         </div>
         <div className="co-body">
           <p id="sub-co-desc" className="co-note">
-            {`${plan} plan by ${how}. This is a test screen: nothing is charged.`}
+            {`${plan} plan by ${how}.`}
           </p>
           <button ref={first} type="button" className="co-pay" onClick={simulate} disabled={busy}>
             {busy ? "Confirming…" : "Simulate payment"}

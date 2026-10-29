@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AppShell } from "../components/AppShell";
-import { BeadWave, RiseWords, useInView } from "../components/Motion";
+import { BeadWave } from "../components/Motion";
 import { Drum, DrumRoll, PatternStrip, Shell } from "../components/Shell";
 import { API_MODE, ApiError, jobDownloadUrl, listClips, type AudioVersion, type Clip } from "../lib/api";
 import { supabase, useSession } from "../lib/supabase";
@@ -8,9 +8,9 @@ import { Link } from "../router";
 import "./Clips.css";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const NO_AUDIO = "Audio arrives when the voice service is live";
-const PHONE_NOTE = "8 kHz versions are for phone menus and on-hold systems (IVR).";
-const VERSION_NOT_LIVE = "This version downloads here once the voice service is live.";
+const NO_AUDIO = "Audio comes once the voice service is live";
+const PHONE_NOTE = "8 kHz is for phone menus and on-hold (IVR).";
+const VERSION_NOT_LIVE = "Downloads once the voice service is live.";
 
 /** The chevron on an "Other versions" toggle; it turns over when the list is open. */
 export function VersionsChevron() {
@@ -44,12 +44,10 @@ export function VersionList({
   return (
     <div id={id} hidden={hidden} className={className ? `versions ${className}` : "versions"}>
       <ul className="versions-list">
-        {versions.map((v, i) => {
-          // Each item eases in a moment after the one above when the list opens.
-          const at = { ["--i" as string]: i } as CSSProperties;
+        {versions.map((v) => {
           if (!v.allowed) {
             return (
-              <li key={v.id} className="versions-item versions-locked" style={at}>
+              <li key={v.id} className="versions-item versions-locked">
                 <span className="versions-label">{v.label}</span>
                 <Link href="/pricing" className="versions-unlock">
                   {v.needs ? `On ${v.needs} and up` : "On a paid plan"}
@@ -60,7 +58,7 @@ export function VersionList({
           }
           const url = jobDownloadUrl(jobId, v.id);
           return (
-            <li key={v.id} className="versions-item" style={at}>
+            <li key={v.id} className="versions-item">
               {url ? (
                 <a className="versions-get" href={url} download>
                   <span className="versions-label">{v.label}</span>
@@ -104,16 +102,10 @@ type State =
   | { kind: "signin" }
   | { kind: "ready"; clips: Clip[] };
 
-/** A list of clip rows that rise in one after another the first time the list comes into view. */
-export function ClipList({ label, delay = 0, children }: { label: string; delay?: number; children: ReactNode }) {
-  const [ref, seen] = useInView<HTMLUListElement>();
+/** A list of clip rows. */
+export function ClipList({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <ul
-      ref={ref}
-      className={`clips-list${seen ? " is-in" : ""}`}
-      aria-label={label}
-      style={{ ["--rows-delay" as string]: `${delay}ms` } as CSSProperties}
-    >
+    <ul className="clips-list" aria-label={label}>
       {children}
     </ul>
   );
@@ -124,13 +116,11 @@ export function ClipRow({
   playing,
   onToggle,
   onEnded,
-  index = 0,
 }: {
   clip: Clip;
   playing: boolean;
   onToggle: () => void;
   onEnded: () => void;
-  index?: number;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const hasAudio = Boolean(clip.audioUrl);
@@ -149,7 +139,7 @@ export function ClipRow({
   const meta = `${clip.length} · ${clip.tier} licence${date ? ` · ${date}` : ""}`;
 
   return (
-    <li className={`clip-row${playing ? " is-playing" : ""}`} style={{ ["--i" as string]: index } as CSSProperties}>
+    <li className={`clip-row${playing ? " is-playing" : ""}`}>
       {hasAudio ? (
         <span className="clip-drum">
           <Drum size={44} playing={playing} label={`${playing ? "Pause" : "Play"} ${clip.voice} clip`} onClick={onToggle} />
@@ -254,17 +244,14 @@ export default function Clips() {
   return (
     <Frame>
       <div className="clips">
-        {API_MODE === "demo" && <p className="faint clips-demo">Demo mode: showing clips made in this browser.</p>}
+        {API_MODE === "demo" && <p className="faint clips-demo">Demo: clips made in this browser.</p>}
 
-        <div className="clips-head">
-          <RiseWords as="h1" className="clips-title" text="My clips" delay={40} step={90} />
-          <p className="muted">Clips you've made, with their licences.</p>
-        </div>
+        <h1 className="clips-title">My clips</h1>
 
         {view.kind === "loading" && (
           <div className="clips-status" role="status">
             <DrumRoll />
-            <span className="muted">Loading your clips…</span>
+            <span className="muted">Loading clips…</span>
           </div>
         )}
 
@@ -309,10 +296,9 @@ export default function Clips() {
 
         {view.kind === "ready" && view.clips.length > 0 && (
           <ClipList label="Your clips">
-            {view.clips.map((c, i) => (
+            {view.clips.map((c) => (
               <ClipRow
                 key={c.id}
-                index={i}
                 clip={c}
                 playing={playingId === c.id}
                 onToggle={() => setPlayingId((p) => (p === c.id ? null : c.id))}
@@ -323,7 +309,7 @@ export default function Clips() {
         )}
 
         <p className="faint clips-foot">
-          Pay-as-you-go clips stay here for 7 days. Plans keep them longer. <Link href="/pricing">See plans</Link>
+          Pay-as-you-go clips stay 7 days; plans keep them longer. <Link href="/pricing">See plans</Link>
         </p>
       </div>
     </Frame>

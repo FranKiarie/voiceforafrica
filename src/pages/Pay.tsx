@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
-import { reducedMotion, usdCounter } from "../components/AppShell";
-import { CountUp, RiseWords, useInView } from "../components/Motion";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Shell } from "../components/Shell";
 import { ACCENTS, PURPOSES, VOICES, formatDuration, formatKes, formatUsd, quoteFor } from "../data";
 import { setFlow, useFlow } from "../flow";
@@ -25,28 +23,6 @@ function previewId(): string | undefined {
   }
 }
 
-// The order card's lines rise in one after another; the total counts up once its line is in.
-const LINE_STEP_MS = 70;
-const LINE_START_MS = 80;
-const at = (i: number) => ({ ["--i" as string]: i }) as CSSProperties;
-
-/** The total, counting up from $0 once its line has risen in. Screen readers get the figure. */
-function Total({ usd, start, delay }: { usd: number; start: boolean; delay: number }) {
-  const [go, setGo] = useState(reducedMotion);
-  useEffect(() => {
-    if (!start || go) return;
-    const t = window.setTimeout(() => setGo(true), delay);
-    return () => window.clearTimeout(t);
-  }, [start, go, delay]);
-  const format = usdCounter(usd);
-  return (
-    <span className="pay-amount">
-      <span className="sr-only">{formatUsd(usd)}</span>
-      <span aria-hidden="true">{go ? <CountUp value={usd} format={format} duration={900} /> : format(0)}</span>
-    </span>
-  );
-}
-
 /** Step 3: the order and a Pay button. Paystack opens only when Pay is pressed. */
 export default function Pay() {
   const flow = useFlow();
@@ -55,7 +31,6 @@ export default function Pay() {
   const [checkout, setCheckout] = useState<PaygCheckout | null>(null);
   const checkoutRef = useRef<PaygCheckout | null>(null);
   const payBtn = useRef<HTMLButtonElement>(null);
-  const [orderRef, orderIn] = useInView<HTMLElement>();
 
   const onSuccess = useCallback((ref: string) => {
     setFlow({ paymentRef: ref });
@@ -94,12 +69,12 @@ export default function Pay() {
       } else if (API_MODE === "demo") {
         setMode("demo");
       } else {
-        backToOrder("Nothing was charged. Payments aren't available right now; please try again shortly.");
+        backToOrder("Nothing was charged. Payments aren't available right now. Try again soon.");
       }
     } catch (err) {
       // The server explains 4xx problems (a bad email, too many attempts) in plain words.
       if (err instanceof ApiError && err.status < 500) backToOrder(`Nothing was charged. ${err.message}`);
-      else if (err instanceof ApiError) backToOrder("Nothing was charged. Something went wrong on our side; please try again.");
+      else if (err instanceof ApiError) backToOrder("Nothing was charged. Something went wrong on our side. Try again.");
       else backToOrder(NETWORK_TEXT);
     }
   }, [flow.script, flow.voiceId, flow.purpose, flow.language, flow.email, onSuccess, onCancel, backToOrder]);
@@ -130,45 +105,39 @@ export default function Pay() {
   const purpose = PURPOSES.find((p) => p.id === flow.purpose)?.label ?? "Voice-over";
   const script = flow.script.trim();
   const excerpt = script.length > EXCERPT_CHARS ? `${script.slice(0, EXCERPT_CHARS).trimEnd()}…` : script;
-  // Order of the card's lines: voice, for, length, (receipt), the script, the total.
-  const lines = flow.email ? 4 : 3;
 
   return (
     <Shell step={3} footer={false}>
       <div className="pay" aria-hidden={mode === "demo" ? true : undefined}>
-        <RiseWords as="h1" className="pay-title" text="Your order" delay={40} step={90} />
+        <h1 className="pay-title">Your order</h1>
 
-        <section ref={orderRef} className={`card pay-order${orderIn ? " is-in" : ""}`} aria-label="Order summary">
+        <section className="card pay-order" aria-label="Order summary">
           <dl className="pay-lines">
-            <div style={at(0)}>
+            <div>
               <dt>Voice</dt>
               <dd>{accent ? `${voice.name} · ${accent}` : voice.name}</dd>
             </div>
-            <div style={at(1)}>
+            <div>
               <dt>For</dt>
               <dd>{purpose}</dd>
             </div>
-            <div style={at(2)}>
+            <div>
               <dt>Length</dt>
               <dd>{`About ${formatDuration(q.projectedSeconds)}`}</dd>
             </div>
             {flow.email && (
-              <div style={at(3)}>
+              <div>
                 <dt>Receipt to</dt>
                 <dd className="pay-email">{flow.email}</dd>
               </div>
             )}
           </dl>
-          <blockquote className="pay-script" style={at(lines)}>
-            {excerpt}
-          </blockquote>
-          <div className="pay-total" style={at(lines + 1)}>
+          <blockquote className="pay-script">{excerpt}</blockquote>
+          <div className="pay-total">
             <span>Total</span>
-            <Total usd={usd} start={orderIn} delay={LINE_START_MS + (lines + 1) * LINE_STEP_MS + 120} />
+            <span className="pay-amount">{formatUsd(usd)}</span>
           </div>
-          <p className="faint pay-kes" style={at(lines + 2)}>
-            {`Billed as ${formatDuration(q.billedSeconds)} · charged as ${formatKes(kes)} by M-Pesa or card`}
-          </p>
+          <p className="faint pay-kes">{`Billed as ${formatDuration(q.billedSeconds)} · ${formatKes(kes)} by M-Pesa or card`}</p>
         </section>
 
         <p className="pay-error" role="alert">
@@ -179,14 +148,12 @@ export default function Pay() {
           {mode === "opening" ? "Opening Paystack…" : `Pay ${formatUsd(usd)}`}
         </button>
         <p className="faint pay-note" role="status">
-          {mode === "open"
-            ? "On M-Pesa? Check your phone and enter your PIN. Keep this page open."
-            : "Paystack opens when you press Pay."}
+          {mode === "open" ? "On M-Pesa, enter your PIN on your phone and keep this page open." : ""}
         </p>
 
         <div className="pay-links">
-          <Link href="/listen">Back to the preview</Link>
-          <Link href="/studio">Change the script or voice</Link>
+          <Link href="/listen">Back to preview</Link>
+          <Link href="/studio">Change script or voice</Link>
         </div>
       </div>
       {mode === "demo" && <TestCheckout email={flow.email} kes={kes} onSuccess={onDemoPaid} onCancel={onCancel} />}
@@ -290,7 +257,7 @@ function TestCheckout({
               />
             </label>
           ) : (
-            <p className="co-note">Card payments open here once payments are live. Use M-Pesa to test.</p>
+            <p className="co-note">Card opens once payments are live; test with M-Pesa.</p>
           )}
           <button type="button" className="co-pay" onClick={simulate} disabled={busy || tab !== "mpesa"}>
             {busy ? "Waiting for M-Pesa…" : "Simulate M-Pesa payment"}
