@@ -9,19 +9,24 @@ export const PREVIEW_SECONDS = 45;
 export const CHARS_PER_SECOND = 15;
 export const MAX_PAYG_CHARS = 4500;
 
-export type Language = { own: string; en?: string; code: string; premiumOnly?: boolean };
+export type Language = { own: string; en?: string; code: string; premiumOnly?: boolean; writeIn?: boolean };
 
-// Languages we translate into and speak, in their own script: only those that
-// passed our translation and speech test (2026-10-29). Kikuyu, Kamba,
-// Kinyarwanda, Somali, Lingala, Twi and Portuguese did not; Yoruba, Zulu and
-// Luo are not supported by Gemini yet.
+// Languages we speak, in their own script: only those that passed our
+// translation and speech test (2026-10-29). writeIn: spoken well but not
+// translated well, so the customer writes the script in the language and we
+// read it as written. Kamba, Somali and Portuguese did not pass; Yoruba, Zulu
+// and Luo are not supported by Gemini yet.
 export const LANGUAGES: Language[] = [
   { own: "English", code: "en" },
   { own: "Kiswahili", en: "Swahili", code: "sw", premiumOnly: true },
+  { own: "Gĩkũyũ", en: "Kikuyu", code: "ki", writeIn: true },
   { own: "Oluganda", en: "Luganda", code: "lg" },
   { own: "Hausa", code: "ha" },
   { own: "አማርኛ", en: "Amharic", code: "am" },
+  { own: "Ikinyarwanda", en: "Kinyarwanda", code: "rw", writeIn: true },
   { own: "Igbo", code: "ig", premiumOnly: true },
+  { own: "Lingála", en: "Lingala", code: "ln", writeIn: true },
+  { own: "Akan", en: "Twi", code: "ak", writeIn: true },
   { own: "Chinyanja", en: "Nyanja", code: "ny" },
   { own: "ትግርኛ", en: "Tigrinya", code: "ti", premiumOnly: true },
   { own: "Sesotho", en: "Sotho", code: "st", premiumOnly: true },

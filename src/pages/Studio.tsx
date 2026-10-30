@@ -173,7 +173,13 @@ export default function Studio() {
             </select>
           </label>
         </div>
-        <p className="faint studio-hint">{`Script in another language? We translate it into ${lang?.en ?? lang?.own ?? "this language"} first.`}</p>
+        {lang?.writeIn ? (
+          <p className="studio-hint studio-write-in" role="note">
+            {`Please write your script in ${lang.en ?? lang.own}. We can't translate into ${lang.en ?? lang.own} yet, so the voice reads exactly the words you paste.`}
+          </p>
+        ) : (
+          <p className="faint studio-hint">{`Script in another language? We translate it into ${lang?.en ?? lang?.own ?? "this language"} first.`}</p>
+        )}
 
         <div className="studio-voice">
           <label className="field">
@@ -229,7 +235,7 @@ export default function Studio() {
               rows={9}
               value={script}
               maxLength={MAX_PAYG_CHARS}
-              placeholder="Paste your script…"
+              placeholder={lang?.writeIn ? `Paste your script, written in ${lang.en ?? lang.own}…` : "Paste your script…"}
               onChange={(e) => setScript(e.target.value)}
               aria-describedby="script-count"
             />

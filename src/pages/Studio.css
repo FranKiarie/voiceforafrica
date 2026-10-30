@@ -84,6 +84,13 @@
   font-size: 15px;
 }
 
+.studio-write-in {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--chip);
+  margin-top: -4px;
+}
+
 .studio-script {
   display: flex;
   flex-direction: column;

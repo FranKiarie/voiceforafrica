@@ -135,10 +135,16 @@ async def create_preview(body: PreviewIn, request: Request) -> dict:
     email = normalise_email(body.email)
 
     # The voice reads the language the text is written in, so a script in
-    # another language is translated first. The page shows the words it got,
+    # another language is translated first (a WRITE_IN language is only
+    # checked: its script must already be in it). The page shows the words it got,
     # and pays for exactly those.
     try:
         spoken, translated = await translate.for_language(script, language)
+    except translate.NotInLanguage as e:
+        name = translate.WRITE_IN[language]
+        raise HTTPException(
+            400, f"Please write your script in {name}. We can't translate into {name} yet."
+        ) from e
     except translate.TranslateError as e:
         logger.warning("Translating a preview into %s failed: %s", language, e)
         raise HTTPException(503, "We couldn't translate your script right now. Please try again in a minute.") from e

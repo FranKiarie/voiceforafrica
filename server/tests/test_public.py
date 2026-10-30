@@ -640,8 +640,19 @@ def test_preview_refuses_a_translation_over_the_limit(fake, client, monkeypatch)
     assert fake["inserts"] == []
 
 
-# "ki" and the rest were dropped after the 2026-10-29 quality test.
-@pytest.mark.parametrize("language", ["", "xx", "english", "sw-ke", "ki", "kam", "rw", "so", "ln", "ak", "pt"])
+def test_preview_asks_for_a_script_in_a_write_in_language(fake, client, monkeypatch):
+    async def not_kikuyu(script, language):
+        raise routes_public.translate.NotInLanguage(language)
+
+    monkeypatch.setattr(routes_public.translate, "for_language", not_kikuyu)
+    res = client.post(f"{BASE}/previews", json={**PREVIEW, "language": "ki", "email": "ann@example.com"})
+    assert res.status_code == 400
+    assert res.json()["detail"] == "Please write your script in Kikuyu. We can't translate into Kikuyu yet."
+    assert fake["inserts"] == [] and "rendered" not in fake
+
+
+# Kamba, Somali and Portuguese were dropped after the 2026-10-29 quality test.
+@pytest.mark.parametrize("language", ["", "xx", "english", "sw-ke", "kam", "so", "pt"])
 def test_preview_refuses_unlisted_languages(fake, client, language):
     res = client.post(f"{BASE}/previews", json={**PREVIEW, "language": language, "email": "ann@example.com"})
     assert res.status_code == 400

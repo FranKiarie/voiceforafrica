@@ -67,7 +67,46 @@ def test_failures_raise(gemini, response):
     assert translate._done == {}
 
 
+def _checked(already: bool) -> dict:
+    return {"candidates": [{"content": {"parts": [{"text": json.dumps({"already": already})}]}}]}
+
+
+def test_a_write_in_language_is_checked_never_translated(gemini):
+    calls, replies = gemini
+    replies.append(httpx.Response(200, json=_checked(True)))
+    script = "Ũkaribũ Kilima Grove Hotel."
+    assert asyncio.run(translate.for_language(script, "ki")) == (script, False)
+    prompt = calls[0]["systemInstruction"]["parts"][0]["text"]
+    assert "Gĩkũyũ (Kikuyu)" in prompt and "translate" not in prompt
+    assert set(calls[0]["generationConfig"]["responseSchema"]["properties"]) == {"already"}
+
+
+def test_a_write_in_language_refuses_a_script_in_another_language(gemini):
+    _, replies = gemini
+    replies.append(httpx.Response(200, json=_checked(False)))
+    with pytest.raises(translate.NotInLanguage):
+        asyncio.run(translate.for_language("Welcome to Kilima Grove Hotel.", "rw"))
+    assert translate._done == {}
+
+
+def test_a_write_in_check_that_fails_reads_the_script_as_written(gemini):
+    _, replies = gemini
+    replies.append(httpx.Response(429, json={"error": {"message": "quota"}}))
+    assert asyncio.run(translate.for_language("Mbote na bino.", "ln")) == ("Mbote na bino.", False)
+    assert translate._done == {}
+
+
+def test_write_in_languages_are_on_the_site():
+    assert set(translate.WRITE_IN) <= set(translate.LANGUAGE_NAMES)
+
+
 def test_every_language_on_the_site_has_a_name():
     data = (Path(__file__).resolve().parents[2] / "src" / "data.ts").read_text(encoding="utf-8")
     listed = data.split("export const LANGUAGES")[1].split("];")[0]
     assert set(re.findall(r'code: "([a-z]{2,3})"', listed)) == set(translate.LANGUAGE_NAMES)
+
+
+def test_the_site_marks_exactly_the_write_in_languages():
+    data = (Path(__file__).resolve().parents[2] / "src" / "data.ts").read_text(encoding="utf-8")
+    listed = data.split("export const LANGUAGES")[1].split("];")[0]
+    assert set(re.findall(r'code: "([a-z]{2,3})"[^}]*writeIn: true', listed)) == set(translate.WRITE_IN)
